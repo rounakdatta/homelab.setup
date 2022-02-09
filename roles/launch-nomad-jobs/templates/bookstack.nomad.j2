@@ -1,0 +1,42 @@
+job "bookstack_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "bookstack_group" {
+    count = 1
+
+    network {
+      port "bookstack_port" {
+        static       = "5566"
+        to           = "80"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "bookstack" {
+      driver = "docker"
+
+      env = {
+        DB_HOST     = "{{ DatabaseHost }}"
+        DB_USERNAME = "{{ BookstackDatabaseUsername }}"
+        DB_PASSWORD = "{{ BookstackDatabasePassword }}"
+        DB_DATABASE = "{{ BookstackDatabaseName }}"
+        APP_URL     = "https://bookstack.{{ BaseDomain }}"
+      }
+
+      config {
+        image = "lscr.io/linuxserver/bookstack"
+        ports = ["bookstack_port"]
+
+      }
+    }
+  }
+}
+

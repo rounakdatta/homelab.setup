@@ -1,0 +1,17 @@
+job "consul" {
+  datacenters = ["246bp"]
+  group "consul" {
+    count = 1
+    task "consul" {
+      driver = "raw_exec"
+
+      config {
+        command = "consul"
+        args    = ["agent", "-dev", "-config-dir=/etc/nomad.d"]
+      }
+      artifact {
+        source = "https://releases.hashicorp.com/consul/1.6.2/consul_1.6.2_linux_arm64.zip"
+      }
+    }
+  }
+}

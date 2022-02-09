@@ -1,0 +1,54 @@
+job "mysql_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "mysql_group" {
+    count = 1
+
+    network {
+      port "mysql_port" {
+        static       = 3306
+        to           = 3306
+        host_network = "tailscale"
+      }
+    }
+
+    volume "mysql_volume" {
+      type      = "host"
+      source    = "mysql_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 2
+      interval = "10m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "mysql_server" {
+      driver = "docker"
+
+      env = {
+        MYSQL_ROOT_PASSWORD = "{{ DatabaseRootPassword }}"
+      }
+
+      volume_mount {
+        volume      = "mysql_volume"
+        destination = "/var/lib/mysql"
+        read_only   = false
+      }
+
+      config {
+        image = "mariadb:10"
+        args = [
+          "--skip-innodb-read-only-compressed"
+        ]
+
+        ports = ["mysql_port"]
+
+      }
+    }
+
+  }
+}

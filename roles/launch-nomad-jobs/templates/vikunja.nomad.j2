@@ -1,0 +1,62 @@
+job "vikunja_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "vikunja_group" {
+    count = 1
+
+    network {
+      port "vikunja_api_port" {
+        static       = "45566"
+        to           = "3456"
+        host_network = "tailscale"
+      }
+
+      port "vikunja_frontend_port" {
+        static       = "55566"
+        to           = "80"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 10
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "vikunja_api" {
+      driver = "docker"
+
+      env = {
+        VIKUNJA_DATABASE_HOST     = "{{ DatabaseHost }}"
+        VIKUNJA_DATABASE_USER     = "{{ VikunjaDatabaseUsername }}"
+        VIKUNJA_DATABASE_PASSWORD = "{{ VikunjaDatabasePassword }}"
+        VIKUNJA_DATABASE_DATABASE = "{{ VikunjaDatabaseName }}"
+        VIKUNJA_DATABASE_TYPE     = "mysql"
+      }
+
+      config {
+        image = "vikunja/api"
+        ports = ["vikunja_api_port"]
+
+      }
+    }
+
+    task "vikunja_frontend" {
+      driver = "docker"
+
+      env = {
+        VIKUNJA_API_URL = "https://vikunja.{{ BaseDomain }}/api/v1"
+      }
+
+      config {
+        image = "vikunja/frontend"
+        ports = ["vikunja_frontend_port"]
+      }
+    }
+
+  }
+}
+

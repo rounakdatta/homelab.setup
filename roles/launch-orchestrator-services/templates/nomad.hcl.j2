@@ -1,0 +1,52 @@
+data_dir   = "/opt/nomad/data"
+bind_addr  = "{%raw%}{{ GetInterfaceIP \"tailscale0\" }}{%endraw%}"
+datacenter = "246bp"
+
+server {
+  enabled          = true
+  bootstrap_expect = 1
+}
+
+client {
+  enabled = true
+  host_network "tailscale" {
+    # Reference: https://tailscale.com/kb/1015/100.x-addresses/
+    cidr           = "{{ HostIp }}/10"
+    reserved_ports = "22"
+  }
+
+  host_volume "mysql_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/mysql"
+  }
+
+  host_volume "nextcloud_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/nextcloud"
+  }
+}
+
+plugin "docker" {
+  config {
+    pull_activity_timeout = "10m"
+    volumes {
+      enabled = true
+    }
+  }
+}
+
+plugin "raw_exec" {
+  config {
+    enabled = true
+  }
+}
+
+telemetry {
+  collection_interval        = "15s"
+  disable_hostname           = true
+  prometheus_metrics         = true
+  publish_allocation_metrics = true
+  publish_node_metrics       = true
+}
+
+consul {
+  address = "{{ HostIp }}:8500"
+}

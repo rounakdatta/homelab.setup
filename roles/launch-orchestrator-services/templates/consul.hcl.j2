@@ -1,0 +1,10 @@
+datacenter       = "246bp"
+data_dir         = "/opt/consul/data"
+server           = true
+bootstrap_expect = 1
+client_addr      = "{{ HostIp }}"
+bind_addr        = "127.0.0.1"
+ui               = true
+connect {
+  enabled = true
+}
