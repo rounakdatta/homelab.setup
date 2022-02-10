@@ -5,6 +5,16 @@
   vars_files:
           - config.yml
   roles:
+    - role: launch-orchestrators
+      tags:
+        - config
+        - orchestration
+
+    - role: launch-nomad-jobs
+      tags:
+        - config
+        - service
+
     - role: setup-internal-reverse-proxy
       tags:
         - config
@@ -15,5 +25,5 @@
       vars:
         caddy_caddyfile: "{{ ansible_env.INTERNAL_CADDYFILE_CONTENTS }}"
       tags:
-        - serve
+        - service
         - gateway
