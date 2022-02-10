@@ -1,0 +1,19 @@
+---
+
+- name: Set up homelab
+  hosts: homelab
+  vars_files:
+          - config.yml
+  roles:
+    - role: setup-internal-reverse-proxy
+      tags:
+        - config
+        - gateway
+
+    - role: maxhoesel.caddy.caddy_server
+      become: yes
+      vars:
+        caddy_caddyfile: "{{ ansible_env.INTERNAL_CADDYFILE_CONTENTS }}"
+      tags:
+        - serve
+        - gateway

@@ -7,6 +7,7 @@ job "firefly-iii_job" {
 
     network {
       port "firefly_port" {
+        statoc       = "9299"
         to           = "8080"
         host_network = "tailscale"
       }

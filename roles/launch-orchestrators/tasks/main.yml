@@ -1,0 +1,12 @@
+---
+
+vars:
+  HostIp: "{{ ansible_env.HOST_EXTERNAL_IPV4 }}"
+
+- name: launch systemd services
+  include: configure.yml
+  vars:
+    service: "{{ item }}"
+  loop:
+    - nomad
+    - consul
