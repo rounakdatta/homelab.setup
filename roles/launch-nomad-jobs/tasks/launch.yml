@@ -1,0 +1,5 @@
+---
+
+- name: Launch {{ service }} job
+  shell: "NOMAD_ADDR=http://{{ DatabaseHost }}:4646 nomad job run {{ nomad_jobs_path }}/{{ service }}.nomad"
+  register: service_file_contents

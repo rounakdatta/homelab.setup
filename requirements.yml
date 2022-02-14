@@ -1,0 +1,15 @@
+---
+
+roles:
+- name: caddy_ansible.caddy_ansible
+  src: https://github.com/caddy-ansible/caddy-ansible.git
+  version: origin/master
+
+- name: papanito.cloudflared
+  src: https://github.com/papanito/ansible-role-cloudflared.git
+  version: origin/master
+
+collections:
+- name: community.mysql
+- name: ansible.posix
+- name: community.general

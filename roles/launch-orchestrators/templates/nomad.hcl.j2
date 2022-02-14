@@ -22,13 +22,18 @@ client {
   host_volume "nextcloud_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/nextcloud"
   }
+
+  host_volume "bookstack_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/bookstack/public/uploads"
+  }
 }
 
 plugin "docker" {
   config {
-    pull_activity_timeout = "10m"
+    pull_activity_timeout = "30m"
     volumes {
       enabled = true
+      selinuxlabel = "z"
     }
   }
 }

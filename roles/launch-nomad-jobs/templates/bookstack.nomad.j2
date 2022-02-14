@@ -8,9 +8,15 @@ job "bookstack_job" {
     network {
       port "bookstack_port" {
         static       = "5566"
-        to           = "80"
+        to           = "8080"
         host_network = "tailscale"
       }
+    }
+
+    volume "bookstack_volume" {
+      type      = "host"
+      source    = "bookstack_hdd_volume"
+      read_only = false
     }
 
     restart {
@@ -31,8 +37,14 @@ job "bookstack_job" {
         APP_URL     = "https://bookstack.{{ BaseDomain }}"
       }
 
+      volume_mount {
+        volume      = "bookstack_volume"
+        destination = "/var/www/bookstack/public/uploads"
+        read_only   = false
+      }
+
       config {
-        image = "lscr.io/linuxserver/bookstack"
+        image = "rounakdatta/docker-bookstack"
         ports = ["bookstack_port"]
 
       }

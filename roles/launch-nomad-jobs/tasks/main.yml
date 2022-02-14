@@ -1,7 +1,7 @@
 ---
 
-vars:
-  DatabaseHost: "{{ ansible_env.HOST_EXTERNAL_IPV4 }}"
+# vars:
+#   DatabaseHost: "{{ ansible_env.HOST_EXTERNAL_IPV4 }}"
 
 - name: Create directory for the nomad jobs
   file:
@@ -11,6 +11,7 @@ vars:
 
 - name: Build config files for the nomad jobs
   vars:
+    DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
     BaseDomain: "{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
 
   block:
@@ -24,42 +25,52 @@ vars:
       include: configure.yml
       vars:
         service: "firefly"
-        FireflyApplicationEncryptionKey: "{{ query('community.general.random_string', special=false, length=32) }}"
+        FireflyApplicationEncryptionKey: "{{ lookup('community.general.random_string', special=false, length=32) }}"
         FireflyDatabaseUsername: "{{ lookup('community.general.passwordstore', 'homelab/secrets/firefly/username', errors='ignore') }}"
-        FireflyDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/firefly/username', errors='ignore') }}"
-        FireflyDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/firefly/username', errors='ignore') }}"
+        FireflyDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/firefly/password', errors='ignore') }}"
+        FireflyDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/firefly/database', errors='ignore') }}"
 
     - name: Initiate config file building for Bookstack
       include: configure.yml
       vars:
         service: "bookstack"
         BookstackDatabaseUsername: "{{ lookup('community.general.passwordstore', 'homelab/secrets/bookstack/username', errors='ignore') }}"
-        BookstackDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/bookstack/username', errors='ignore') }}"
-        BookstackDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/bookstack/username', errors='ignore') }}"
+        BookstackDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/bookstack/password', errors='ignore') }}"
+        BookstackDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/bookstack/database', errors='ignore') }}"
 
     - name: Initiate config file building for Vikunja
       include: configure.yml
       vars:
         service: "vikunja"
         VikunjaDatabaseUsername: "{{ lookup('community.general.passwordstore', 'homelab/secrets/vikunja/username', errors='ignore') }}"
-        VikunjaDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/vikunja/username', errors='ignore') }}"
-        VikunjaDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/vikunja/username', errors='ignore') }}"
+        VikunjaDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/vikunja/password', errors='ignore') }}"
+        VikunjaDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/vikunja/database', errors='ignore') }}"
 
     - name: Initiate config file building for Nextcloud
       include: configure.yml
       vars:
         service: "nextcloud"
         NextcloudDatabaseUsername: "{{ lookup('community.general.passwordstore', 'homelab/secrets/nextcloud/username', errors='ignore') }}"
-        NextcloudDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/nextcloud/username', errors='ignore') }}"
-        NextcloudDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/nextcloud/username', errors='ignore') }}"
+        NextcloudDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/nextcloud/password', errors='ignore') }}"
+        NextcloudDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/nextcloud/database', errors='ignore') }}"
+
+- name: Install the required apt packages
+  apt:
+    name:
+      - python3-pip
+
+- name: Install python-nomad library
+  pip:
+    name:
+      - python-nomad
+    executable: pip3
 
 - name: Launch the nomad jobs
-  community.general.nomad_job:
-    host: "{{ DatabaseHost }}:4646"
-    state: present
-    content: "{{ lookup('ansible.builtin.file', '{{ nomad_jobs_path }}/{{ item }}.nomad') }}"
-    timeout: 60
-  loop:
+  include: launch.yml
+  vars:
+    DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+    service: "{{ item }}"
+  with_items:
     - mysql
     - firefly
     - bookstack

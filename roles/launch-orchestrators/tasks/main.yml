@@ -1,12 +1,46 @@
 ---
 
-vars:
-  HostIp: "{{ ansible_env.HOST_EXTERNAL_IPV4 }}"
+- name: Install docker
+  shell: "curl -X GET https://get.docker.com/ | sh"
+
+- name: Download nomad package
+  get_url:
+    url: "https://releases.hashicorp.com/nomad/1.2.6/nomad_1.2.6_linux_arm64.zip"
+    dest: "/tmp/nomad.zip"
+
+- name: Inflate the package
+  ansible.builtin.unarchive:
+    src: "/tmp/nomad.zip"
+    dest: "/usr/bin"
+    remote_src: yes
+
+- name: Download consul package
+  get_url:
+    url: "https://releases.hashicorp.com/consul/1.11.2/consul_1.11.2_linux_arm64.zip"
+    dest: "/tmp/consul.zip"
+
+- name: Inflate the package
+  ansible.builtin.unarchive:
+    src: "/tmp/consul.zip"
+    dest: "/usr/bin"
+    remote_src: yes
+
+- name: Create mount directory for mysql
+  file:
+    path: "{{ hdd_mount_path }}/homelab/mysql"
+    state: directory
+    recurse: yes
+
+- name: Create mount directory for nextcloud
+  file:
+    path: "{{ hdd_mount_path }}/homelab/nextcloud"
+    state: directory
+    recurse: yes
 
 - name: launch systemd services
   include: configure.yml
   vars:
+    HostIp: "{{ HOST_EXTERNAL_IPV4 }}"
     service: "{{ item }}"
-  loop:
+  with_items:
     - nomad
-    - consul

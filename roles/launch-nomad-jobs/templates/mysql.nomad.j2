@@ -40,10 +40,7 @@ job "mysql_job" {
       }
 
       config {
-        image = "mariadb:10"
-        args = [
-          "--skip-innodb-read-only-compressed"
-        ]
+        image = "arm64v8/mariadb:10.3.32"
 
         ports = ["mysql_port"]
 

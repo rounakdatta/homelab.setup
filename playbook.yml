@@ -15,15 +15,46 @@
         - config
         - service
 
-    - role: setup-internal-reverse-proxy
-      tags:
-        - config
-        - gateway
-
-    - role: maxhoesel.caddy.caddy_server
-      become: yes
+    - role: caddy_ansible.caddy_ansible
+      caddy_config: "{{ lookup('template', 'templates/Caddyfile.j2') }}"
       vars:
-        caddy_caddyfile: "{{ ansible_env.INTERNAL_CADDYFILE_CONTENTS }}"
+        HostIp: "{{ HOST_EXTERNAL_IPV4 }}"
       tags:
         - service
         - gateway
+
+    - role: setup-binaries
+      tags:
+        - config
+
+    - role: papanito.cloudflared
+      caddy_config: "{{ lookup('template', 'templates/Caddyfile.j2') }}"
+      vars:
+        cf_systemd_user: root
+        cf_systemd_group: root
+        cf_cert_location: ~/.secrets/cert.pem
+      cf_tunnels:
+        dietpigw:
+          tunnel_id: "{{ lookup('community.general.passwordstore', 'homelab/secrets/cloudflare/tunnels/1/tunnel_id', errors='ignore') }}"
+          credentials-file: /etc/cloudflared/{{ lookup('community.general.passwordstore', 'homelab/secrets/cloudflare/tunnels/1/tunnel_id', errors='ignore') }}.json
+          account_tag: "{{ lookup('community.general.passwordstore', 'homelab/secrets/cloudflare/tunnels/1/account_tag', errors='ignore') }}"
+          tunnel_secret: "{{ lookup('community.general.passwordstore', 'homelab/secrets/cloudflare/tunnels/1/tunnel_secret', errors='ignore') }}"
+          loglevel: debug
+          routes:
+            dns:
+            - "firefly"
+            - "bookstack"
+            - "vikunja"
+            - "nextcloud"
+          ingress:
+          - hostname: "firefly.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+            service: http://localhost:8081
+          - hostname: "bookstack.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+            service: http://localhost:8082
+          - hostname: "vikunja.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+            service: http://localhost:8083
+          - hostname: "nextcloud.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+            service: http://localhost:8084
+          - service: http_status:404
+      tags:
+        - networking

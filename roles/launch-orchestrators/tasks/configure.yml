@@ -18,5 +18,10 @@
 
 - name: Run {{ service }}
   ansible.builtin.systemd:
-    state: started
-    name: {{ service }}
+    state: reloaded
+    name: "{{ service }}"
+
+- name: Run {{ service }}
+  ansible.builtin.systemd:
+    state: restarted
+    name: "{{ service }}"
