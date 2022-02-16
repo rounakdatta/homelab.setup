@@ -26,6 +26,14 @@ client {
   host_volume "bookstack_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/bookstack/public/uploads"
   }
+
+  host_volume "webtrees_data_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/webtrees/data"
+  }
+
+  host_volume "webtrees_media_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/webtrees/media"
+  }
 }
 
 plugin "docker" {

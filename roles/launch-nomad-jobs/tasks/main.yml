@@ -54,6 +54,14 @@
         NextcloudDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/nextcloud/password', errors='ignore') }}"
         NextcloudDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/nextcloud/database', errors='ignore') }}"
 
+    - name: Initiate config file building for Webtrees
+      include: configure.yml
+      vars:
+        service: "webtrees"
+        WebtreesDatabaseUsername: "{{ lookup('community.general.passwordstore', 'homelab/secrets/webtrees/username', errors='ignore') }}"
+        WebtreesDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/webtrees/password', errors='ignore') }}"
+        WebtreesDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/webtrees/database', errors='ignore') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -76,3 +84,4 @@
     - bookstack
     - vikunja
     - nextcloud
+    - webtrees
