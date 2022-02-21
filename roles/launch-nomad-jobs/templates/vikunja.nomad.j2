@@ -19,6 +19,12 @@ job "vikunja_job" {
       }
     }
 
+    volume "vikunja_api_volume" {
+      type      = "host"
+      source    = "vikunja_hdd_volume"
+      read_only = false
+    }
+
     restart {
       attempts = 10
       interval = "25m"
@@ -35,6 +41,12 @@ job "vikunja_job" {
         VIKUNJA_DATABASE_PASSWORD = "{{ VikunjaDatabasePassword }}"
         VIKUNJA_DATABASE_DATABASE = "{{ VikunjaDatabaseName }}"
         VIKUNJA_DATABASE_TYPE     = "mysql"
+      }
+
+      volume_mount {
+        volume      = "vikunja_api_volume"
+        destination = "/app/vikunja/files"
+        read_only   = false
       }
 
       config {

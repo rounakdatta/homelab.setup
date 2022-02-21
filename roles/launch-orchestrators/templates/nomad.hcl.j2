@@ -19,6 +19,10 @@ client {
     path = "{{ hdd_mount_path }}/homelab/mysql"
   }
 
+  host_volume "vikunja_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/vikunja/files"
+  }
+
   host_volume "nextcloud_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/nextcloud"
   }
