@@ -38,6 +38,14 @@ client {
   host_volume "webtrees_media_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/webtrees/media"
   }
+
+  host_volume "photoprism_originals_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/photoprism/originals"
+  }
+
+  host_volume "photoprism_storage_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/photoprism/storage"
+  }
 }
 
 plugin "docker" {

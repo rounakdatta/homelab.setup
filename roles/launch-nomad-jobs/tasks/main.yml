@@ -62,6 +62,15 @@
         WebtreesDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/webtrees/password', errors='ignore') }}"
         WebtreesDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/webtrees/database', errors='ignore') }}"
 
+    - name: Initiate config file building for Photoprism
+      include: configure.yml
+      vars:
+        service: "photoprism"
+        PhotoprismDatabaseUsername: "{{ lookup('community.general.passwordstore', 'homelab/secrets/photoprism/username', errors='ignore') }}"
+        PhotoprismDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/photoprism/password', errors='ignore') }}"
+        PhotoprismDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/photoprism/database', errors='ignore') }}"
+        PhotoprismAdminPassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/photoprism/admin_password', errors='ignore') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -85,3 +94,4 @@
     - vikunja
     - nextcloud
     - webtrees
+    - photoprism

@@ -47,6 +47,7 @@
             - "vikunja"
             - "nextcloud"
             - "webtrees"
+            - "photoprism"
           ingress:
           - hostname: "firefly.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
             service: http://localhost:8081
@@ -58,6 +59,8 @@
             service: http://localhost:8084
           - hostname: "webtrees.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
             service: http://localhost:8085
+          - hostname: "photoprism.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+            service: http://localhost:8086
           - service: http_status:404
       tags:
         - networking
