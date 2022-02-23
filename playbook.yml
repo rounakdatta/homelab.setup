@@ -48,6 +48,8 @@
             - "nextcloud"
             - "webtrees"
             - "photoprism"
+            - "dev.ainv"
+            - "ainv"
           ingress:
           - hostname: "firefly.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
             service: http://localhost:8081
@@ -61,6 +63,10 @@
             service: http://localhost:8085
           - hostname: "photoprism.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
             service: http://localhost:8086
+          - hostname: "dev.ainv.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+            service: http://localhost:8087
+          - hostname: "ainv.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+            service: http://localhost:8088
           - service: http_status:404
       tags:
         - networking

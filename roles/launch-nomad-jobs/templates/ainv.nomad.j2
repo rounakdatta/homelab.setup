@@ -1,0 +1,65 @@
+job "ainv_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "ainv_group" {
+    count = 1
+
+    network {
+      port "ainv_dev_port" {
+        static       = "5444"
+        to           = "1234"
+        host_network = "tailscale"
+      }
+
+      port "ainv_prod_port" {
+        static       = "5445"
+        to           = "1234"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "ainv_dev" {
+      driver = "docker"
+
+      env = {
+        DATABASE_HOST     = "{{ DatabaseHost }}"
+        APP_USER = "{{ AinvDevDatabaseUsername }}"
+        APP_PASSWORD = "{{ AinvDevDatabasePassword }}"
+        APP_DATABASE = "{{ AinvDevDatabaseName }}"
+      }
+
+      config {
+        image = "rounakdatta/ainv"
+        ports = ["ainv_dev_port"]
+
+      }
+    }
+
+    task "ainv_prod" {
+      driver = "docker"
+
+      env = {
+        DATABASE_HOST     = "{{ DatabaseHost }}"
+        APP_USER = "{{ AinvProdDatabaseUsername }}"
+        APP_PASSWORD = "{{ AinvProdDatabasePassword }}"
+        APP_DATABASE = "{{ AinvProdDatabaseName }}"
+      }
+
+      config {
+        image = "rounakdatta/ainv"
+        ports = ["ainv_prod_port"]
+
+      }
+    }
+
+  }
+}
+

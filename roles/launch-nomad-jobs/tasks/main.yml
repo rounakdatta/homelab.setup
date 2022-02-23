@@ -71,6 +71,17 @@
         PhotoprismDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/photoprism/database', errors='ignore') }}"
         PhotoprismAdminPassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/photoprism/admin_password', errors='ignore') }}"
 
+    - name: Initiate config file building for AINV
+      include: configure.yml
+      vars:
+        service: "ainv"
+        AinvDevDatabaseUsername: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/dev/username', errors='ignore') }}"
+        AinvDevDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/dev/password', errors='ignore') }}"
+        AinvDevDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/dev/database', errors='ignore') }}"
+        AinvProdDatabaseUsername: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/prod/username', errors='ignore') }}"
+        AinvProdDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/prod/password', errors='ignore') }}"
+        AinvProdDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/prod/database', errors='ignore') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -95,3 +106,4 @@
     - nextcloud
     - webtrees
     - photoprism
+    - ainv

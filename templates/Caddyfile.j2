@@ -30,3 +30,13 @@
 :8086 {
     reverse_proxy {{ HostIp }}:2342
 }
+
+# ainv_dev
+:8087 {
+    reverse_proxy {{ HostIp }}:5444
+}
+
+# ainv_prod
+:8088 {
+    reverse_proxy {{ HostIp }}:5445
+}
