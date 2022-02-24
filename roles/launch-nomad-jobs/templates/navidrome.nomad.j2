@@ -1,0 +1,57 @@
+job "navidrome_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "navidrome_group" {
+    count = 1
+
+    network {
+      port "navidrome_port" {
+        static       = "6967"
+        to           = "4533"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "navidrome_data_volume" {
+      type      = "host"
+      source    = "navidrome_data_hdd_volume"
+      read_only = false
+    }
+
+    volume "navidrome_media_volume" {
+      type      = "host"
+      source    = "navidrome_media_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "navidrome" {
+      driver = "docker"
+
+      volume_mount {
+        volume      = "navidrome_data_volume"
+        destination = "/data"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "navidrome_media_volume"
+        destination = "/music:ro"
+        read_only   = false
+      }
+
+      config {
+        image = "deluan/navidrome"
+        ports = ["navidrome_port"]
+      }
+    }
+  }
+}
+

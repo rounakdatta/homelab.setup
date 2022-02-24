@@ -82,6 +82,11 @@
         AinvProdDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/prod/password', errors='ignore') }}"
         AinvProdDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/prod/database', errors='ignore') }}"
 
+    - name: Initiate config file building for navidrome
+      include: configure.yml
+      vars:
+        service: "navidrome"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -107,3 +112,4 @@
     - webtrees
     - photoprism
     - ainv
+    - navidrome

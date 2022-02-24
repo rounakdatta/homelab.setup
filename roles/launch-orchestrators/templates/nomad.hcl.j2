@@ -46,6 +46,14 @@ client {
   host_volume "photoprism_storage_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/photoprism/storage"
   }
+
+  host_volume "navidrome_data_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/navidrome/data"
+  }
+
+  host_volume "navidrome_media_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/navidrome/media"
+  }
 }
 
 plugin "docker" {
