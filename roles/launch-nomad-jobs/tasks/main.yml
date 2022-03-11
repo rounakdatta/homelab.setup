@@ -1,8 +1,5 @@
 ---
 
-# vars:
-#   DatabaseHost: "{{ ansible_env.HOST_EXTERNAL_IPV4 }}"
-
 - name: Create directory for the nomad jobs
   file:
     path: "{{ nomad_jobs_path }}"
@@ -82,10 +79,10 @@
         AinvProdDatabasePassword: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/prod/password', errors='ignore') }}"
         AinvProdDatabaseName: "{{ lookup('community.general.passwordstore', 'homelab/secrets/ainv/prod/database', errors='ignore') }}"
 
-    - name: Initiate config file building for navidrome
+    - name: Initiate config file building for audiobookshelf
       include: configure.yml
       vars:
-        service: "navidrome"
+        service: "audiobookshelf"
 
 - name: Install the required apt packages
   apt:
@@ -112,4 +109,4 @@
     - webtrees
     - photoprism
     - ainv
-    - navidrome
+    - audiobookshelf
