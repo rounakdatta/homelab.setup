@@ -51,8 +51,16 @@ client {
     path = "{{ hdd_mount_path }}/homelab/navidrome/data"
   }
 
-  host_volume "navidrome_media_hdd_volume" {
-    path = "{{ hdd_mount_path }}/homelab/navidrome/media"
+  host_volume "audiobooks_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/audiobooks/data"
+  }
+
+  host_volume "audiobookshelf_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/audiobookshelf/config"
+  }
+
+  host_volume "audiobookshelf_metadata_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/audiobookshelf/metadata"
   }
 }
 
