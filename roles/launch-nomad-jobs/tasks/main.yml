@@ -110,3 +110,8 @@
     - photoprism
     - ainv
     - audiobookshelf
+
+- name: Manually override webtrees config file permission
+  file:
+    path: "{{ hdd_mount_path }}/homelab/webtrees/data/config.ini.php"
+    mode: 0700
