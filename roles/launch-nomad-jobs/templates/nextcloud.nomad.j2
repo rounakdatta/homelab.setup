@@ -34,11 +34,12 @@ job "nextcloud_job" {
         MYSQL_USER     = "{{ NextcloudDatabaseUsername }}"
         MYSQL_PASSWORD = "{{ NextcloudDatabasePassword }}"
         MYSQL_DATABASE = "{{ NextcloudDatabaseName }}"
+        OVERWRITEPROTOCOL = "https"
       }
 
       volume_mount {
         volume      = "nextcloud_volume"
-        destination = "/var/www/html/data"
+        destination = "/var/www/html"
         read_only   = false
       }
 
