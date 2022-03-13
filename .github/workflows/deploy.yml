@@ -24,6 +24,7 @@ jobs:
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
           SSH_USER: ${{ secrets.SSH_USER }}
+          MACHINE_NAME: ${{ secrets.MACHINE_NAME }}
         run: |
           mkdir -p ~/.ssh
           MACHINE_IP="$(tailscale ip -4 ${MACHINE_NAME})"
