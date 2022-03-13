@@ -33,6 +33,11 @@ jobs:
           chmod 600 ~/.ssh/key
           printf "Host homelab\n\tUser %s\n\tIdentityFile %s\n\tHostName %s" "${SSH_USER}" "~/.ssh/key" "${MACHINE_IP}" > ~/.ssh/config
 
+      - name: Verify
+        id: verify
+        run: |
+          cat ~/.ssh/config
+
       - name: Run Ansible playbook
         uses: dawidd6/action-ansible-playbook@v2
         with:
