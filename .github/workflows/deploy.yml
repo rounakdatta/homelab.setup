@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch repository
+        id: fetch
+        uses: actions/checkout@v3
+
+      - name: Setup Tailscale
+        id: tailscale
+        uses: tailscale/github-action@v1
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Add SSH key
+        id: ssh
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          MACHINE_IP="$(tailscale ip -4 ${MACHINE_NAME})"
+          echo "GITHUB_MACHINE_IP=${MACHINE_IP}" >> ${GITHUB_ENV}
+          ssh-keyscan ${MACHINE_IP} >> ~/.ssh/known_hosts
+          printf "%s" "${SSH_KEY}" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          printf "Host homelab\n\tUser %s\n\tIdentityFile %s\n\tHostName %s" "${SSH_USER}" "~/.ssh/key" "${MACHINE_IP}" > ~/.ssh/key
+
+      - name: Run Ansible playbook
+        uses: dawidd6/action-ansible-playbook@v2
+        with:
+          playbook: playbook.yml
+          requirements: requirements.yml
+          options: |
+            --inventory hosts
+            --verbose
+            --extra-vars "HOST_EXTERNAL_IPV4=${{ env.GITHUB_MACHINE_IP }} hdd_mount_path=${{ secrets.STORAGE_MOUNT_PATH }}"
