@@ -1,10 +1,20 @@
 ---
 
+- name: Prepare local
+  hosts: localhost
+  roles:
+    - role: ansible-modules-bitwarden
+    - role: setup-cloudflared-credentials
+      tags:
+        - config
+
 - name: Set up homelab
   hosts: homelab
   vars_files:
           - config.yml
   roles:
+    - role: ansible-modules-bitwarden
+
     - role: launch-orchestrators
       tags:
         - config
@@ -26,8 +36,6 @@
     - role: setup-binaries
       tags:
         - config
-
-    - role: ansible-modules-bitwarden
 
     - role: papanito.cloudflared
       caddy_config: "{{ lookup('template', 'templates/Caddyfile.j2') }}"
