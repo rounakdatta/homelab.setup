@@ -2,7 +2,8 @@ name: Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - '**'
 
 jobs:
   deploy:
@@ -34,6 +35,19 @@ jobs:
           chmod 600 ~/.ssh/key
           printf "Host homelab\n\tUser %s\n\tIdentityFile %s\n\tHostName %s" "${SSH_USER}" "~/.ssh/key" "${MACHINE_IP}" > ~/.ssh/config
 
+      - name: Set up Bitwarden
+        id: bitwarden
+        env:
+          BW_EMAIL: ${{ secrets.BW_EMAIL }}
+          BW_PW: ${{ secrets.BW_PW }}
+          BW_CLIENT_S: ${{ secrets.BW_CLIENT_S }}
+        run: |
+          sudo snap install bw
+          bw login --raw "${BW_EMAIL}" "${BW_PW}" "${BW_CLIENT_S}"
+          export BW_SESSION=$(bw unlock --raw "${BW_PW}")
+          echo "GITHUB_BW_SESSION=${BW_SESSION}" >> ${GITHUB_ENV}
+          bw sync
+
       - name: Run Ansible playbook
         uses: dawidd6/action-ansible-playbook@v2
         with:
@@ -42,4 +56,4 @@ jobs:
           options: |
             --inventory hosts
             --verbose
-            --extra-vars "HOST_EXTERNAL_IPV4=${{ env.GITHUB_MACHINE_IP }} hdd_mount_path=${{ secrets.STORAGE_MOUNT_PATH }}"
+            --extra-vars "BW_SESSION=${{ env.GITHUB_BW_SESSION }} HOST_EXTERNAL_IPV4=${{ env.GITHUB_MACHINE_IP }} hdd_mount_path=${{ secrets.STORAGE_MOUNT_PATH }}"
