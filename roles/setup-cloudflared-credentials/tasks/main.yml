@@ -1,4 +1,10 @@
 ---
 
+- name: Create directory for the cloudflared certificate
+  file:
+    path: "~/.secrets"
+    state: directory
+    recurse: yes
+
 - name: Setup cloudflared certificate
   shell: "echo '{{ lookup('bitwarden', 'homelab/secrets/cloudflare/tunnels/1/certificate', field='notes') }}' > ~/.secrets/cert.pem"
