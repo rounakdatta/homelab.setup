@@ -46,7 +46,7 @@ jobs:
           npm install -g @bitwarden/cli
           bw login --apikey
           export BW_SESSION=$(bw unlock --raw "${BW_PW}")
-          echo "GITHUB_BW_SESSION=${BW_SESSION}" >> ${GITHUB_ENV}
+          echo "BW_SESSION=${BW_SESSION}" >> ${GITHUB_ENV}
           bw sync
 
       - name: Run Ansible playbook
@@ -57,4 +57,4 @@ jobs:
           options: |
             --inventory hosts
             --verbose
-            --extra-vars "BW_SESSION=${{ env.GITHUB_BW_SESSION }} HOST_EXTERNAL_IPV4=${{ env.GITHUB_MACHINE_IP }} hdd_mount_path=${{ secrets.STORAGE_MOUNT_PATH }}"
+            --extra-vars "HOST_EXTERNAL_IPV4=${{ env.GITHUB_MACHINE_IP }} hdd_mount_path=${{ secrets.STORAGE_MOUNT_PATH }}"
