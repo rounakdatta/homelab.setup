@@ -40,10 +40,11 @@ jobs:
         env:
           BW_EMAIL: ${{ secrets.BW_EMAIL }}
           BW_PW: ${{ secrets.BW_PW }}
-          BW_CLIENT_S: ${{ secrets.BW_CLIENT_S }}
+          BW_CLIENTID: ${{ secrets.BW_CLIENTID }}
+          BW_CLIENTSECRET: ${{ secrets.BW_CLIENTSECRET }}
         run: |
           npm install -g @bitwarden/cli
-          printf "${BW_CLIENT_S}" | bw login --raw "${BW_EMAIL}" "${BW_PW}"
+          bw login --apikey
           export BW_SESSION=$(bw unlock --raw "${BW_PW}")
           echo "GITHUB_BW_SESSION=${BW_SESSION}" >> ${GITHUB_ENV}
           bw sync
