@@ -42,7 +42,7 @@ jobs:
           BW_PW: ${{ secrets.BW_PW }}
           BW_CLIENT_S: ${{ secrets.BW_CLIENT_S }}
         run: |
-          sudo snap install bw
+          npm install -g @bitwarden/cli
           bw login --raw "${BW_EMAIL}" "${BW_PW}" "${BW_CLIENT_S}"
           export BW_SESSION=$(bw unlock --raw "${BW_PW}")
           echo "GITHUB_BW_SESSION=${BW_SESSION}" >> ${GITHUB_ENV}
