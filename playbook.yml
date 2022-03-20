@@ -1,10 +1,20 @@
 ---
 
+- name: Prepare local
+  hosts: localhost
+  roles:
+    - role: ansible-modules-bitwarden
+    - role: setup-cloudflared-credentials
+      tags:
+        - config
+
 - name: Set up homelab
   hosts: homelab
   vars_files:
           - config.yml
   roles:
+    - role: ansible-modules-bitwarden
+
     - role: launch-orchestrators
       tags:
         - config
@@ -35,10 +45,10 @@
         cf_cert_location: ~/.secrets/cert.pem
       cf_tunnels:
         dietpigw:
-          tunnel_id: "{{ lookup('community.general.passwordstore', 'homelab/secrets/cloudflare/tunnels/1/tunnel_id', errors='ignore') }}"
-          credentials-file: /etc/cloudflared/{{ lookup('community.general.passwordstore', 'homelab/secrets/cloudflare/tunnels/1/tunnel_id', errors='ignore') }}.json
-          account_tag: "{{ lookup('community.general.passwordstore', 'homelab/secrets/cloudflare/tunnels/1/account_tag', errors='ignore') }}"
-          tunnel_secret: "{{ lookup('community.general.passwordstore', 'homelab/secrets/cloudflare/tunnels/1/tunnel_secret', errors='ignore') }}"
+          tunnel_id: "{{ lookup('bitwarden', 'homelab/secrets/cloudflare/tunnels/1/tunnel_id') }}"
+          credentials-file: /etc/cloudflared/{{ lookup('bitwarden', 'homelab/secrets/cloudflare/tunnels/1/tunnel_id') }}.json
+          account_tag: "{{ lookup('bitwarden', 'homelab/secrets/cloudflare/tunnels/1/account_tag') }}"
+          tunnel_secret: "{{ lookup('bitwarden', 'homelab/secrets/cloudflare/tunnels/1/tunnel_secret') }}"
           loglevel: debug
           routes:
             dns:
@@ -52,23 +62,23 @@
             - "ainv"
             - "audiobookshelf"
           ingress:
-          - hostname: "firefly.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
-          - hostname: "bookstack.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "bookstack.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8082
-          - hostname: "vikunja.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "vikunja.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8083
-          - hostname: "nextcloud.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "nextcloud.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8084
-          - hostname: "webtrees.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "webtrees.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8085
-          - hostname: "photoprism.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "photoprism.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8086
-          - hostname: "ainv-dev.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "ainv-dev.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8087
-          - hostname: "ainv.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "ainv.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8088
-          - hostname: "audiobookshelf.{{ lookup('community.general.passwordstore', 'homelab/secrets/domain/public/base', errors='ignore') }}"
+          - hostname: "audiobookshelf.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8090
           - service: http_status:404
       tags:

@@ -9,6 +9,10 @@ roles:
   src: https://github.com/papanito/ansible-role-cloudflared.git
   version: origin/master
 
+- name: ansible-modules-bitwarden
+  src: https://github.com/c0sco/ansible-modules-bitwarden
+  version: origin/master
+
 collections:
 - name: community.mysql
 - name: ansible.posix
