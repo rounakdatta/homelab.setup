@@ -29,7 +29,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           MACHINE_IP="$(tailscale ip -4 ${MACHINE_NAME})"
-          echo "::add-mask::${{ MACHINE_IP }}"
+          echo "::add-mask::${MACHINE_IP}"
           echo "GITHUB_MACHINE_IP=${MACHINE_IP}" >> ${GITHUB_ENV}
           ssh-keyscan ${MACHINE_IP} >> ~/.ssh/known_hosts
           printf "%s" "${SSH_KEY}" > ~/.ssh/key
