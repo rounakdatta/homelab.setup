@@ -8,3 +8,4 @@
 
 - name: Setup cloudflared certificate
   shell: "echo '{{ lookup('bitwarden', 'homelab/secrets/cloudflare/tunnels/1/certificate', field='notes') }}' > ~/.secrets/cert.pem"
+  no_log: true
