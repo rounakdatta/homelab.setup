@@ -47,6 +47,7 @@ jobs:
           npm install -g @bitwarden/cli
           bw login --apikey
           export BW_SESSION=$(bw unlock --raw "${BW_PW}")
+          echo "::add-mask::${BW_SESSION}"
           echo "BW_SESSION=${BW_SESSION}" >> ${GITHUB_ENV}
           bw sync
 
