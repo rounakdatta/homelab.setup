@@ -28,4 +28,3 @@
         minute: "30"
         hour: "4"
         job: "rclone bisync -v --resync {{ hdd_mount_path }}/homelab {{ Name }}:{{ Bucket }}/backup/homelab"
-        no_log: true
