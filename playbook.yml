@@ -86,7 +86,3 @@
           - service: http_status:404
       tags:
         - networking
-
-    - role: setup-cron
-      tags:
-        - backup
