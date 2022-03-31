@@ -50,7 +50,7 @@ jobs:
           export BW_SESSION=$(bw unlock --raw "${BW_PW}") >/dev/null
           echo "BW_SESSION=${BW_SESSION}" >> ${GITHUB_ENV}
           bw sync
-          echo "::add-mask::${BW_SESSION}"
+          echo "::add-mask::${BW_SESSION}" >/dev/null
 
       - name: Run Ansible playbook
         uses: dawidd6/action-ansible-playbook@v2
