@@ -59,7 +59,7 @@ job "duplicati_job" {
 
       volume_mount {
         volume      = "duplicati_backup_volume"
-        destination = "/source"
+        destination = "/backups"
         read_only   = false
       }
 

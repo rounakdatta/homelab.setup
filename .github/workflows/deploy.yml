@@ -3,7 +3,7 @@ name: Deploy
 on:
   push:
     branches:
-      - '**'
+      - '**' # running only on main branch is pointless until we have a development environment
 
 jobs:
   deploy:
@@ -50,6 +50,7 @@ jobs:
           export BW_SESSION=$(bw unlock --raw "${BW_PW}") >/dev/null
           echo "BW_SESSION=${BW_SESSION}" >> ${GITHUB_ENV}
           bw sync
+          echo "::add-mask::${BW_SESSION}"
 
       - name: Run Ansible playbook
         uses: dawidd6/action-ansible-playbook@v2
