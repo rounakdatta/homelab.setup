@@ -84,6 +84,11 @@
       vars:
         service: "audiobookshelf"
 
+    - name: Initiate config file building for duplicati
+      include: configure.yml
+      vars:
+        service: "duplicati"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -110,8 +115,4 @@
     - photoprism
     - ainv
     - audiobookshelf
-
-- name: Manually override webtrees config file permission
-  file:
-    path: "{{ hdd_mount_path }}/homelab/webtrees/data/config.ini.php"
-    mode: 0700
+    - duplicati

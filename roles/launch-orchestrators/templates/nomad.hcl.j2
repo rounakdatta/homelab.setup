@@ -62,6 +62,18 @@ client {
   host_volume "audiobookshelf_metadata_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/audiobookshelf/metadata"
   }
+
+  host_volume "duplicati_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/duplicati"
+  }
+
+  host_volume "duplicati_source_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab"
+  }
+
+  host_volume "duplicati_backup_hdd_volume" {
+    path = "{{ hdd_mount_path }}/backup"
+  }
 }
 
 plugin "docker" {

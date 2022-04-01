@@ -1,0 +1,74 @@
+job "duplicati_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "duplicati_group" {
+    count = 1
+
+    network {
+      port "duplicati_port" {
+        static       = "6060"
+        to           = "8200"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "duplicati_config_volume" {
+      type      = "host"
+      source    = "duplicati_config_hdd_volume"
+      read_only = false
+    }
+
+    volume "duplicati_source_volume" {
+      type      = "host"
+      source    = "duplicati_source_hdd_volume"
+      read_only = true
+    }
+
+    volume "duplicati_backup_volume" {
+      type      = "host"
+      source    = "duplicati_backup_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "duplicati" {
+      driver = "docker"
+
+      env = {
+        TZ     = "Asia/Kolkata"
+      }
+
+      volume_mount {
+        volume      = "duplicati_config_volume"
+        destination = "/config"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "duplicati_source_volume"
+        destination = "/source"
+        read_only   = true
+      }
+
+      volume_mount {
+        volume      = "duplicati_backup_volume"
+        destination = "/backups"
+        read_only   = false
+      }
+
+      config {
+        image = "linuxserver/duplicati"
+        ports = ["duplicati_port"]
+
+      }
+    }
+  }
+}
+
