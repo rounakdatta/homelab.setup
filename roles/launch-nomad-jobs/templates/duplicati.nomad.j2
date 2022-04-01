@@ -42,7 +42,9 @@ job "duplicati_job" {
       driver = "docker"
 
       env = {
-        TZ     = "Asia/Kolkata"
+        TZ   = "Asia/Kolkata"
+        PUID = "0"
+        PGID = "0"
       }
 
       volume_mount {
@@ -66,7 +68,6 @@ job "duplicati_job" {
       config {
         image = "linuxserver/duplicati"
         ports = ["duplicati_port"]
-
       }
     }
   }
