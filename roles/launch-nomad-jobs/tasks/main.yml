@@ -89,6 +89,11 @@
       vars:
         service: "duplicati"
 
+    - name: Initiate config file building for strings
+      include: configure.yml
+      vars:
+        service: "strings"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -116,3 +121,4 @@
     - ainv
     - audiobookshelf
     - duplicati
+    - strings

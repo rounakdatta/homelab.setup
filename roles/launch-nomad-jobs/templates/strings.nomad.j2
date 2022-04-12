@@ -1,0 +1,33 @@
+job "strings_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "strings_group" {
+    count = 1
+
+    network {
+      port "strings_port" {
+        static       = "7887"
+        to           = "3000"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "strings" {
+      driver = "docker"
+
+      config {
+        image = "daveperrett/string-is"
+        ports = ["strings_port"]
+      }
+    }
+  }
+}
+
