@@ -30,6 +30,8 @@ job "firefly-iii_job" {
         DB_PASSWORD = "{{ FireflyDatabasePassword }}"
         DB_DATABASE = "{{ FireflyDatabaseName }}"
         APP_URL     = "https://firefly.{{ BaseDomain }}"
+        DISABLE_CSP_HEADER = "true"
+        TRUSTED_PROXIES = "**"
       }
 
       config {
