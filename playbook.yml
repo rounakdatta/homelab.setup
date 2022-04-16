@@ -62,6 +62,7 @@
             - "ainv"
             - "audiobookshelf"
             - "duplicati"
+            - "ntfy"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -83,6 +84,8 @@
             service: http://localhost:8090
           - hostname: "duplicati.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8091
+          - hostname: "ntfy.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8092
           - service: http_status:404
       tags:
         - networking

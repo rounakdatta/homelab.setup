@@ -89,6 +89,11 @@
       vars:
         service: "duplicati"
 
+    - name: Initiate config file building for ntfy
+      include: configure.yml
+      vars:
+        service: "ntfy"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -116,3 +121,4 @@
     - ainv
     - audiobookshelf
     - duplicati
+    - ntfy
