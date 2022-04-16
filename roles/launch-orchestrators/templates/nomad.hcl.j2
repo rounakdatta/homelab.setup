@@ -74,6 +74,9 @@ client {
   host_volume "duplicati_backup_hdd_volume" {
     path = "{{ hdd_mount_path }}/backup"
   }
+
+  host_volume "ntfy_cache_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/ntfy"
 }
 
 plugin "docker" {
