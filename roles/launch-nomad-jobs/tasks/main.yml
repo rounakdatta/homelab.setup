@@ -46,6 +46,7 @@
         VikunjaMailerPort: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/port') }}"
         VikunjaMailerUsername: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/username') }}"
         VikunjaMailerPassword: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/password') }}"
+        VikunjaMailerSender: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/sender') }}"
 
     - name: Initiate config file building for Nextcloud
       include: configure.yml

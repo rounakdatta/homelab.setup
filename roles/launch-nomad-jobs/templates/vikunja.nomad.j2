@@ -48,6 +48,7 @@ job "vikunja_job" {
         VIKUNJA_MAILER_PORT = "{{ VikunjaMailerPort }}"
         VIKUNJA_MAILER_USERNAME = "{{ VikunjaMailerUsername }}"
         VIKUNJA_MAILER_PASSWORD = "{{ VikunjaMailerPassword }}"
+        VIKUNJA_MAILER_FROMEMAIL = "{{ VikunjaMailerSender }}"
       }
 
       volume_mount {
