@@ -41,6 +41,15 @@ job "vikunja_job" {
         VIKUNJA_DATABASE_PASSWORD = "{{ VikunjaDatabasePassword }}"
         VIKUNJA_DATABASE_DATABASE = "{{ VikunjaDatabaseName }}"
         VIKUNJA_DATABASE_TYPE     = "mysql"
+        VIKUNJA_SERVICE_ENABLEEMAILREMINDERS = "true"
+        VIKUNJA_MAILER_ENABLED = "true"
+        VIKUNJA_MAILER_FORCESSL = "true"
+        VIKUNJA_MAILER_HOST = "{{ VikunjaMailerHost }}"
+        VIKUNJA_MAILER_PORT = "{{ VikunjaMailerPort }}"
+        VIKUNJA_MAILER_USERNAME = "{{ VikunjaMailerUsername }}"
+        VIKUNJA_MAILER_PASSWORD = "{{ VikunjaMailerPassword }}"
+        VIKUNJA_MAILER_FROMEMAIL = "{{ VikunjaMailerSender }}"
+        VIKUNJA_LOG_LEVEL = "DEBUG"
       }
 
       volume_mount {
