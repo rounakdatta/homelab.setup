@@ -1,0 +1,49 @@
+job "redis_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "redis_group" {
+    count = 1
+
+    network {
+      port "redis_port" {
+        static       = "6379"
+        to           = "6379"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "redis_cache_volume" {
+      type      = "host"
+      source    = "redis_cache_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "redis" {
+      driver = "docker"
+
+      env = {
+        ALLOW_EMPTY_PASSWORD = "yes"
+      }
+
+      volume_mount {
+        volume      = "redis_cache_volume"
+        destination = "/bitnami/redis/data"
+        read_only   = false
+      }
+
+      config {
+        image = "bitnami/redis:latest"
+        ports = ["redis_port"]
+      }
+    }
+  }
+}
+
