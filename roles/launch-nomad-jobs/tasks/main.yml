@@ -18,6 +18,11 @@
         service: "mysql"
         DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/mysql/root_password') }}"
 
+    - name: Initiate config file building for redis
+      include: configure.yml
+      vars:
+        service: "redis"
+
     - name: Initiate config file building for Firefly-III
       include: configure.yml
       vars:
@@ -55,6 +60,8 @@
         NextcloudDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/username') }}"
         NextcloudDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/password') }}"
         NextcloudDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/database') }}"
+        NextcloudRedisHost: "{{ HOST_EXTERNAL_IPV4 }}"
+        NextcloudRedisPort: "6379"
 
     - name: Initiate config file building for Webtrees
       include: configure.yml
@@ -117,6 +124,7 @@
     service: "{{ item }}"
   with_items:
     - mysql
+    - redis
     - firefly
     - bookstack
     - vikunja

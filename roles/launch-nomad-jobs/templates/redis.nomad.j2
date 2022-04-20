@@ -1,0 +1,33 @@
+job "redis_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "redis_group" {
+    count = 1
+
+    network {
+      port "redis_port" {
+        static       = "6379"
+        to           = "6379"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "redis" {
+      driver = "docker"
+
+      config {
+        image = "arm64v8/redis"
+        ports = ["redis_port"]
+      }
+    }
+  }
+}
+
