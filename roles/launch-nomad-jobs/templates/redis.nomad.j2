@@ -13,12 +13,6 @@ job "redis_job" {
       }
     }
 
-    volume "redis_cache_volume" {
-      type      = "host"
-      source    = "redis_cache_hdd_volume"
-      read_only = false
-    }
-
     restart {
       attempts = 3
       interval = "25m"
@@ -29,18 +23,8 @@ job "redis_job" {
     task "redis" {
       driver = "docker"
 
-      env = {
-        ALLOW_EMPTY_PASSWORD = "yes"
-      }
-
-      volume_mount {
-        volume      = "redis_cache_volume"
-        destination = "/bitnami/redis/data"
-        read_only   = false
-      }
-
       config {
-        image = "bitnami/redis:latest"
+        image = "arm64v8/redis"
         ports = ["redis_port"]
       }
     }
