@@ -1,7 +1,7 @@
 # firefly-iii
 :8081 {
     reverse_proxy {{ HostIp }}:9299
-    redir https://{host}{uri}
+    header Content-Security-Policy upgrade-insecure-requests
 }
 
 # bookstack
