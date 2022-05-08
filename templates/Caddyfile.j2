@@ -1,7 +1,7 @@
 # firefly-iii
 :8081 {
     reverse_proxy {{ HostIp }}:9299
-    header Location http:// https://
+    redir https://{host}{uri}
 }
 
 # bookstack
