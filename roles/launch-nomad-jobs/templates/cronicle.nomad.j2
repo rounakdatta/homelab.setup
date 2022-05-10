@@ -1,0 +1,50 @@
+job "cronicle_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "cronicle_group" {
+    count = 1
+
+    network {
+      port "cronicle_port" {
+        static       = "3012"
+        to           = "3012"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "cronicle_volume" {
+      type      = "host"
+      source    = "cronicle_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "cronicle" {
+      driver = "docker"
+
+      env = {
+        CRONICLE_base_app_url = "https://cronicle.{{ BaseDomain }}"
+      }
+
+      volume_mount {
+        volume      = "cronicle_volume"
+        destination = "/opt/cronicle"
+        read_only   = false
+      }
+
+      config {
+        image = "bluet/cronicle-docker"
+        command = "serve"
+        ports = ["cronicle_port"]
+      }
+    }
+  }
+}
+

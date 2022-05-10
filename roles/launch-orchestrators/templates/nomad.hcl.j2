@@ -78,6 +78,10 @@ client {
   host_volume "ntfy_cache_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/ntfy"
   }
+
+  host_volume "cronicle_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/cronicle"
+  }
 }
 
 plugin "docker" {
