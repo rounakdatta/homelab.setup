@@ -78,6 +78,22 @@ client {
   host_volume "ntfy_cache_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/ntfy"
   }
+
+  host_volume "cronicle_data_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/cronicle/data"
+  }
+
+  host_volume "cronicle_logs_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/cronicle/logs"
+  }
+
+  host_volume "cronicle_plugins_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/cronicle/plugins"
+  }
+
+  host_volume "cronicle_app_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/cronicle/app"
+  }
 }
 
 plugin "docker" {
