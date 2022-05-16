@@ -1,0 +1,48 @@
+job "metabase_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "metabase_group" {
+    count = 1
+
+    network {
+      port "metabase_port" {
+        static       = "3999"
+        to           = "3000"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "metabase_volume" {
+      type      = "host"
+      source    = "metabase_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "metabase" {
+      driver = "docker"
+
+      env = {
+        MB_DB_FILE = "/metabase-data/metabase.db"
+      }
+
+      volume_mount {
+        volume      = "metabase_volume"
+        destination = "/metabase-data"
+        read_only   = false
+      }
+
+      config {
+        image = "metabase/metabase"
+        ports = ["metabase_port"]
+      }
+    }
+  }
+}

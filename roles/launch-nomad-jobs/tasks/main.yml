@@ -111,6 +111,11 @@
       vars:
         service: "cronicle"
 
+    - name: Initiate config file building for metabase
+      include: configure.yml
+      vars:
+        service: "metabase"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -141,3 +146,4 @@
     - duplicati
     - ntfy
     - cronicle
+    - metabase
