@@ -13,12 +13,6 @@ job "metabase_job" {
       }
     }
 
-    volume "metabase_volume" {
-      type      = "host"
-      source    = "metabase_hdd_volume"
-      read_only = false
-    }
-
     restart {
       attempts = 3
       interval = "25m"
@@ -30,13 +24,13 @@ job "metabase_job" {
       driver = "docker"
 
       env = {
-        MB_DB_FILE = "/metabase-data/metabase.db"
-      }
-
-      volume_mount {
-        volume      = "metabase_volume"
-        destination = "/metabase-data"
-        read_only   = false
+        MB_DB_TYPE     = "mariadb"
+        MB_DB_USER = "{{ MetabaseDatabaseUsername }}"
+        MB_DB_PASS = "{{ MetabaseDatabasePassword }}"
+        MB_DB_DBNAME = "{{ MetabaseDatabaseName }}"
+        MB_DB_HOST   = "{{ MetabaseDatabaseHost }}"
+        MB_DB_PORT = "3306"
+        MB_ENCRYPTION_SECRET_KEY = "{{ MetabaseEncryptionKey }}"
       }
 
       config {

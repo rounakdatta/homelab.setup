@@ -94,10 +94,6 @@ client {
   host_volume "cronicle_app_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/cronicle/app"
   }
-
-  host_volume "metabase_hdd_volume" {
-    path = "{{ hdd_mount_path }}/homelab/metabase"
-  }
 }
 
 plugin "docker" {
