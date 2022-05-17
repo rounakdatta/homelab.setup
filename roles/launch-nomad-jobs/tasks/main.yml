@@ -111,6 +111,16 @@
       vars:
         service: "cronicle"
 
+    - name: Initiate config file building for metabase
+      include: configure.yml
+      vars:
+        service: "metabase"
+        MetabaseDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/metabase/username') }}"
+        MetabaseDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/metabase/password') }}"
+        MetabaseDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/metabase/database') }}"
+        MetabaseDatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+        MetabaseEncryptionKey: "{{ lookup('bitwarden', 'homelab/secrets/metabase/encryption/key') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -141,3 +151,4 @@
     - duplicati
     - ntfy
     - cronicle
+    - metabase
