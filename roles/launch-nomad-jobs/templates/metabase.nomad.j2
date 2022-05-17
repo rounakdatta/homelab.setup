@@ -24,7 +24,7 @@ job "metabase_job" {
       driver = "docker"
 
       env = {
-        MB_DB_TYPE     = "mariadb"
+        MB_DB_TYPE     = "mysql"
         MB_DB_USER = "{{ MetabaseDatabaseUsername }}"
         MB_DB_PASS = "{{ MetabaseDatabasePassword }}"
         MB_DB_DBNAME = "{{ MetabaseDatabaseName }}"
