@@ -121,6 +121,15 @@
         MetabaseDatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
         MetabaseEncryptionKey: "{{ lookup('bitwarden', 'homelab/secrets/metabase/encryption/key') }}"
 
+    - name: Initiate config file building for n8n
+      include: configure.yml
+      vars:
+        service: "n8n"
+        N8NDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/n8n/username') }}"
+        N8NDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/n8n/password') }}"
+        N8NDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/n8n/database') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -152,3 +161,4 @@
     - ntfy
     - cronicle
     - metabase
+    - n8n

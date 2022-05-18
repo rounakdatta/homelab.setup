@@ -1,0 +1,57 @@
+job "n8n_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "n8n_group" {
+    count = 1
+
+    network {
+      port "n8n_port" {
+        static       = "7339"
+        to           = "5678"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "n8n_volume" {
+      type      = "host"
+      source    = "n8n_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "n8n" {
+      driver = "docker"
+
+      env = {
+        DB_TYPE = "mysqldb"
+        DB_MYSQLDB_HOST = "{{ DatabaseHost }}"
+        DB_MYSQLDB_PORT = "3306"
+        DB_MYSQLDB_USER = "{{ N8NDatabaseUsername }}"
+        DB_MYSQLDB_PASSWORD = "{{ N8NDatabasePassword }}"
+        DB_MYSQLDB_DATABASE = "{{ N8NDatabaseName }}"
+        GENERIC_TIMEZONE = "Asia/Kolkata"
+        TZ = "Asia/Kolkata"
+      }
+
+      volume_mount {
+        volume      = "n8n_volume"
+        destination = "/home/node/.n8n"
+        read_only   = false
+      }
+
+      config {
+        image = "n8nio/n8n"
+        ports = ["n8n_port"]
+        command = "n8n start"
+      }
+    }
+  }
+}
+

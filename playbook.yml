@@ -65,6 +65,7 @@
             - "ntfy"
             - "cronicle"
             - "metabase"
+            - "n8n"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -92,6 +93,8 @@
             service: http://localhost:8093
           - hostname: "metabase.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8094
+          - hostname: "n8n.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8095
           - service: http_status:404
       tags:
         - networking
