@@ -38,6 +38,7 @@ job "n8n_job" {
         DB_MYSQLDB_DATABASE = "{{ N8NDatabaseName }}"
         GENERIC_TIMEZONE = "Asia/Kolkata"
         TZ = "Asia/Kolkata"
+        WEBHOOK_URL = "https://n8n.{{ BaseDomain }}"
       }
 
       volume_mount {
