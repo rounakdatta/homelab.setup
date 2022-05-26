@@ -19,6 +19,12 @@ job "kavita_job" {
       read_only = false
     }
 
+    volume "kavita_books_volume" {
+      type      = "host"
+      source    = "kavita_books_hdd_volume"
+      read_only = false
+    }
+
     restart {
       attempts = 3
       interval = "25m"
@@ -36,6 +42,12 @@ job "kavita_job" {
       volume_mount {
         volume      = "kavita_volume"
         destination = "/kavita/config"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "kavita_books_volume"
+        destination = "/kavita/books"
         read_only   = false
       }
 
