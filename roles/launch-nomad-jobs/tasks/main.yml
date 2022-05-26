@@ -130,6 +130,11 @@
         N8NDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/n8n/database') }}"
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
+    - name: Initiate config file building for kavita
+      include: configure.yml
+      vars:
+        service: "kavita"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -162,3 +167,4 @@
     - cronicle
     - metabase
     - n8n
+    - kavita

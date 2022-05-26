@@ -98,6 +98,14 @@ client {
   host_volume "n8n_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/n8n"
   }
+
+  host_volume "kavita_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/kavita"
+  }
+
+  host_volume "kavita_books_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/{{ relative_path_to_books }}"
+  }
 }
 
 plugin "docker" {

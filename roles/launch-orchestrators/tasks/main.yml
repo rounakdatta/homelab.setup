@@ -42,5 +42,6 @@
   vars:
     HostIp: "{{ HOST_EXTERNAL_IPV4 }}"
     service: "{{ item }}"
+    relative_path_to_books: "{{ lookup('bitwarden', 'homelab/secrets/kavita/books/path') }}"
   with_items:
     - nomad
