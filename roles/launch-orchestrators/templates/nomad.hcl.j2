@@ -106,6 +106,14 @@ client {
   host_volume "kavita_books_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/{{ relative_path_to_books }}"
   }
+
+  host_volume "mailpile_gnupg_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/mailpile/gnupg"
+  }
+
+  host_volume "mailpile_data_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/mailpile/data"
+  }
 }
 
 plugin "docker" {
