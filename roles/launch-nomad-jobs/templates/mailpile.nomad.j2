@@ -47,6 +47,10 @@ job "mailpile_job" {
         read_only   = false
       }
 
+      env = {
+        MAILPILE_IGNORE_BINARIES="Tor"
+      }
+
       config {
         image = "memphisx/rpi-mailpile"
         ports = ["mailpile_port"]
