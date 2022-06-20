@@ -19,7 +19,6 @@ jobs:
         uses: tailscale/github-action@v1
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
-          # args: ${{ secrets.TAILSCALE_ADDITIONAL_ARGS }}
 
       - name: Add SSH key
         id: ssh
