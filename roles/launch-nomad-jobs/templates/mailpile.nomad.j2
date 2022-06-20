@@ -46,13 +46,9 @@ job "mailpile_job" {
         destination = "/root/.local/share/Mailpile"
         read_only   = false
       }
-
-      env = {
-        MAILPILE_IGNORE_BINARIES="Tor"
-      }
-
+      
       config {
-        image = "memphisx/rpi-mailpile"
+        image = "rounakdatta/mailpile"
         ports = ["mailpile_port"]
       }
     }
