@@ -46,6 +46,13 @@ job "mailpile_job" {
         destination = "/root/.local/share/Mailpile"
         read_only   = false
       }
+
+      env = {
+        MAILPILE_TOR="/usr/sbin/tor"
+        MAILPILE_OPENSSL="/usr/bin/openssl"
+        MAILPILE_GNUPG="/usr/bin/gpg"
+        MAILPILE_IGNORE_BINARIES="GnuPG/ga GnuPG/dm"
+      }
       
       config {
         image = "rounakdatta/mailpile"
