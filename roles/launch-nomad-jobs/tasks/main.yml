@@ -136,6 +136,11 @@
       vars:
         service: "kavita"
 
+    - name: Initiate config file building for mailpile
+      include: configure.yml
+      vars:
+        service: "mailpile"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -166,3 +171,4 @@
     - ntfy
     - cronicle
     - kavita
+    - mailpile
