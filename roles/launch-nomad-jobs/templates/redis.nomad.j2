@@ -24,7 +24,7 @@ job "redis_job" {
       driver = "docker"
 
       config {
-        image = "{% install_arch if (install_arch == 'amd64') else arm64v8 %}/redis"
+        image = "{{ install_arch_mod }}/redis"
         ports = ["redis_port"]
       }
     }
