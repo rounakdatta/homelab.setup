@@ -40,7 +40,7 @@ job "mysql_job" {
       }
 
       config {
-        image = "arm64v8/mariadb:10.3.32"
+        image = "{% install_arch if (install_arch == 'amd64') else arm64v8 %}/mariadb:10.3.32"
 
         ports = ["mysql_port"]
 

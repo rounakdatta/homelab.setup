@@ -59,4 +59,4 @@ jobs:
           options: |
             --inventory hosts
             --verbose
-            --extra-vars "HOST_EXTERNAL_IPV4=${{ env.GITHUB_MACHINE_IP }} hdd_mount_path=${{ secrets.STORAGE_MOUNT_PATH }}"
+            --extra-vars "HOST_EXTERNAL_IPV4=${{ env.GITHUB_MACHINE_IP }} hdd_mount_path=${{ secrets.STORAGE_MOUNT_PATH }}" install_arch=${{ secrets.INSTALL_ARCH }}
