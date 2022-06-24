@@ -29,6 +29,10 @@ job "mysql_job" {
     task "mysql_server" {
       driver = "docker"
 
+      resources {
+        memory = 400
+      }
+
       env = {
         MYSQL_ROOT_PASSWORD = "{{ DatabaseRootPassword }}"
       }

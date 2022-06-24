@@ -41,6 +41,10 @@ job "duplicati_job" {
     task "duplicati" {
       driver = "docker"
 
+      resources {
+        memory = 200
+      }
+
       env = {
         TZ   = "Asia/Kolkata"
         PUID = "0"

@@ -29,6 +29,10 @@ job "bookstack_job" {
     task "bookstack" {
       driver = "docker"
 
+      resources {
+        memory = 200
+      }
+
       env = {
         DB_HOST     = "{{ DatabaseHost }}"
         DB_USERNAME = "{{ BookstackDatabaseUsername }}"

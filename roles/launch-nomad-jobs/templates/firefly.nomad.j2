@@ -23,6 +23,10 @@ job "firefly-iii_job" {
     task "firefly-iii" {
       driver = "docker"
 
+      resources {
+        memory = 200
+      }
+
       env = {
         APP_KEY     = "{{ FireflyApplicationEncryptionKey }}"
         DB_HOST     = "{{ DatabaseHost }}"

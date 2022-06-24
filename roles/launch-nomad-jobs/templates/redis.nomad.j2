@@ -23,6 +23,11 @@ job "redis_job" {
     task "redis" {
       driver = "docker"
 
+      resources {
+        memory = 100
+      }
+
+
       config {
         image = "{{ install_arch_mod }}/redis"
         ports = ["redis_port"]
