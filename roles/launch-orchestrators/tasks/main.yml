@@ -5,12 +5,17 @@
 
 - name: Download nomad package
   get_url:
-    url: "https://releases.hashicorp.com/nomad/1.3.1/nomad_1.3.1_linux_arm64.zip"
+    url: "https://releases.hashicorp.com/nomad/1.3.1/nomad_1.3.1_linux_{{ install_arch }}.zip"
     dest: "/tmp/"
+
+- name: Install the required apt packages
+  apt:
+    name:
+      - unzip
 
 - name: Inflate the package
   ansible.builtin.unarchive:
-    src: "/tmp/nomad_1.3.1_linux_arm64.zip"
+    src: "/tmp/nomad_1.3.1_linux_{{ install_arch }}.zip"
     dest: "/usr/bin"
     remote_src: yes
 

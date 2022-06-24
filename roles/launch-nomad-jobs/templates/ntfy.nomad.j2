@@ -29,6 +29,10 @@ job "ntfy_job" {
     task "ntfy" {
       driver = "docker"
 
+      resources {
+        memory = 200
+      }
+
       env = {
         NTFY_BASE_URL = "https://ntfy.{{ BaseDomain }}"
         NTFY_CACHE_FILE = "/var/cache/ntfy/cache.db"

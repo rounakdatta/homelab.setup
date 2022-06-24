@@ -35,6 +35,10 @@ job "webtrees_job" {
     task "webtrees" {
       driver = "docker"
 
+      resources {
+        memory = 100
+      }
+
       env = {
         DB_HOST     = "{{ DatabaseHost }}"
         DB_USER = "{{ WebtreesDatabaseUsername }}"

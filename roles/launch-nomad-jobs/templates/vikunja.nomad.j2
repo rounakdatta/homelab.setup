@@ -35,6 +35,10 @@ job "vikunja_job" {
     task "vikunja_api" {
       driver = "docker"
 
+      resources {
+        memory = 100
+      }
+
       env = {
         VIKUNJA_DATABASE_HOST     = "{{ DatabaseHost }}"
         VIKUNJA_DATABASE_USER     = "{{ VikunjaDatabaseUsername }}"
@@ -67,6 +71,10 @@ job "vikunja_job" {
 
     task "vikunja_frontend" {
       driver = "docker"
+
+      resources {
+        memory = 100
+      }
 
       env = {
         VIKUNJA_API_URL = "https://vikunja.{{ BaseDomain }}/api/v1"

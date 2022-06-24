@@ -35,6 +35,10 @@ job "kavita_job" {
     task "kavita" {
       driver = "docker"
 
+      resources {
+        memory = 200
+      }
+
       env = {
         TZ = "Asia/Kolkata"
       }

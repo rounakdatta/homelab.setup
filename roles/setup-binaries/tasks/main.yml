@@ -2,5 +2,5 @@
 
 - name: Download cloudflared binary
   get_url:
-    url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64"
+    url: "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-{{ install_arch }}"
     dest: "/usr/bin/cloudflared"
