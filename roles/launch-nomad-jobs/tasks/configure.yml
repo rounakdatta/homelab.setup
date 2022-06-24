@@ -5,4 +5,4 @@
     src: "{{ service }}.nomad.j2"
     dest: "{{ nomad_jobs_path }}/{{ service }}.nomad"
   vars:
-    install_arch_mod: {% install_arch if (install_arch == 'amd64') else arm64v8 %}
+    install_arch_mod: "{{ install_arch if install_arch == 'amd64' else 'arm64v8' }}"
