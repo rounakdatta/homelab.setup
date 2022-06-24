@@ -23,7 +23,6 @@ jobs:
       - name: Add SSH key
         id: ssh
         env:
-          SSH_KEY: ${{ secrets.SSH_KEY }}
           SSH_USER: ${{ secrets.SSH_USER }}
           MACHINE_NAME: ${{ secrets.MACHINE_NAME }}
         run: |
@@ -32,9 +31,7 @@ jobs:
           echo "::add-mask::${MACHINE_IP}"
           echo "GITHUB_MACHINE_IP=${MACHINE_IP}" >> ${GITHUB_ENV}
           ssh-keyscan ${MACHINE_IP} >> ~/.ssh/known_hosts
-          printf "%s" "${SSH_KEY}" > ~/.ssh/key
-          chmod 600 ~/.ssh/key
-          printf "Host homelab\n\tUser %s\n\tIdentityFile %s\n\tHostName %s" "${SSH_USER}" "~/.ssh/key" "${MACHINE_IP}" > ~/.ssh/config
+          printf "Host homelab\n\tUser %s\n\tHostName %s" "${SSH_USER}" "${MACHINE_IP}" > ~/.ssh/config
 
       - name: Set up Bitwarden
         id: bitwarden
