@@ -24,7 +24,11 @@ client {
   }
 
   host_volume "nextcloud_hdd_volume" {
-    path = "{{ hdd_mount_path }}/homelab/nextcloud"
+    path = "{{ hdd_mount_path }}/homelab/nextcloud/data"
+  }
+
+  host_volume "nextcloud_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/nextcloud/config"
   }
 
   host_volume "bookstack_hdd_volume" {

@@ -19,6 +19,12 @@ job "nextcloud_job" {
       read_only = false
     }
 
+    volume "nextcloud_config_volume" {
+      type      = "host"
+      source    = "nextcloud_config_hdd_volume"
+      read_only = false
+    }
+
     restart {
       attempts = 10
       interval = "25m"
@@ -30,7 +36,7 @@ job "nextcloud_job" {
       driver = "docker"
 
       resources {
-        memory = 200
+        memory = 300
       }
 
       env = {
@@ -43,7 +49,13 @@ job "nextcloud_job" {
 
       volume_mount {
         volume      = "nextcloud_volume"
-        destination = "/var/www/html"
+        destination = "/var/www/html/data"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "nextcloud_config_volume"
+        destination = "/var/www/html/config"
         read_only   = false
       }
 
