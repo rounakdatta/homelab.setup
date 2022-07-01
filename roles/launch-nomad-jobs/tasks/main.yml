@@ -141,6 +141,16 @@
       vars:
         service: "mailpile"
 
+    - name: Initiate config file building for miniflux
+      include: configure.yml
+      vars:
+        service: "miniflux"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/fly.io/postgres/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/fly.io/postgres/password') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}:5432"
+        MinifluxUsername: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/username') }}"
+        MinifluxPassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/password') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -172,3 +182,4 @@
     - cronicle
     - kavita
     - mailpile
+    - miniflux

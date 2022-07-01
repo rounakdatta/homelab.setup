@@ -68,6 +68,7 @@
             - "n8n"
             - "kavita"
             - "mailpile"
+            - "miniflux"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -101,6 +102,8 @@
             service: http://localhost:8096
           - hostname: "mailpile.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8097
+          - hostname: "miniflux.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8098
           - service: http_status:404
       tags:
         - networking
