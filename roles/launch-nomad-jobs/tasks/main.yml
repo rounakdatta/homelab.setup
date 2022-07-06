@@ -145,9 +145,9 @@
       include: configure.yml
       vars:
         service: "miniflux"
-        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/fly.io/postgres/username') }}"
-        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/fly.io/postgres/password') }}"
-        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}:5432"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/rds/postgres/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/rds/postgres/password') }}"
+        DatabaseHost: "{{ lookup('bitwarden', 'homelab/secrets/rds/postgres/host') }}"
         MinifluxUsername: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/username') }}"
         MinifluxPassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/password') }}"
 

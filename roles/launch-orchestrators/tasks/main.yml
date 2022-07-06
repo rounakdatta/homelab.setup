@@ -31,20 +31,6 @@
     state: directory
     recurse: yes
 
-- name: Set up flyctl (connecting to an external database)
-  vars:
-    DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
-    BaseDomain: "{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-
-  block:
-    - name: Install flyctl
-      shell: "curl -L https://fly.io/install.sh | sh"
-
-    - name: Set up flyctl PG proxy
-      environment:
-        FLY_ACCESS_TOKEN: "{{ lookup('bitwarden', 'homelab/secrets/fly.io/token') }}"
-      shell: "~/.fly/bin/flyctl proxy 5432 -a {{ lookup('bitwarden', 'homelab/secrets/fly.io/postgres/name') }} &"
-
 - name: launch systemd services
   include: configure.yml
   vars:
