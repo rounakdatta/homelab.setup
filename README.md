@@ -1,6 +1,6 @@
 ![homelab.setup-logo](homelab.setup_logo.png)
 
-This repository hosts all the playbooks required to deploy and run my homelab. You have bring your own hardware, Linux operating system and *data* though.
+This repository hosts all the playbooks required to deploy and run my homelab. You have to bring your own hardware, Linux operating system and *data* though.
 
 My homelab is a single-node x64 (previously ARM) machine, and applications are deployed containerized via Hashicorp Nomad. Tailscale takes care of all the networking required for administration and deployments. Cloudflare Tunnels help in exposing the services to the internet.
 
@@ -39,24 +39,28 @@ The project was born as a hobby idea to organize knowledge. The core idea is to 
 
 ## Deployment mechanism
 
-Deployments happen whenever a PR gets merged to the `main` branch. GitHub CI is used for all deployments. Whenever there's code merged, the CI instance boots up, joins my Tailscale network, runs the Ansible playbook and goes away once successful. Hence idempotence is a strict requirement here.
+Deployments happen whenever a PR gets merged to the `main` branch. GitHub CI is used for all deployments and the secrets are kept in Bitwarden (non self-hosted). Whenever there's code merged, the CI instance boots up, joins my Tailscale network, picks up the Bitwarden secrets, runs the Ansible playbook and goes away once successful. Needless to say, idempotence is therefore a strict requirement here.
 
 ## Backup mechanism
 
-All the application containers are mapped to a persistent storage in the mounted HDD. And this giant data directory is being backed up to object storage (Backblaze B2 in my case). Encrypted, incremental backups - thanks to Duplicati.
+All the application containers are mapped to a persistent storage location in the mounted HDD. And this giant data directory is being backed up to object storage (Backblaze B2 in my case). Encrypted, incremental backups - thanks to Duplicati.
 
-## History of the host machine
+## Evolution of the host machine
 
 1. 1GB DigitalOcean droplet
     - The now-archived [repository](https://github.com/rounakdatta/homeserver.setup) used to deploy applications natively (non-containerized) and given memory was limited, very few applications were deployed.
     - Since DO droplets have dedicated IPv4, exposing services publicly was not at all a concern.
 2. Raspberry Pi 4
-    - The Raspberry Pi performed really well in the initial 3 months of setting up, until summer spoiled the party.
+    - The Raspberry Pi performed really well in the initial 3 months of setting up, until summer heat waves spoiled the party.
     - Pis being single-board computers tend to get very hot when overworking.
-    - The Pi (ARM) setup was very efficient on power and had a USB-connected HDD for storage.
+    - The Pi (ARM) setup was very efficient on power and had an external USB-connected HDD for storage.
     - The Pi ran DietPi - a stripped down Debian-based operating system. With 8GB of memory, it ran a large number of applications really well, although response times were quite high on average.
 3. Dell Latitude E6400
     - Migrating to a AMD64 (x64) old laptop was mostly trivial. The Dell machine runs Ubuntu server.
     - CPU, in comparison to the Pi is way more faster and resulted to slightly better response times.
     - Being a laptop, the machine provides battery backup to some extent and also a screen for urgent debugging.
     - However the laptop being decade-old, it tends to heat up a lot and needs active environmental cooling.
+
+## Future scopes
+
+The current host machine (Dell Latitude E6400) is almost at capacity and I have to be very conservative while deploying new applications. While the plan is to upgrade to a more powerful desktop machine, I'm also looking into distributed deployments. One of the main challenges in that is exposing a distributed interface for storage (like Ceph, SeaweedFS etc). Another point of future focus would be good metric collection and monitoring setup.
