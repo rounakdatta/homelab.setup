@@ -1,0 +1,43 @@
+job "souptik_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "souptik_group" {
+    count = 1
+
+    network {
+      port "souptik_port" {
+        static       = "6000"
+        to           = "80"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 10
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "souptik" {
+      driver = "docker"
+
+      resources {
+        memory = 200
+      }
+
+      env = {
+		WORDPRESS_DB_HOST     = "{{ DatabaseHost }}"
+		WORDPRESS_DB_USER     = "{{ SouptikDatabaseUser }}"
+		WORDPRESS_DB_PASSWORD = "{{ SouptikDatabasePassword }}"
+		WORDPRESS_DB_NAME     = "{{ SouptikDatabaseName }}"
+      }
+
+      config {
+        image = "souptikdatta/wp-headless-backend:latest"
+        ports = ["souptik_port"]
+      }
+    }
+  }
+}

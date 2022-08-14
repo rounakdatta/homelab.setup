@@ -151,6 +151,15 @@
         MinifluxUsername: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/username') }}"
         MinifluxPassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/password') }}"
 
+    - name: Initiate config file building for souptik
+      include: configure.yml
+      vars:
+        service: "souptik"
+        SouptikDatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/souptik/username') }}"
+        SouptikDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/souptik/password') }}"
+        SouptikDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/souptik/database') }}"
+        DatabaseHost: "{{ lookup('bitwarden', 'homelab/secrets/rds/postgres/host') }}"
+
 - name: Install the required apt packages
   apt:
     name:
