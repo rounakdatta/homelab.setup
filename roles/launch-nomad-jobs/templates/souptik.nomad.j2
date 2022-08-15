@@ -13,6 +13,12 @@ job "souptik_job" {
       }
     }
 
+    volume "souptik_data_volume" {
+      type      = "host"
+      source    = "souptik_hdd_volume"
+      read_only = false
+    }
+
     restart {
       attempts = 10
       interval = "25m"
@@ -27,11 +33,17 @@ job "souptik_job" {
         memory = 200
       }
 
+      volume_mount {
+        volume      = "souptik_data_volume"
+        destination = "/var/www/html/wp-content/uploads"
+        read_only   = false
+      }
+
       env = {
-		WORDPRESS_DB_HOST     = "{{ DatabaseHost }}"
-		WORDPRESS_DB_USER     = "{{ SouptikDatabaseUser }}"
-		WORDPRESS_DB_PASSWORD = "{{ SouptikDatabasePassword }}"
-		WORDPRESS_DB_NAME     = "{{ SouptikDatabaseName }}"
+        WORDPRESS_DB_HOST     = "{{ DatabaseHost }}"
+        WORDPRESS_DB_USER     = "{{ SouptikDatabaseUser }}"
+        WORDPRESS_DB_PASSWORD = "{{ SouptikDatabasePassword }}"
+        WORDPRESS_DB_NAME     = "{{ SouptikDatabaseName }}"
       }
 
       config {
