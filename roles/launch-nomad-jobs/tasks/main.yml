@@ -158,7 +158,7 @@
         SouptikDatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/souptik/username') }}"
         SouptikDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/souptik/password') }}"
         SouptikDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/souptik/database') }}"
-        DatabaseHost: "{{ lookup('bitwarden', 'homelab/secrets/rds/postgres/host') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
 - name: Install the required apt packages
   apt:
