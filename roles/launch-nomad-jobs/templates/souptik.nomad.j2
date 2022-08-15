@@ -13,9 +13,9 @@ job "souptik_job" {
       }
     }
 
-    volume "souptik_data_volume" {
+    volume "souptik_data_uploads_volume" {
       type      = "host"
-      source    = "souptik_hdd_volume"
+      source    = "souptik_hdd_uploads_volume"
       read_only = false
     }
 
@@ -34,7 +34,7 @@ job "souptik_job" {
       }
 
       volume_mount {
-        volume      = "souptik_data_volume"
+        volume      = "souptik_data_uploads_volume"
         destination = "/var/www/html/wp-content/uploads"
         read_only   = false
       }
