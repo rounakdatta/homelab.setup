@@ -35,10 +35,6 @@ job "nextcloud_job" {
     task "nextcloud" {
       driver = "docker"
 
-      resources {
-        memory = 300
-      }
-
       env = {
         MYSQL_HOST     = "{{ DatabaseHost }}"
         MYSQL_USER     = "{{ NextcloudDatabaseUsername }}"

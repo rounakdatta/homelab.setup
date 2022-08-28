@@ -35,10 +35,6 @@ job "mailpile_job" {
     task "mailpile" {
       driver = "docker"
 
-      resources {
-        memory = 200
-      }
-
       volume_mount {
         volume      = "mailpile_gnupg_volume"
         destination = "/home/mailpile/.gnupg"

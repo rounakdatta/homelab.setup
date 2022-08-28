@@ -47,10 +47,6 @@ job "cronicle_job" {
     task "cronicle" {
       driver = "docker"
 
-      resources {
-        memory = 200
-      }
-
       env = {
         CRONICLE_base_app_url = "https://cronicle.{{ BaseDomain }}"
       }

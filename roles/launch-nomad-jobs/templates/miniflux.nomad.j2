@@ -23,10 +23,6 @@ job "miniflux_job" {
     task "miniflux" {
       driver = "docker"
 
-      resources {
-        memory = 200
-      }
-
       env = {
         DATABASE_URL     = "postgres://{{ DatabaseUser }}:{{ DatabasePassword }}@{{ DatabaseHost }}/miniflux?sslmode=disable"
         RUN_MIGRATIONS     = "1"
