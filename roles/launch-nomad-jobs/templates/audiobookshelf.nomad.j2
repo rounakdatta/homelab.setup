@@ -41,10 +41,6 @@ job "audiobookshelf_job" {
     task "audiobookshelf" {
       driver = "docker"
 
-      resources {
-        memory = 200
-      }
-
       volume_mount {
         volume      = "audiobookshelf_data_volume"
         destination = "/audiobooks"

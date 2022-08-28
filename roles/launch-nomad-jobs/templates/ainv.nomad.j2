@@ -29,10 +29,6 @@ job "ainv_job" {
     task "ainv_dev" {
       driver = "docker"
 
-      resources {
-        memory = 100
-      }
-
       env = {
         DATABASE_HOST     = "{{ DatabaseHost }}"
         APP_USER = "{{ AinvDevDatabaseUsername }}"
@@ -49,10 +45,6 @@ job "ainv_job" {
 
     task "ainv_prod" {
       driver = "docker"
-
-      resources {
-        memory = 100
-      }
 
       env = {
         DATABASE_HOST     = "{{ DatabaseHost }}"
