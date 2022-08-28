@@ -29,10 +29,6 @@ job "souptik_job" {
     task "souptik" {
       driver = "docker"
 
-      resources {
-        memory = 200
-      }
-
       volume_mount {
         volume      = "souptik_data_uploads_volume"
         destination = "/var/www/html/wp-content/uploads"
