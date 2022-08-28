@@ -1,0 +1,52 @@
+job "postgresql_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "postgresql_group" {
+    count = 1
+
+    network {
+      port "postgresql_port" {
+        static       = 5432
+        to           = 5432
+        host_network = "tailscale"
+      }
+    }
+
+    volume "postgresql_volume" {
+      type      = "host"
+      source    = "postgresql_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 2
+      interval = "10m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "postgresql_server" {
+      driver = "docker"
+
+      env = {
+        POSTGRES_USER = "{{ DatabaseRootUser }}"
+        POSTGRES_PASSWORD = "{{ DatabaseRootPassword }}"
+      }
+
+      volume_mount {
+        volume      = "postgresql_volume"
+        destination = "/var/lib/postgresql/data"
+        read_only   = false
+      }
+
+      config {
+        image = "postgres:14.5"
+
+        ports = ["postgresql_port"]
+
+      }
+    }
+
+  }
+}
