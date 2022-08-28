@@ -118,6 +118,10 @@ client {
   host_volume "mailpile_data_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/mailpile/data"
   }
+
+  host_volume "souptik_hdd_uploads_volume" {
+    path = "{{ hdd_mount_path }}/homelab/souptik/uploads"
+  }
 }
 
 plugin "docker" {

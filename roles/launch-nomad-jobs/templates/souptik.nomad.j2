@@ -1,0 +1,52 @@
+job "souptik_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "souptik_group" {
+    count = 1
+
+    network {
+      port "souptik_port" {
+        static       = "6000"
+        to           = "80"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "souptik_data_uploads_volume" {
+      type      = "host"
+      source    = "souptik_hdd_uploads_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 10
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "souptik" {
+      driver = "docker"
+
+      volume_mount {
+        volume      = "souptik_data_uploads_volume"
+        destination = "/var/www/html/wp-content/uploads"
+        read_only   = false
+      }
+
+      env = {
+        WORDPRESS_DB_HOST     = "{{ DatabaseHost }}"
+        WORDPRESS_DB_USER     = "{{ SouptikDatabaseUser }}"
+        WORDPRESS_DB_PASSWORD = "{{ SouptikDatabasePassword }}"
+        WORDPRESS_DB_NAME     = "{{ SouptikDatabaseName }}"
+        WORDPRESS_DEBUG       = "{{ SouptikDebugLog }}"
+      }
+
+      config {
+        image = "souptikdatta/wp-headless-backend:latest"
+        ports = ["souptik_port"]
+      }
+    }
+  }
+}

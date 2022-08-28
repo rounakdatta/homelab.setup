@@ -69,6 +69,7 @@
             - "kavita"
             - "mailpile"
             - "miniflux"
+            - "souptik"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -104,6 +105,8 @@
             service: http://localhost:8097
           - hostname: "miniflux.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8098
+          - hostname: "souptik.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8099
           - service: http_status:404
       tags:
         - networking
