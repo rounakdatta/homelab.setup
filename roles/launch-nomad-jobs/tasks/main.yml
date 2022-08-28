@@ -186,6 +186,7 @@
     service: "{{ item }}"
   with_items:
     - mysql
+    - postgresql
     - redis
     - firefly
     - bookstack
@@ -200,4 +201,3 @@
     - kavita
     - miniflux
     - souptik
-    - postgresql
