@@ -145,9 +145,9 @@
       include: configure.yml
       vars:
         service: "miniflux"
-        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/rds/postgres/username') }}"
-        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/rds/postgres/password') }}"
-        DatabaseHost: "{{ lookup('bitwarden', 'homelab/secrets/rds/postgres/host') }}"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/postgres/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/postgres/password') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
         MinifluxUsername: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/username') }}"
         MinifluxPassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/password') }}"
 
@@ -160,6 +160,13 @@
         SouptikDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/souptik/database') }}"
         SouptikDebugLog: "{{ lookup('bitwarden', 'homelab/secrets/souptik/debug') }}"
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+
+    - name: Initiate config file building for PostgreSQL
+      include: configure.yml
+      vars:
+        service: "postgresql"
+        DatabaseRootUser: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_user') }}"
+        DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_password') }}"
 
 - name: Install the required apt packages
   apt:
@@ -179,6 +186,7 @@
     service: "{{ item }}"
   with_items:
     - mysql
+    - postgresql
     - redis
     - firefly
     - bookstack
@@ -191,6 +199,5 @@
     - ntfy
     - cronicle
     - kavita
-    - mailpile
     - miniflux
     - souptik
