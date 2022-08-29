@@ -6,11 +6,47 @@ job "servarr_job" {
     count = 1
 
     network {
-      port "radarr_port" {
+      port "torrent_port" {
         static       = "12001"
+        to           = "8090"
+        host_network = "tailscale"
+      }
+
+      port "prowlarr_port" {
+        static       = "12002"
+        to           = "9696"
+        host_network = "tailscale"
+      }
+
+      port "radarr_port" {
+        static       = "12003"
         to           = "7878"
         host_network = "tailscale"
       }
+    }
+
+    volume "torrent_tv_volume" {
+      type      = "host"
+      source    = "torrent_tv_hdd_volume"
+      read_only = false
+    }
+
+    volume "torrent_film_volume" {
+      type      = "host"
+      source    = "torrent_film_hdd_volume"
+      read_only = false
+    }
+
+    volume "torrent_config_volume" {
+      type      = "host"
+      source    = "torrent_config_hdd_volume"
+      read_only = false
+    }
+
+    volume "prowlarr_config_volume" {
+      type      = "host"
+      source    = "prowlarr_config_hdd_volume"
+      read_only = false
     }
 
     volume "servarr_data_volume" {
@@ -30,6 +66,62 @@ job "servarr_job" {
       interval = "25m"
       delay    = "1m"
       mode     = "delay"
+    }
+
+    task "qbittorrent" {
+      driver = "docker"
+
+      env = {
+        PUID = "1000"
+        PGID = "1000"
+        TZ   = "Asia/Kolkata"
+        UMASK_SET = "022"
+        WEBUI_PORT = "8090"
+      }
+
+      volume_mount {
+        volume      = "torrent_tv_volume"
+        destination = "/tvdownloads"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "torrent_film_volume"
+        destination = "/filmdownloads"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "torrent_config_volume"
+        destination = "/config"
+        read_only   = false
+      }
+
+      config {
+        image = "linuxserver/qbittorrent"
+        ports = ["torrent_port"]
+      }
+    }
+
+    task "prowlarr" {
+      driver = "docker"
+
+      env = {
+        PUID = "1000"
+        PGID = "1000"
+        TZ   = "Asia/Kolkata"
+      }
+
+      volume_mount {
+        volume      = "prowlarr_config_volume"
+        destination = "/config"
+        read_only   = false
+      }
+
+      config {
+        image = "hotio/prowlarr"
+        ports = ["prowlarr_port"]
+      }
     }
 
     task "radarr" {
