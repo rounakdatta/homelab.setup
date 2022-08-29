@@ -130,6 +130,14 @@ client {
   host_volume "monica_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/monica"
   }
+
+  host_volume "servarr_base_data_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/data"
+  }
+
+  host_volume "servarr_base_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/config"
+  }
 }
 
 plugin "docker" {

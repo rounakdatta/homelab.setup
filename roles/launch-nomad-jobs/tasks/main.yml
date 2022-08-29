@@ -177,6 +177,11 @@
         DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/monica/password') }}"
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
+    - name: Initiate config file building for Servarr
+      include: configure.yml
+      vars:
+        service: "servarr"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -212,3 +217,4 @@
     - souptik
     - monica
     - n8n
+    - servarr
