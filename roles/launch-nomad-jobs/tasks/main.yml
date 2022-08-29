@@ -168,6 +168,15 @@
         DatabaseRootUser: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_user') }}"
         DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_password') }}"
 
+    - name: Initiate config file building for Monica
+      include: configure.yml
+      vars:
+        service: "monica"
+        AppKey: "{{ lookup('bitwarden', 'homelab/secrets/monica/appkey') }}"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/monica/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/monica/password') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -201,3 +210,5 @@
     - kavita
     - miniflux
     - souptik
+    - monica
+    - n8n
