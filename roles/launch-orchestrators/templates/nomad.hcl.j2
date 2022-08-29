@@ -126,6 +126,10 @@ client {
   host_volume "postgresql_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/postgresql"
   }
+
+  host_volume "monica_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/monica"
+  }
 }
 
 plugin "docker" {
