@@ -8,7 +8,7 @@ job "monica_job" {
     network {
       port "monica_port" {
         static       = "4848"
-        to           = "8080"
+        to           = "80"
         host_network = "tailscale"
       }
     }
@@ -34,6 +34,7 @@ job "monica_job" {
         DB_HOST = "{{ DatabaseHost }}"
         DB_USERNAME = "{{ DatabaseUser }}"
         DB_PASSWORD = "{{ DatabasePassword }}"
+        APP_ENV = "production"
       }
 
       volume_mount {
