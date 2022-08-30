@@ -89,7 +89,7 @@
           - hostname: "ainv.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8088
           - hostname: "audiobookshelf.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8090
+            service: http://localhost:8079
           - hostname: "duplicati.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8091
           - hostname: "ntfy.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"

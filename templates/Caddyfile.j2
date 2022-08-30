@@ -41,8 +41,8 @@
     reverse_proxy {{ HostIp }}:5445
 }
 
-# audiobookshelf
-:8090 {
+# audiobookshelf (port is an exception)
+:8079 {
     reverse_proxy {{ HostIp }}:4444
 }
 

@@ -7,7 +7,7 @@ job "servarr_job" {
 
     network {
       port "torrent_port" {
-        static       = "12001"
+        static       = "8090"
         to           = "8090"
         host_network = "tailscale"
       }
