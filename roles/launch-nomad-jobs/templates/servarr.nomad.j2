@@ -25,15 +25,9 @@ job "servarr_job" {
       }
     }
 
-    volume "torrent_tv_volume" {
+    volume "torrent_download_volume" {
       type      = "host"
-      source    = "torrent_tv_hdd_volume"
-      read_only = false
-    }
-
-    volume "torrent_film_volume" {
-      type      = "host"
-      source    = "torrent_film_hdd_volume"
+      source    = "torrent_download_hdd_volume"
       read_only = false
     }
 
@@ -46,12 +40,6 @@ job "servarr_job" {
     volume "prowlarr_config_volume" {
       type      = "host"
       source    = "prowlarr_config_hdd_volume"
-      read_only = false
-    }
-
-    volume "servarr_data_volume" {
-      type      = "host"
-      source    = "servarr_base_data_hdd_volume"
       read_only = false
     }
 
@@ -80,14 +68,8 @@ job "servarr_job" {
       }
 
       volume_mount {
-        volume      = "torrent_tv_volume"
-        destination = "/tvdownloads"
-        read_only   = false
-      }
-
-      volume_mount {
-        volume      = "torrent_film_volume"
-        destination = "/filmdownloads"
+        volume      = "torrent_download_volume"
+        destination = "/downloads"
         read_only   = false
       }
 
@@ -134,7 +116,7 @@ job "servarr_job" {
       }
 
       volume_mount {
-        volume      = "servarr_data_volume"
+        volume      = "torrent_download_volume"
         destination = "/data"
         read_only   = false
       }
