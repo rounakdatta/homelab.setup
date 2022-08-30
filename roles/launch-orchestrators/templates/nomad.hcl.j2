@@ -146,6 +146,10 @@ client {
   host_volume "radarr_config_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/servarr/radarr/config"
   }
+
+  host_volume "sonarr_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/sonarr/config"
+  }
 }
 
 plugin "docker" {
