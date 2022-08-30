@@ -38,6 +38,12 @@ job "servarr_job" {
 
     }
 
+    volume "torrent_base_volume" {
+      type      = "host"
+      source    = "torrent_base_hdd_volume"
+      read_only = false
+    }
+
     volume "torrent_movies_volume" {
       type      = "host"
       source    = "torrent_movies_hdd_volume"
@@ -99,7 +105,7 @@ job "servarr_job" {
       }
 
       volume_mount {
-        volume      = "torrent_download_volume"
+        volume      = "torrent_base_volume"
         destination = "/downloads"
         read_only   = false
       }
