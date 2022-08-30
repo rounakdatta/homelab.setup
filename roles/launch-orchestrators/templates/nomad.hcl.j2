@@ -150,6 +150,10 @@ client {
   host_volume "sonarr_config_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/servarr/sonarr/config"
   }
+
+  host_volume "jellyfin_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/jellyfin/config"
+  }
 }
 
 plugin "docker" {
