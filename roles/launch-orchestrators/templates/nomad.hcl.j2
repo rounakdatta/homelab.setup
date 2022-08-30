@@ -131,8 +131,12 @@ client {
     path = "{{ hdd_mount_path }}/homelab/monica"
   }
 
-  host_volume "torrent_download_hdd_volume" {
-    path = "{{ hdd_mount_path }}/homelab/servarr/torrent/downloads"
+  host_volume "torrent_movies_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/torrent/downloads/movies"
+  }
+
+  host_volume "torrent_tvshows_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/torrent/downloads/tvshows"
   }
 
   host_volume "torrent_config_hdd_volume" {
