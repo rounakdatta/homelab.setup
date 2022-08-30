@@ -23,6 +23,13 @@ job "servarr_job" {
         to           = "7878"
         host_network = "tailscale"
       }
+
+      port "sonarr_port" {
+        static       = "12004"
+        to           = "8989"
+        host_network = "tailscale"
+      }
+
     }
 
     volume "torrent_download_volume" {
@@ -43,9 +50,15 @@ job "servarr_job" {
       read_only = false
     }
 
-    volume "servarr_config_volume" {
+    volume "radarr_config_volume" {
       type      = "host"
-      source    = "servarr_base_config_hdd_volume"
+      source    = "radarr_config_hdd_volume"
+      read_only = false
+    }
+
+    volume "sonarr_config_volume" {
+      type      = "host"
+      source    = "sonarr_config_hdd_volume"
       read_only = false
     }
 
@@ -122,7 +135,7 @@ job "servarr_job" {
       }
 
       volume_mount {
-        volume      = "servarr_config_volume"
+        volume      = "radarr_config_volume"
         destination = "/config"
         read_only   = false
       }
@@ -130,6 +143,33 @@ job "servarr_job" {
       config {
         image = "cr.hotio.dev/hotio/radarr:latest"
         ports = ["radarr_port"]
+      }
+    }
+
+    task "sonarr" {
+      driver = "docker"
+
+      env = {
+        PUID = "1000"
+        PGID = "1000"
+        TZ   = "Asia/Kolkata"
+      }
+
+      volume_mount {
+        volume      = "torrent_download_volume"
+        destination = "/data"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "sonarr_config_volume"
+        destination = "/config"
+        read_only   = false
+      }
+
+      config {
+        image = "cr.hotio.dev/hotio/sonarr:latest"
+        ports = ["sonarr_port"]
       }
     }
 
