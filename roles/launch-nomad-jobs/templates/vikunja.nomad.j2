@@ -49,7 +49,9 @@ job "vikunja_job" {
         VIKUNJA_MAILER_USERNAME = "{{ VikunjaMailerUsername }}"
         VIKUNJA_MAILER_PASSWORD = "{{ VikunjaMailerPassword }}"
         VIKUNJA_MAILER_FROMEMAIL = "{{ VikunjaMailerSender }}"
-        VIKUNJA_SERVICE_JWT_SECRET = "{{ VikunjaJwtSecret }}"
+        VIKUNJA_SERVICE_JWTSECRET = "{{ VikunjaJwtSecret }}"
+        VIKUNJA_SERVICE_FRONTENDURL = "https://vikunja.{{ BaseDomain }}"
+        VIKUNJA_SERVICE_ENABLEREGISTRATION = "false"
       }
 
       volume_mount {
