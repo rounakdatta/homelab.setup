@@ -130,6 +130,38 @@ client {
   host_volume "monica_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/monica"
   }
+
+  host_volume "torrent_base_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr"
+  }
+
+  host_volume "torrent_movies_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/radarr"
+  }
+
+  host_volume "torrent_tvshows_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/sonarr"
+  }
+
+  host_volume "torrent_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/torrent/config"
+  }
+
+  host_volume "prowlarr_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/prowlarr/config"
+  }
+
+  host_volume "radarr_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/radarr/config"
+  }
+
+  host_volume "sonarr_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/sonarr/config"
+  }
+
+  host_volume "jellyfin_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/servarr/jellyfin/config"
+  }
 }
 
 plugin "docker" {

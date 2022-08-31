@@ -71,6 +71,7 @@
             - "miniflux"
             - "souptik"
             - "monica"
+            - "jellyfin"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -89,7 +90,7 @@
           - hostname: "ainv.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8088
           - hostname: "audiobookshelf.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8090
+            service: http://localhost:8079
           - hostname: "duplicati.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8091
           - hostname: "ntfy.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
@@ -110,6 +111,8 @@
             service: http://localhost:8099
           - hostname: "monica.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8100
+          - hostname: "jellyfin.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8101
           - service: http_status:404
       tags:
         - networking
