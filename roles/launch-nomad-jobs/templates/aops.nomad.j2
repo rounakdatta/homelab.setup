@@ -24,18 +24,18 @@ job "aops_job" {
       driver = "docker"
 
       env = {
-        FB_API_KEY = "{{ json_query(AopsJson.secrets.FB_API_KEY) }}"
-        FB_AUTH_DOMAIN = "{{ json_query(AopsJson.secrets.FB_AUTH_DOMAIN) }}"
-        FB_BUCKET = "{{ json_query(AopsJson.secrets.FB_BUCKET) }}"
-        FB_DB_URL = "{{ json_query(AopsJson.secrets.FB_DB_URL) }}"
-        MADE_BY = "{{ json_query(AopsJson.secrets.MADE_BY) }}"
-        MY_DOMAIN = "{{ json_query(AopsJson.secrets.MY_DOMAIN) }}"
-        POWERED_BY = "{{ json_query(AopsJson.secrets.POWERED_BY) }}"
-        RECP_1 = "{{ json_query(AopsJson.secrets.RECP_1) }}"
-        RECP_2 = "{{ json_query(AopsJson.secrets.RECP_2) }}"
-        SECRET = "{{ json_query(AopsJson.secrets.SECRET) }}"
-        Y_EMAIL = "{{ json_query(AopsJson.secrets.Y_EMAIL) }}"
-        Y_PWD = "{{ json_query(AopsJson.secrets.Y_PWD) }}"
+        FB_API_KEY = "{{ AopsJson | json_query(secrets.FB_API_KEY) }}"
+        FB_AUTH_DOMAIN = "{{ AopsJson | json_query(secrets.FB_AUTH_DOMAIN) }}"
+        FB_BUCKET = "{{ AopsJson | json_query(secrets.FB_BUCKET) }}"
+        FB_DB_URL = "{{ AopsJson | json_query(secrets.FB_DB_URL) }}"
+        MADE_BY = "{{ AopsJson | json_query(secrets.MADE_BY) }}"
+        MY_DOMAIN = "{{ AopsJson | json_query(secrets.MY_DOMAIN) }}"
+        POWERED_BY = "{{ AopsJson | json_query(secrets.POWERED_BY) }}"
+        RECP_1 = "{{ AopsJson | json_query(secrets.RECP_1) }}"
+        RECP_2 = "{{ AopsJson | json_query(secrets.RECP_2) }}"
+        SECRET = "{{ AopsJson | json_query(secrets.SECRET) }}"
+        Y_EMAIL = "{{ AopsJson | json_query(secrets.Y_EMAIL) }}"
+        Y_PWD = "{{ AopsJson | json_query(secrets.Y_PWD) }}"
       }
 
       config {
