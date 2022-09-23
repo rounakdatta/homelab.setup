@@ -24,18 +24,16 @@ job "aops_job" {
       driver = "docker"
 
       env = {
-        FB_API_KEY = "{{ AopsJson | json_query(secrets.FB_API_KEY) }}"
-        FB_AUTH_DOMAIN = "{{ AopsJson | json_query(secrets.FB_AUTH_DOMAIN) }}"
-        FB_BUCKET = "{{ AopsJson | json_query(secrets.FB_BUCKET) }}"
-        FB_DB_URL = "{{ AopsJson | json_query(secrets.FB_DB_URL) }}"
-        MADE_BY = "{{ AopsJson | json_query(secrets.MADE_BY) }}"
-        MY_DOMAIN = "{{ AopsJson | json_query(secrets.MY_DOMAIN) }}"
-        POWERED_BY = "{{ AopsJson | json_query(secrets.POWERED_BY) }}"
-        RECP_1 = "{{ AopsJson | json_query(secrets.RECP_1) }}"
-        RECP_2 = "{{ AopsJson | json_query(secrets.RECP_2) }}"
-        SECRET = "{{ AopsJson | json_query(secrets.SECRET) }}"
-        Y_EMAIL = "{{ AopsJson | json_query(secrets.Y_EMAIL) }}"
-        Y_PWD = "{{ AopsJson | json_query(secrets.Y_PWD) }}"
+        FB_API_KEY = "{{ AopsFbApiKey }}"
+        FB_AUTH_DOMAIN = "{{ FbAuthDomain }}"
+        FB_BUCKET = "{{ FbBucket }}"
+        FB_DB_URL = "{{ FbDbUrl) }}"
+        MY_DOMAIN = "https://aops.{{ BaseDomain }}"
+        RECP_1 = "{{ EmailRecipient1 }}"
+        RECP_2 = "{{ EmailRecipient2 }}"
+        SECRET = "{{ Secret }}"
+        Y_EMAIL = "{{ Ymail }}"
+        Y_PWD = "{{ YPassword }}"
       }
 
       config {
