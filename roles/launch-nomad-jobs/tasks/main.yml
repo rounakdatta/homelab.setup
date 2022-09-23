@@ -182,14 +182,11 @@
     #   vars:
     #     service: "servarr"
 
-    - name: Print out
-      shell: "echo '{{ lookup('bitwarden', 'homelab/secrets/aops', field='notes') }}'"
-
     - name: Initiate config file building for AOPS
       include: configure.yml
       vars:
         service: "aops"
-        AopsJson: "{{ lookup('bitwarden', 'homelab/secrets/aops', field='notes') }}"
+        AopsJson: "{{ lookup('bitwarden', 'homelab/secrets/aops', field='notes') | from_json }}"
 
 - name: Install the required apt packages
   apt:
