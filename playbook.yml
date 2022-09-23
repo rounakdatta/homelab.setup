@@ -72,6 +72,7 @@
             - "souptik"
             - "monica"
             - "jellyfin"
+            - "aops"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -113,6 +114,8 @@
             service: http://localhost:8100
           - hostname: "jellyfin.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8101
+          - hostname: "aops.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8102
           - service: http_status:404
       tags:
         - networking

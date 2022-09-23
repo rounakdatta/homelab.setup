@@ -182,6 +182,12 @@
       vars:
         service: "servarr"
 
+    - name: Initiate config file building for AOPS
+      include: configure.yml
+      vars:
+        service: "aops"
+        AopsJson: "{{ lookup('bitwarden', 'homelab/secrets/aops') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -217,3 +223,5 @@
     - souptik
     - monica
     - servarr
+    - aops
+

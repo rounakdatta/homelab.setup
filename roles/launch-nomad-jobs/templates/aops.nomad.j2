@@ -1,0 +1,50 @@
+job "aops_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "aops_group" {
+    count = 1
+
+    network {
+      port "aops_port" {
+        static       = "7444"
+        to           = "5001"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "aops_prod" {
+      driver = "docker"
+
+      env = {
+        FB_API_KEY = "{{ AopsJson | from_json | json_query(secrets.FB_API_KEY) }}"
+        FB_AUTH_DOMAIN = "{{ AopsJson | from_json | json_query(secrets.FB_AUTH_DOMAIN) }}"
+        FB_BUCKET = "{{ AopsJson | from_json | json_query(secrets.FB_BUCKET) }}"
+        FB_DB_URL = "{{ AopsJson | from_json | json_query(secrets.FB_DB_URL) }}"
+        MADE_BY = "{{ AopsJson | from_json | json_query(secrets.MADE_BY) }}"
+        MY_DOMAIN = "{{ AopsJson | from_json | json_query(secrets.MY_DOMAIN) }}"
+        POWERED_BY = "{{ AopsJson | from_json | json_query(secrets.POWERED_BY) }}"
+        RECP_1 = "{{ AopsJson | from_json | json_query(secrets.RECP_1) }}"
+        RECP_2 = "{{ AopsJson | from_json | json_query(secrets.RECP_2) }}"
+        SECRET = "{{ AopsJson | from_json | json_query(secrets.SECRET) }}"
+        Y_EMAIL = "{{ AopsJson | from_json | json_query(secrets.Y_EMAIL) }}"
+        Y_PWD = "{{ AopsJson | from_json | json_query(secrets.Y_PWD) }}"
+      }
+
+      config {
+        image = "rounakdatta/aops"
+        ports = ["aops_port"]
+
+      }
+    }
+
+  }
+}
+
