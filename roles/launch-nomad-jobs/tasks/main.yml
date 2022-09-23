@@ -182,6 +182,9 @@
     #   vars:
     #     service: "servarr"
 
+    - name: Print out
+      shell: "echo '{{ lookup('bitwarden', 'homelab/secrets/aops', field='notes') }}'"
+
     - name: Initiate config file building for AOPS
       include: configure.yml
       vars:
