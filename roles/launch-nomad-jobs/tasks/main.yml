@@ -186,7 +186,7 @@
       include: configure.yml
       vars:
         service: "aops"
-        AopsJson: "{{ lookup('bitwarden', 'homelab/secrets/aops') }}"
+        AopsJson: "{{ lookup('bitwarden', 'homelab/secrets/aops', field='password') }}"
 
 - name: Install the required apt packages
   apt:
