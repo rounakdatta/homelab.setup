@@ -20,11 +20,11 @@ job "aops_job" {
       mode     = "delay"
     }
 
-    task "aops_prod" {
+    task "aops" {
       driver = "docker"
 
       env = {
-        FB_API_KEY = "{{ AopsFbApiKey }}"
+        FB_API_KEY = "{{ FbApiKey }}"
         FB_AUTH_DOMAIN = "{{ FbAuthDomain }}"
         FB_BUCKET = "{{ FbBucket }}"
         FB_DB_URL = "{{ FbDbUrl) }}"
@@ -32,7 +32,7 @@ job "aops_job" {
         RECP_1 = "{{ EmailRecipient1 }}"
         RECP_2 = "{{ EmailRecipient2 }}"
         SECRET = "{{ Secret }}"
-        Y_EMAIL = "{{ Ymail }}"
+        Y_EMAIL = "{{ YMail }}"
         Y_PWD = "{{ YPassword }}"
       }
 
