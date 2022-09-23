@@ -6,6 +6,18 @@
     state: directory
     recurse: yes
 
+- name: Install the required apt packages
+  apt:
+    name:
+      - python3-pip
+
+- name: Install python-nomad library
+  pip:
+    name:
+      - python-nomad
+      - jmespath
+    executable: pip3
+
 - name: Build config files for the nomad jobs
   vars:
     DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
@@ -187,17 +199,6 @@
       vars:
         service: "aops"
         AopsJson: "{{ lookup('bitwarden', 'homelab/secrets/aops', field='notes') | to_json }}"
-
-- name: Install the required apt packages
-  apt:
-    name:
-      - python3-pip
-
-- name: Install python-nomad library
-  pip:
-    name:
-      - python-nomad
-    executable: pip3
 
 - name: Launch the nomad jobs
   include: launch.yml
