@@ -182,6 +182,20 @@
       vars:
         service: "servarr"
 
+    - name: Initiate config file building for AOPS
+      include: configure.yml
+      vars:
+        service: "aops"
+        FbApiKey: "{{ lookup('bitwarden', 'homelab/secrets/aops/fb/apikey') }}"
+        FbAuthDomain: "{{ lookup('bitwarden', 'homelab/secrets/aops/fb/authdomain') }}"
+        FbBucket: "{{ lookup('bitwarden', 'homelab/secrets/aops/fb/bucket') }}"
+        FbDbUrl: "{{ lookup('bitwarden', 'homelab/secrets/aops/fb/dburl') }}"
+        EmailRecipient1: "{{ lookup('bitwarden', 'homelab/secrets/aops/emailrec1') }}"
+        EmailRecipient2: "{{ lookup('bitwarden', 'homelab/secrets/aops/emailrec2') }}"
+        Secret: "{{ lookup('bitwarden', 'homelab/secrets/aops/fb/secret') }}"
+        YMail: "{{ lookup('bitwarden', 'homelab/secrets/aops/ymail') }}"
+        YPassword: "{{ lookup('bitwarden', 'homelab/secrets/aops/ypassword') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -216,5 +230,6 @@
     - miniflux
     - souptik
     - monica
-    - n8n
     - servarr
+    - aops
+
