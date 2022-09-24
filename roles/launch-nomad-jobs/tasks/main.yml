@@ -12,175 +12,175 @@
     BaseDomain: "{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
 
   block:
-    - name: Initiate config file building for MySQL
-      include: configure.yml
-      vars:
-        service: "mysql"
-        DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/mysql/root_password') }}"
+    # - name: Initiate config file building for MySQL
+    #   include: configure.yml
+    #   vars:
+    #     service: "mysql"
+    #     DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/mysql/root_password') }}"
 
-    - name: Initiate config file building for redis
-      include: configure.yml
-      vars:
-        service: "redis"
+    # - name: Initiate config file building for redis
+    #   include: configure.yml
+    #   vars:
+    #     service: "redis"
 
-    - name: Initiate config file building for Firefly-III
-      include: configure.yml
-      vars:
-        service: "firefly"
-        FireflyApplicationEncryptionKey: "{{ lookup('community.general.random_string', special=false, length=32) }}"
-        FireflyDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/firefly/username') }}"
-        FireflyDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/firefly/password') }}"
-        FireflyDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/firefly/database') }}"
+    # - name: Initiate config file building for Firefly-III
+    #   include: configure.yml
+    #   vars:
+    #     service: "firefly"
+    #     FireflyApplicationEncryptionKey: "{{ lookup('community.general.random_string', special=false, length=32) }}"
+    #     FireflyDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/firefly/username') }}"
+    #     FireflyDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/firefly/password') }}"
+    #     FireflyDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/firefly/database') }}"
 
-    - name: Initiate config file building for Bookstack
-      include: configure.yml
-      vars:
-        service: "bookstack"
-        BookstackDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/bookstack/username') }}"
-        BookstackDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/bookstack/password') }}"
-        BookstackDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/bookstack/database') }}"
+    # - name: Initiate config file building for Bookstack
+    #   include: configure.yml
+    #   vars:
+    #     service: "bookstack"
+    #     BookstackDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/bookstack/username') }}"
+    #     BookstackDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/bookstack/password') }}"
+    #     BookstackDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/bookstack/database') }}"
 
-    - name: Initiate config file building for Vikunja
-      include: configure.yml
-      vars:
-        service: "vikunja"
-        VikunjaDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/username') }}"
-        VikunjaDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/password') }}"
-        VikunjaDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/database') }}"
-        VikunjaMailerHost: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/host') }}"
-        VikunjaMailerPort: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/port') }}"
-        VikunjaMailerUsername: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/username') }}"
-        VikunjaMailerPassword: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/password') }}"
-        VikunjaMailerSender: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/sender') }}"
-        VikunjaJwtSecret: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/jwt/secret') }}"
+    # - name: Initiate config file building for Vikunja
+    #   include: configure.yml
+    #   vars:
+    #     service: "vikunja"
+    #     VikunjaDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/username') }}"
+    #     VikunjaDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/password') }}"
+    #     VikunjaDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/database') }}"
+    #     VikunjaMailerHost: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/host') }}"
+    #     VikunjaMailerPort: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/port') }}"
+    #     VikunjaMailerUsername: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/username') }}"
+    #     VikunjaMailerPassword: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/password') }}"
+    #     VikunjaMailerSender: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/mailer/sender') }}"
+    #     VikunjaJwtSecret: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/jwt/secret') }}"
 
-    - name: Initiate config file building for Nextcloud
-      include: configure.yml
-      vars:
-        service: "nextcloud"
-        NextcloudDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/username') }}"
-        NextcloudDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/password') }}"
-        NextcloudDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/database') }}"
-        NextcloudRedisHost: "{{ HOST_EXTERNAL_IPV4 }}"
-        NextcloudRedisPort: "6379"
+    # - name: Initiate config file building for Nextcloud
+    #   include: configure.yml
+    #   vars:
+    #     service: "nextcloud"
+    #     NextcloudDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/username') }}"
+    #     NextcloudDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/password') }}"
+    #     NextcloudDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/database') }}"
+    #     NextcloudRedisHost: "{{ HOST_EXTERNAL_IPV4 }}"
+    #     NextcloudRedisPort: "6379"
 
-    - name: Initiate config file building for Webtrees
-      include: configure.yml
-      vars:
-        service: "webtrees"
-        WebtreesDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/webtrees/username') }}"
-        WebtreesDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/webtrees/password') }}"
-        WebtreesDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/webtrees/database') }}"
+    # - name: Initiate config file building for Webtrees
+    #   include: configure.yml
+    #   vars:
+    #     service: "webtrees"
+    #     WebtreesDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/webtrees/username') }}"
+    #     WebtreesDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/webtrees/password') }}"
+    #     WebtreesDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/webtrees/database') }}"
 
-    - name: Initiate config file building for Photoprism
-      include: configure.yml
-      vars:
-        service: "photoprism"
-        PhotoprismDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/username') }}"
-        PhotoprismDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/password') }}"
-        PhotoprismDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/database') }}"
-        PhotoprismAdminPassword: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/admin_password') }}"
+    # - name: Initiate config file building for Photoprism
+    #   include: configure.yml
+    #   vars:
+    #     service: "photoprism"
+    #     PhotoprismDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/username') }}"
+    #     PhotoprismDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/password') }}"
+    #     PhotoprismDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/database') }}"
+    #     PhotoprismAdminPassword: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/admin_password') }}"
 
-    - name: Initiate config file building for AINV
-      include: configure.yml
-      vars:
-        service: "ainv"
-        AinvDevDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/ainv/dev/username') }}"
-        AinvDevDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/ainv/dev/password') }}"
-        AinvDevDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/ainv/dev/database') }}"
-        AinvProdDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/ainv/prod/username') }}"
-        AinvProdDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/ainv/prod/password') }}"
-        AinvProdDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/ainv/prod/database') }}"
+    # - name: Initiate config file building for AINV
+    #   include: configure.yml
+    #   vars:
+    #     service: "ainv"
+    #     AinvDevDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/ainv/dev/username') }}"
+    #     AinvDevDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/ainv/dev/password') }}"
+    #     AinvDevDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/ainv/dev/database') }}"
+    #     AinvProdDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/ainv/prod/username') }}"
+    #     AinvProdDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/ainv/prod/password') }}"
+    #     AinvProdDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/ainv/prod/database') }}"
 
-    - name: Initiate config file building for audiobookshelf
-      include: configure.yml
-      vars:
-        service: "audiobookshelf"
+    # - name: Initiate config file building for audiobookshelf
+    #   include: configure.yml
+    #   vars:
+    #     service: "audiobookshelf"
 
-    - name: Initiate config file building for duplicati
-      include: configure.yml
-      vars:
-        service: "duplicati"
+    # - name: Initiate config file building for duplicati
+    #   include: configure.yml
+    #   vars:
+    #     service: "duplicati"
 
-    - name: Initiate config file building for ntfy
-      include: configure.yml
-      vars:
-        service: "ntfy"
+    # - name: Initiate config file building for ntfy
+    #   include: configure.yml
+    #   vars:
+    #     service: "ntfy"
 
-    - name: Initiate config file building for cronicle
-      include: configure.yml
-      vars:
-        service: "cronicle"
+    # - name: Initiate config file building for cronicle
+    #   include: configure.yml
+    #   vars:
+    #     service: "cronicle"
 
-    - name: Initiate config file building for metabase
-      include: configure.yml
-      vars:
-        service: "metabase"
-        MetabaseDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/metabase/username') }}"
-        MetabaseDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/metabase/password') }}"
-        MetabaseDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/metabase/database') }}"
-        MetabaseDatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
-        MetabaseEncryptionKey: "{{ lookup('bitwarden', 'homelab/secrets/metabase/encryption/key') }}"
+    # - name: Initiate config file building for metabase
+    #   include: configure.yml
+    #   vars:
+    #     service: "metabase"
+    #     MetabaseDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/metabase/username') }}"
+    #     MetabaseDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/metabase/password') }}"
+    #     MetabaseDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/metabase/database') }}"
+    #     MetabaseDatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+    #     MetabaseEncryptionKey: "{{ lookup('bitwarden', 'homelab/secrets/metabase/encryption/key') }}"
 
-    - name: Initiate config file building for n8n
-      include: configure.yml
-      vars:
-        service: "n8n"
-        N8NDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/n8n/username') }}"
-        N8NDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/n8n/password') }}"
-        N8NDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/n8n/database') }}"
-        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+    # - name: Initiate config file building for n8n
+    #   include: configure.yml
+    #   vars:
+    #     service: "n8n"
+    #     N8NDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/n8n/username') }}"
+    #     N8NDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/n8n/password') }}"
+    #     N8NDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/n8n/database') }}"
+    #     DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
-    - name: Initiate config file building for kavita
-      include: configure.yml
-      vars:
-        service: "kavita"
+    # - name: Initiate config file building for kavita
+    #   include: configure.yml
+    #   vars:
+    #     service: "kavita"
 
-    - name: Initiate config file building for mailpile
-      include: configure.yml
-      vars:
-        service: "mailpile"
+    # - name: Initiate config file building for mailpile
+    #   include: configure.yml
+    #   vars:
+    #     service: "mailpile"
 
-    - name: Initiate config file building for miniflux
-      include: configure.yml
-      vars:
-        service: "miniflux"
-        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/postgres/username') }}"
-        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/postgres/password') }}"
-        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
-        MinifluxUsername: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/username') }}"
-        MinifluxPassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/password') }}"
+    # - name: Initiate config file building for miniflux
+    #   include: configure.yml
+    #   vars:
+    #     service: "miniflux"
+    #     DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/postgres/username') }}"
+    #     DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/postgres/password') }}"
+    #     DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+    #     MinifluxUsername: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/username') }}"
+    #     MinifluxPassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/password') }}"
 
-    - name: Initiate config file building for souptik
-      include: configure.yml
-      vars:
-        service: "souptik"
-        SouptikDatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/souptik/username') }}"
-        SouptikDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/souptik/password') }}"
-        SouptikDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/souptik/database') }}"
-        SouptikDebugLog: "{{ lookup('bitwarden', 'homelab/secrets/souptik/debug') }}"
-        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+    # - name: Initiate config file building for souptik
+    #   include: configure.yml
+    #   vars:
+    #     service: "souptik"
+    #     SouptikDatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/souptik/username') }}"
+    #     SouptikDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/souptik/password') }}"
+    #     SouptikDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/souptik/database') }}"
+    #     SouptikDebugLog: "{{ lookup('bitwarden', 'homelab/secrets/souptik/debug') }}"
+    #     DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
-    - name: Initiate config file building for PostgreSQL
-      include: configure.yml
-      vars:
-        service: "postgresql"
-        DatabaseRootUser: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_user') }}"
-        DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_password') }}"
+    # - name: Initiate config file building for PostgreSQL
+    #   include: configure.yml
+    #   vars:
+    #     service: "postgresql"
+    #     DatabaseRootUser: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_user') }}"
+    #     DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_password') }}"
 
-    - name: Initiate config file building for Monica
-      include: configure.yml
-      vars:
-        service: "monica"
-        AppKey: "{{ lookup('bitwarden', 'homelab/secrets/monica/appkey') }}"
-        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/monica/username') }}"
-        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/monica/password') }}"
-        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+    # - name: Initiate config file building for Monica
+    #   include: configure.yml
+    #   vars:
+    #     service: "monica"
+    #     AppKey: "{{ lookup('bitwarden', 'homelab/secrets/monica/appkey') }}"
+    #     DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/monica/username') }}"
+    #     DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/monica/password') }}"
+    #     DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
-    - name: Initiate config file building for Servarr
-      include: configure.yml
-      vars:
-        service: "servarr"
+    # - name: Initiate config file building for Servarr
+    #   include: configure.yml
+    #   vars:
+    #     service: "servarr"
 
     - name: Initiate config file building for AOPS
       include: configure.yml
