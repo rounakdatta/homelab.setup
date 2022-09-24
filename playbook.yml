@@ -15,10 +15,10 @@
   roles:
     - role: ansible-modules-bitwarden
 
-    # - role: launch-orchestrators
-    #   tags:
-    #     - config
-    #     - orchestration
+    - role: launch-orchestrators
+      tags:
+        - config
+        - orchestration
 
     - role: launch-nomad-jobs
       tags:
