@@ -75,7 +75,7 @@
             - "aops"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8081
+            service: https://localhost:8081
           - hostname: "bookstack.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8082
           - hostname: "vikunja.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
