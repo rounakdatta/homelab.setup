@@ -1,0 +1,130 @@
+job "immich_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "immich_group" {
+    count = 1
+
+    network {
+      port "immich_port" {
+        static       = "2283"
+        to           = "2283"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "immich_originals_volume" {
+      type      = "host"
+      source    = "photoprism_originals_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "main_immich_server" {
+      driver = "docker"
+
+      env = {
+        NODE_ENV = "production"
+        DB_HOSTNAME = "{{ PgHostname }}"
+        DB_USERNAME = "{{ ImmichUsername }}"
+        DB_PASSWORD "{{ ImmichPassword }}"
+        DB_DATABASE_NAME = "{{ ImmichDatabase }}"
+        REDIS_HOSTNAME = "{{ RedisHostname }}"
+        JWT_SECRET = "{{ ImmichJwtSecret }}"
+        ENABLE_MAPBOX = "false"
+      }
+
+      volume_mount {
+        volume      = "immich_originals_volume"
+        destination = "/usr/src/app/upload"
+        read_only   = false
+      }
+
+      config {
+        image = "altran1502/immich-server:release"
+        command = "/bin/sh"
+        args    = ["./start-server.sh"]
+      }
+    }
+
+    task "immich_microservices" {
+      driver = "docker"
+
+      env = {
+        NODE_ENV = "production"
+        DB_HOSTNAME = "{{ PgHostname }}"
+        DB_USERNAME = "{{ ImmichUsername }}"
+        DB_PASSWORD "{{ ImmichPassword }}"
+        DB_DATABASE_NAME = "{{ ImmichDatabase }}"
+        REDIS_HOSTNAME = "{{ RedisHostname }}"
+        JWT_SECRET = "{{ ImmichJwtSecret }}"
+        ENABLE_MAPBOX = "false"
+      }
+
+      volume_mount {
+        volume      = "immich_originals_volume"
+        destination = "/usr/src/app/upload"
+        read_only   = false
+      }
+
+      config {
+        image = "altran1502/immich-server:release"
+        command = "/bin/sh"
+        args    = ["./start-microservices.sh"]
+      }
+    }
+
+    task "immich_machine_learning" {
+      driver = "docker"
+
+      env = {
+        NODE_ENV = "production"
+        DB_HOSTNAME = "{{ PgHostname }}"
+        DB_USERNAME = "{{ ImmichUsername }}"
+        DB_PASSWORD "{{ ImmichPassword }}"
+        DB_DATABASE_NAME = "{{ ImmichDatabase }}"
+        REDIS_HOSTNAME = "{{ RedisHostname }}"
+        JWT_SECRET = "{{ ImmichJwtSecret }}"
+        ENABLE_MAPBOX = "false"
+      }
+
+      volume_mount {
+        volume      = "immich_originals_volume"
+        destination = "/usr/src/app/upload"
+        read_only   = false
+      }
+
+      config {
+        image = "altran1502/immich-machine-learning:release"
+        command = "/bin/sh"
+        args    = ["./entrypoint.sh"]
+      }
+    }
+
+    task "immich_web" {
+      driver = "docker"
+      
+      config {
+        image = "altran1502/immich-web:release"
+        command = "/bin/sh"
+        args    = ["./entrypoint.sh"]
+      }
+    }
+
+    task "immich_proxy" {
+      driver = "docker"
+
+      config {
+        image = "altran1502/immich-proxy:release"
+        ports = ["immich_port"]
+      }
+    }
+
+  }
+}
