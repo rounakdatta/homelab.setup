@@ -1,6 +1,6 @@
 ![homelab.setup-logo](homelab.setup_logo.png)
 
-This repository hosts all the playbooks required to deploy and run my homelab. You have to bring your own hardware, Linux operating system and *data* though.
+This repository hosts all the playbooks required to deploy and run my homelab. You have to bring your own hardware, Linux operating system, configuration secrets and *data* though.
 
 My homelab is a single-node x64 (previously ARM) machine, and applications are deployed containerized via Hashicorp Nomad. Tailscale takes care of all the networking required for administration and deployments. Cloudflare Tunnels help in exposing the services to the internet.
 
@@ -56,11 +56,15 @@ All the application containers are mapped to a persistent storage location in th
     - The Pi (ARM) setup was very efficient on power and had an external USB-connected HDD for storage.
     - The Pi ran DietPi - a stripped down Debian-based operating system. With 8GB of memory, it ran a large number of applications really well, although response times were quite high on average.
 3. Dell Latitude E6400
-    - Migrating to a AMD64 (x64) old laptop was mostly trivial. The Dell machine runs Ubuntu server.
+    - Migrating to a x64 (AMD64) old laptop was mostly trivial. The Dell machine runs Ubuntu server.
     - CPU, in comparison to the Pi is way more faster and resulted to slightly better response times.
     - Being a laptop, the machine provides battery backup to some extent and also a screen for urgent debugging.
     - However the laptop being decade-old, it tends to heat up a lot and needs active environmental cooling.
+4. ASUS Desktop (gaming PC)
+    - The second-hand-purchases gaming desktop sports i5 7th generation and 16GB RAM (early 2018 model).
+    - Has powerful motherboard with efficient cooling and power unit.
+    - Nextcloud, Photoprism, Duplicati performance has clear visible improvements upon migration to this desktop homelab.
 
 ## Future scopes
 
-The current host machine (Dell Latitude E6400) is almost at capacity and I have to be very conservative while deploying new applications. While the plan is to upgrade to a more powerful desktop machine, I'm also looking into distributed deployments. One of the main challenges in that is exposing a distributed interface for storage (like Ceph, SeaweedFS etc). Another point of future focus would be good metric collection and monitoring setup.
+Oracle Cloud offers high-spec ARM machines at free tier, I'm yet to explore if that offering can be put to good use. With that in mind, I'm also looking into distributed deployments. One of the main challenges in that is exposing a distributed interface for storage (like Ceph, SeaweedFS etc). Another point of future focus would be good metric collection and monitoring setup.
