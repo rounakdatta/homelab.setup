@@ -15,10 +15,10 @@
   roles:
     - role: ansible-modules-bitwarden
 
-    # - role: launch-orchestrators
-    #   tags:
-    #     - config
-    #     - orchestration
+    - role: launch-orchestrators
+      tags:
+        - config
+        - orchestration
 
     - role: launch-nomad-jobs
       tags:
@@ -73,7 +73,6 @@
             - "monica"
             - "jellyfin"
             - "aops"
-            - "immich-server"
             - "immich"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
@@ -118,10 +117,8 @@
             service: http://localhost:8101
           - hostname: "aops.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8102
-          - hostname: "immich-server.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8103
           - hostname: "immich.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8104
+            service: http://localhost:8103
           - service: http_status:404
       tags:
         - networking

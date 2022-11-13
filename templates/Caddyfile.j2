@@ -106,13 +106,8 @@
     reverse_proxy {{ HostIp }}:7444
 }
 
-# immich-server
-:8103 {
-    reverse_proxy {{ HostIp }}:2283
-}
-
 # immich
-:8104 {
+:8103 {
     handle_path /api/* {
         reverse_proxy {{ HostIp }}:2283
     }
