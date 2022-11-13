@@ -12,16 +12,16 @@
     BaseDomain: "{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
 
   block:
-    - name: Initiate config file building for MySQL
-      include: configure.yml
-      vars:
-        service: "mysql"
-        DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/mysql/root_password') }}"
+    # - name: Initiate config file building for MySQL
+    #   include: configure.yml
+    #   vars:
+    #     service: "mysql"
+    #     DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/mysql/root_password') }}"
 
-    - name: Initiate config file building for redis
-      include: configure.yml
-      vars:
-        service: "redis"
+    # - name: Initiate config file building for redis
+    #   include: configure.yml
+    #   vars:
+    #     service: "redis"
 
     # - name: Initiate config file building for Firefly-III
     #   include: configure.yml
@@ -200,7 +200,7 @@
       include: configure.yml
       vars:
         service: "immich"
-        PgHostname: "{{ HOST_EXTERNAL_IPV4 }}"
+        Hostname: "{{ HOST_EXTERNAL_IPV4 }}"
         ImmichUsername: "{{ lookup('bitwarden', 'homelab/secrets/immich/database/username') }}"
         ImmichPassword: "{{ lookup('bitwarden', 'homelab/secrets/immich/database/password') }}"
         ImmichDatabase: "{{ lookup('bitwarden', 'homelab/secrets/immich/database/database') }}"

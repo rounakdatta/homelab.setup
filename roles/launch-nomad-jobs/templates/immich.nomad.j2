@@ -6,15 +6,24 @@ job "immich_job" {
     count = 1
 
     network {
+      port "immich_web_port" {
+        static       = "2282"
+        to           = "3000"
+        host_network = "tailscale"
+      }
+
       port "immich_server_port" {
         static       = "2283"
         to           = "3001"
         host_network = "tailscale"
       }
 
-      port "immich_web_port" {
-        static       = "2284"
-        to           = "3000"
+      # purposefully skipping exposing microservices as per
+      # https://github.com/immich-app/immich/pull/930/files#diff-ec10582dde9af6c0c622084d3244b29d496260613491c430ec8958565e2f31b4R76
+
+      port "immich_machine_learning_port" {
+        static       = "2285"
+        to           = "3003"
         host_network = "tailscale"
       }
     }
@@ -35,15 +44,22 @@ job "immich_job" {
     task "main_immich_server" {
       driver = "docker"
 
+      resources {
+        memory = 2048
+      }
+
       env = {
         NODE_ENV = "production"
-        DB_HOSTNAME = "{{ PgHostname }}"
+        DB_HOSTNAME = "{{ Hostname }}"
         DB_USERNAME = "{{ ImmichUsername }}"
         DB_PASSWORD = "{{ ImmichPassword }}"
         DB_DATABASE_NAME = "{{ ImmichDatabase }}"
         REDIS_HOSTNAME = "{{ RedisHostname }}"
         JWT_SECRET = "{{ ImmichJwtSecret }}"
         ENABLE_MAPBOX = "false"
+        IMMICH_WEB_URL = "{{ Hostname }}:3000"
+        IMMICH_SERVER_URL = "{{ Hostname }}:3001"
+        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:3003"
       }
 
       volume_mount {
@@ -69,13 +85,16 @@ job "immich_job" {
 
       env = {
         NODE_ENV = "production"
-        DB_HOSTNAME = "{{ PgHostname }}"
+        DB_HOSTNAME = "{{ Hostname }}"
         DB_USERNAME = "{{ ImmichUsername }}"
         DB_PASSWORD = "{{ ImmichPassword }}"
         DB_DATABASE_NAME = "{{ ImmichDatabase }}"
         REDIS_HOSTNAME = "{{ RedisHostname }}"
         JWT_SECRET = "{{ ImmichJwtSecret }}"
         ENABLE_MAPBOX = "false"
+        IMMICH_WEB_URL = "{{ Hostname }}:3000"
+        IMMICH_SERVER_URL = "{{ Hostname }}:3001"
+        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:3003"
       }
 
       volume_mount {
@@ -94,15 +113,22 @@ job "immich_job" {
     task "immich_machine_learning" {
       driver = "docker"
 
+      resources {
+        memory = 2048
+      }
+
       env = {
         NODE_ENV = "production"
-        DB_HOSTNAME = "{{ PgHostname }}"
+        DB_HOSTNAME = "{{ Hostname }}"
         DB_USERNAME = "{{ ImmichUsername }}"
         DB_PASSWORD = "{{ ImmichPassword }}"
         DB_DATABASE_NAME = "{{ ImmichDatabase }}"
         REDIS_HOSTNAME = "{{ RedisHostname }}"
         JWT_SECRET = "{{ ImmichJwtSecret }}"
         ENABLE_MAPBOX = "false"
+        IMMICH_WEB_URL = "{{ Hostname }}:3000"
+        IMMICH_SERVER_URL = "{{ Hostname }}:3001"
+        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:3003"
       }
 
       volume_mount {
@@ -120,6 +146,10 @@ job "immich_job" {
 
     task "immich_web" {
       driver = "docker"
+
+      env = {
+        PUBLIC_IMMICH_SERVER_URL = "https://immich-server.{{ BaseDomain }}"
+      }
 
       config {
         image = "altran1502/immich-web:release"
