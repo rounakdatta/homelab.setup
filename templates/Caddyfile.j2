@@ -113,5 +113,6 @@
 
 # immich
 :8104 {
+    reverse_proxy /api/* {{ HostIp }}:2283
     reverse_proxy {{ HostIp }}:2282
 }

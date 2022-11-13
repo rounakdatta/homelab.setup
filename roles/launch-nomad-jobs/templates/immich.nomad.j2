@@ -57,9 +57,9 @@ job "immich_job" {
         REDIS_HOSTNAME = "{{ RedisHostname }}"
         JWT_SECRET = "{{ ImmichJwtSecret }}"
         ENABLE_MAPBOX = "false"
-        IMMICH_WEB_URL = "{{ Hostname }}:3000"
-        IMMICH_SERVER_URL = "{{ Hostname }}:3001"
-        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:3003"
+        IMMICH_WEB_URL = "{{ Hostname }}:2282"
+        IMMICH_SERVER_URL = "{{ Hostname }}:2283"
+        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:2285"
       }
 
       volume_mount {
@@ -80,7 +80,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory = 2048
+        memory = 512
       }
 
       env = {
@@ -92,9 +92,9 @@ job "immich_job" {
         REDIS_HOSTNAME = "{{ RedisHostname }}"
         JWT_SECRET = "{{ ImmichJwtSecret }}"
         ENABLE_MAPBOX = "false"
-        IMMICH_WEB_URL = "{{ Hostname }}:3000"
-        IMMICH_SERVER_URL = "{{ Hostname }}:3001"
-        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:3003"
+        IMMICH_WEB_URL = "{{ Hostname }}:2282"
+        IMMICH_SERVER_URL = "{{ Hostname }}:2283"
+        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:2285"
       }
 
       volume_mount {
@@ -114,7 +114,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory = 2048
+        memory = 512
       }
 
       env = {
@@ -126,9 +126,9 @@ job "immich_job" {
         REDIS_HOSTNAME = "{{ RedisHostname }}"
         JWT_SECRET = "{{ ImmichJwtSecret }}"
         ENABLE_MAPBOX = "false"
-        IMMICH_WEB_URL = "{{ Hostname }}:3000"
-        IMMICH_SERVER_URL = "{{ Hostname }}:3001"
-        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:3003"
+        IMMICH_WEB_URL = "{{ Hostname }}:2282"
+        IMMICH_SERVER_URL = "{{ Hostname }}:2283"
+        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:2285"
       }
 
       volume_mount {
