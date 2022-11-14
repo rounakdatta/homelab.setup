@@ -196,6 +196,17 @@
         YMail: "{{ lookup('bitwarden', 'homelab/secrets/aops/ymail') }}"
         YPassword: "{{ lookup('bitwarden', 'homelab/secrets/aops/ypassword') }}"
 
+    - name: Initiate config file building for Immich
+      include: configure.yml
+      vars:
+        service: "immich"
+        Hostname: "{{ HOST_EXTERNAL_IPV4 }}"
+        ImmichUsername: "{{ lookup('bitwarden', 'homelab/secrets/immich/database/username') }}"
+        ImmichPassword: "{{ lookup('bitwarden', 'homelab/secrets/immich/database/password') }}"
+        ImmichDatabase: "{{ lookup('bitwarden', 'homelab/secrets/immich/database/database') }}"
+        RedisHostname: "{{ HOST_EXTERNAL_IPV4 }}"
+        ImmichJwtSecret: "{{ lookup('bitwarden', 'homelab/secrets/immich/jwt/secret') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -232,4 +243,5 @@
     - monica
     - servarr
     - aops
+    - immich
 
