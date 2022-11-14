@@ -148,7 +148,7 @@ job "immich_job" {
       driver = "docker"
 
       env = {
-        PUBLIC_IMMICH_SERVER_URL = "https://immich-server.{{ BaseDomain }}"
+        PUBLIC_IMMICH_SERVER_URL = "https://immich.{{ BaseDomain }}/api"
       }
 
       config {

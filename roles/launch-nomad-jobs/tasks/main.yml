@@ -227,21 +227,21 @@
     - mysql
     - postgresql
     - redis
-    # - firefly
-    # - bookstack
-    # - vikunja
-    # - nextcloud
-    # - webtrees
-    # - photoprism
-    # - audiobookshelf
-    # - duplicati
-    # - ntfy
-    # - cronicle
-    # - kavita
-    # - miniflux
-    # - souptik
-    # - monica
-    # - servarr
-    # - aops
+    - firefly
+    - bookstack
+    - vikunja
+    - nextcloud
+    - webtrees
+    - photoprism
+    - audiobookshelf
+    - duplicati
+    - ntfy
+    - cronicle
+    - kavita
+    - miniflux
+    - souptik
+    - monica
+    - servarr
+    - aops
     - immich
 
