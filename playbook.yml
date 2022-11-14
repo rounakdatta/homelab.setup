@@ -57,7 +57,6 @@
             - "vikunja"
             - "nextcloud"
             - "webtrees"
-            - "photoprism"
             - "ainv-dev"
             - "ainv"
             - "audiobookshelf"
@@ -85,8 +84,6 @@
             service: http://localhost:8084
           - hostname: "webtrees.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8085
-          - hostname: "photoprism.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8086
           - hostname: "ainv-dev.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8087
           - hostname: "ainv.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
