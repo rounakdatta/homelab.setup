@@ -26,11 +26,6 @@
     reverse_proxy {{ HostIp }}:3299
 }
 
-# photoprism
-:8086 {
-    reverse_proxy {{ HostIp }}:2342
-}
-
 # ainv_dev
 :8087 {
     reverse_proxy {{ HostIp }}:5444
@@ -104,4 +99,13 @@
 # aops
 :8102 {
     reverse_proxy {{ HostIp }}:7444
+}
+
+# immich
+:8103 {
+    handle_path /api/* {
+        reverse_proxy {{ HostIp }}:2283
+    }
+
+    reverse_proxy {{ HostIp }}:2282
 }
