@@ -49,6 +49,7 @@ job "photoprism_job" {
         PHOTOPRISM_ADMIN_PASSWORD = "{{ PhotoprismAdminPassword }}"
         PHOTOPRISM_ORIGINALS_LIMIT = "10000"
         PHOTOPRISM_SITE_URL = "https://photoprism.{{ BaseDomain }}/"
+        MARIADB_AUTO_UPGRADE = "1"
       }
 
       volume_mount {
