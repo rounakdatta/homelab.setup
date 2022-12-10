@@ -1,6 +1,11 @@
 # firefly-iii
 :8081 {
-    reverse_proxy {{ HostIp }}:9299
+    reverse_proxy {{ HostIp }}:9299 {
+        header_up X-Forwarded-Host {host}
+        header_up X-Forwarded-Server {host}
+        header_up X-Forwarded-Proto "https"
+        header_up Host {host}
+    }
 }
 
 # bookstack
