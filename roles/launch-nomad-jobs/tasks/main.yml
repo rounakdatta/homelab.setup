@@ -207,6 +207,14 @@
         RedisHostname: "{{ HOST_EXTERNAL_IPV4 }}"
         ImmichJwtSecret: "{{ lookup('bitwarden', 'homelab/secrets/immich/jwt/secret') }}"
 
+    - name: Initiate config file building for snibox
+      include: configure.yml
+      vars:
+        service: "snibox"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/postgres/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/postgres/password') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+
 - name: Install the required apt packages
   apt:
     name:
