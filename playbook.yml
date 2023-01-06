@@ -73,6 +73,7 @@
             - "jellyfin"
             - "aops"
             - "immich"
+            - "snibox"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -116,6 +117,8 @@
             service: http://localhost:8102
           - hostname: "immich.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8103
+          - hostname: "snibox.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8104
           - service: http_status:404
       tags:
         - networking

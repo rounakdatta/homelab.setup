@@ -1,0 +1,49 @@
+job "snibox_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "snibox_group" {
+    count = 1
+
+    network {
+      port "snibox_port" {
+        static       = "7477"
+        to           = "3000"
+        host_network = "tailscale"
+      }
+    }
+
+    volume "snibox_volume" {
+      type      = "host"
+      source    = "snibox_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "snibox" {
+      driver = "docker"
+
+      env = {
+        SECRET_KEY_BASE = "{{ SecretKeyBase }}"
+      }
+
+      volume_mount {
+        volume      = "snibox_volume"
+        destination = "/app/db/database"
+        read_only   = false
+      }
+
+      config {
+        image = "melashri/snibox:latest"
+        ports = ["snibox_port"]
+      }
+    }
+  }
+}
+

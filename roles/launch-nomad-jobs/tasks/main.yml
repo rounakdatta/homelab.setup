@@ -145,8 +145,8 @@
       include: configure.yml
       vars:
         service: "miniflux"
-        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/postgres/username') }}"
-        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/postgres/password') }}"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/postgres/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/postgres/password') }}"
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
         MinifluxUsername: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/username') }}"
         MinifluxPassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/password') }}"
@@ -207,6 +207,12 @@
         RedisHostname: "{{ HOST_EXTERNAL_IPV4 }}"
         ImmichJwtSecret: "{{ lookup('bitwarden', 'homelab/secrets/immich/jwt/secret') }}"
 
+    - name: Initiate config file building for snibox
+      include: configure.yml
+      vars:
+        service: "snibox"
+        SecretKeyBase: "{{ lookup('bitwarden', 'homelab/secrets/snibox/secret_key_base') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -243,4 +249,5 @@
     - servarr
     - aops
     - immich
+    - snibox
 

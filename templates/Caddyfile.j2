@@ -114,3 +114,8 @@
 
     reverse_proxy {{ HostIp }}:2282
 }
+
+# snibox
+:8104 {
+    reverse_proxy {{ HostIp }}:7477
+}
