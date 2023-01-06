@@ -8,7 +8,7 @@ job "snibox_job" {
     network {
       port "snibox_port" {
         static       = "7477"
-        to           = "8000"
+        to           = "3000"
         host_network = "tailscale"
       }
     }
@@ -31,23 +31,16 @@ job "snibox_job" {
 
       env = {
         SECRET_KEY_BASE = "{{ SecretKeyBase }}"
-        FORCE_SSL = "false"
-        DB_NAME = "snibox"
-        DB_USER = "{{ DatabaseUser }}"
-        DB_PASS = "{{ DatabasePassword }}"
-        DB_HOST = "{{ DatabaseHost }}"
-        DB_PORT = "5432"
       }
 
       volume_mount {
         volume      = "snibox_volume"
-        destination = "/app/public"
+        destination = "/app/db/database"
         read_only   = false
       }
 
       config {
-        image = "snibox/snibox:latest"
-        command = "./bin/rails s -p 3000 -b '0.0.0.0'"
+        image = "melashri/snibox:latest"
         ports = ["snibox_port"]
       }
     }

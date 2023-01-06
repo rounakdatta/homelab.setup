@@ -166,6 +166,10 @@ client {
   host_volume "thunderbird_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/thunderbird/personal"
   }
+
+  host_volume "snibox_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/snibox"
+  }
 }
 
 plugin "docker" {
