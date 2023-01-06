@@ -214,7 +214,7 @@
         DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/snibox/postgres/username') }}"
         DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/snibox/postgres/password') }}"
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
-        SecretKeyBase: {{ lookup('bitwarden', 'homelab/secrets/snibox/secret_key_base') }}
+        SecretKeyBase: "{{ lookup('bitwarden', 'homelab/secrets/snibox/secret_key_base') }}"
 
 - name: Install the required apt packages
   apt:
