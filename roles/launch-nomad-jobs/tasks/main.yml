@@ -213,6 +213,15 @@
         service: "snibox"
         SecretKeyBase: "{{ lookup('bitwarden', 'homelab/secrets/snibox/secret_key_base') }}"
 
+    - name: Initiate config file building for Bitwarden backup
+      include: configure.yml
+      vars:
+        service: "bitwarden_backup"
+        BitwardenUserName: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/username') }}"
+        BitwardenPassword: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/password') }}"
+        BitwardenBackupArchivePassword: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/archive/password') }}"
+        BitwardenBaseUrl: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/host') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -250,4 +259,5 @@
     - aops
     - immich
     - snibox
+    - bitwarden_backup
 
