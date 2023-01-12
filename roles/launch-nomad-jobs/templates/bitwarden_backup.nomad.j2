@@ -3,7 +3,7 @@ job "bitwarden_backup_job" {
   type        = "batch"
 
   periodic {
-    cron  = "15 * * * *"
+    cron  = "@daily"
     prohibit_overlap = true
   }
 
