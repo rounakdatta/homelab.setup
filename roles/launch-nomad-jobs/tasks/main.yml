@@ -220,7 +220,8 @@
         BitwardenUserName: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/username') }}"
         BitwardenPassword: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/password') }}"
         BitwardenBackupArchivePassword: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/archive/password') }}"
-        BitwardenBaseUrl: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/host') }}"
+        BitwardenClientId: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/clientid') }}"
+        BitwardenClientSecret: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/clientsecret') }}"
 
 - name: Install the required apt packages
   apt:

@@ -1,6 +1,6 @@
 job "bitwarden_backup_job" {
   datacenters = ["246bp"]
-  type        = "service"
+  type        = "batch"
 
   periodic {
     cron  = "15 * * * *"
@@ -27,10 +27,11 @@ job "bitwarden_backup_job" {
       driver = "docker"
 
       env = {
-        BITWARDEN_URL = "{{ BitwardenBaseUrl }}"
         BACKUP_PASSWORD = "{{ BitwardenBackupArchivePassword }}"
         BW_USER_1 = "{{ BitwardenUserName }}"
         BW_PASSWORD_1 = "{{ BitwardenPassword }}"
+        BW_CLIENTID_1 = "{{ BitwardenClientId }}"
+        BW_CLIENTSECRET_1 = "{{ BitwardenClientSecret }}"
       }
 
       volume_mount {
@@ -40,7 +41,7 @@ job "bitwarden_backup_job" {
       }
 
       config {
-        image = "spx01/bitwarden-backup"
+        image = "rounakdatta/bitwarden-backup"
       }
     }
   }
