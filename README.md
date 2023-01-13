@@ -24,6 +24,9 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | Miniflux       | RSS reader                                     | https://miniflux.app/                  |
 | Metabase       | SQL / analytics interface                      | https://www.metabase.com/              |
 | n8n            | Scheduled and on-demand DAGs and workflows     | https://n8n.io/                        |
+| Monica         | Daily journalling and relationship manager     | https://www.monicahq.com/              |
+| Immich         | Google Photos alternative                      | https://immich.app/                    |
+| Snibox         | Snippets organizer                             | https://github.com/MohamedElashri/Snibox|
 
 ## Architecture
 
@@ -47,6 +50,8 @@ All the application containers are mapped to a persistent storage location in th
 
 ## Evolution of the host machine
 
+Yeah I'm a [one-machine](https://thume.ca/2023/01/02/one-machine-twitter/) fan.
+
 1. 1GB DigitalOcean droplet
     - The now-archived [repository](https://github.com/rounakdatta/homeserver.setup) used to deploy applications natively (non-containerized) and given memory was limited, very few applications were deployed.
     - Since DO droplets have dedicated IPv4, exposing services publicly was not at all a concern.
@@ -61,7 +66,7 @@ All the application containers are mapped to a persistent storage location in th
     - Being a laptop, the machine provides battery backup to some extent and also a screen for urgent debugging.
     - However the laptop being decade-old, it tends to heat up a lot and needs active environmental cooling.
 4. ASUS Desktop (gaming PC)
-    - The second-hand-purchases gaming desktop sports i5 7th generation and 16GB RAM (early 2018 model).
+    - The second-hand-purchased gaming desktop sports i5 7th generation and 16GB RAM (early 2018 model).
     - Has powerful motherboard with efficient cooling and power unit.
     - Nextcloud, Photoprism, Duplicati performance has clear visible improvements upon migration to this desktop homelab.
 
