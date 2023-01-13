@@ -1,0 +1,48 @@
+job "bitwarden_backup_job" {
+  datacenters = ["246bp"]
+  type        = "batch"
+
+  periodic {
+    cron  = "@daily"
+    prohibit_overlap = true
+  }
+
+  group "bitwarden_backup_group" {
+    count = 1
+
+    volume "bitwarden_backup_volume" {
+      type      = "host"
+      source    = "bitwarden_backup_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 10
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "bitwarden_backup" {
+      driver = "docker"
+
+      env = {
+        BACKUP_PASSWORD = "{{ BitwardenBackupArchivePassword }}"
+        BW_USER_1 = "{{ BitwardenUserName }}"
+        BW_PASSWORD_1 = "{{ BitwardenPassword }}"
+        BW_CLIENTID_1 = "{{ BitwardenClientId }}"
+        BW_CLIENTSECRET_1 = "{{ BitwardenClientSecret }}"
+      }
+
+      volume_mount {
+        volume      = "bitwarden_backup_volume"
+        destination = "/out"
+        read_only   = false
+      }
+
+      config {
+        image = "rounakdatta/bitwarden-backup"
+      }
+    }
+  }
+}

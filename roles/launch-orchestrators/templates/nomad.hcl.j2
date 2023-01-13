@@ -170,6 +170,10 @@ client {
   host_volume "snibox_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/snibox"
   }
+
+  host_volume "bitwarden_backup_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/bitwarden/backup"
+  }
 }
 
 plugin "docker" {
