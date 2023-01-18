@@ -119,3 +119,13 @@
 :8104 {
     reverse_proxy {{ HostIp }}:7477
 }
+
+# your_spotify-api
+:8105 {
+    reverse_proxy {{ HostIp }}:1997
+}
+
+# your_spotify
+:8106 {
+    reverse_proxy {{ HostIp }}:1998
+}

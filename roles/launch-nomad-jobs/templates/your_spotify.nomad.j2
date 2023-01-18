@@ -1,0 +1,63 @@
+job "your_spotify_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "your_spotify_group" {
+    count = 1
+
+    # spotify is love, as are 1997 & 1998
+    network {
+      port "your_spotify_server_port" {
+        static       = "1997"
+        to           = "8080"
+        host_network = "tailscale"
+      }
+
+      port "your_spotify_client_port" {
+        static       = "1998"
+        to           = "3000"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "your_spotify_server" {
+      driver = "docker"
+
+      env = {
+        MONGO_ENDPOINT = "mongodb://{{ DatabaseHost }}:27017/your_spotify"
+        NODE_ENV = "production"
+        API_ENDPOINT = "https://ys-api.{{ BaseDomain }}"
+        CLIENT_ENDPOINT = "https://yspotify.{{ BaseDomain }}"
+        SPOTIFY_PUBLIC = "{{ SpotifyPublicKey }}"
+        SPOTIFY_SECRET = "{{ SpotifySecretKey }}"
+        CORS = "all"
+      }
+
+      config {
+        image = "yooooomi/your_spotify_server"
+        ports = ["your_spotify_server_port"]
+      }
+    }
+
+    task "your_spotify_client" {
+      driver = "docker"
+
+      env = {
+        API_ENDPOINT = "https://ys-api.{{ BaseDomain }}"
+      }
+
+      config {
+        image = "yooooomi/your_spotify_client"
+        ports = ["your_spotify_client_port"]
+      }
+    }
+
+  }
+}
