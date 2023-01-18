@@ -223,6 +223,11 @@
         BitwardenClientId: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/clientid') }}"
         BitwardenClientSecret: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/clientsecret') }}"
 
+    - name: Initiate config file building for MongoDB
+      include: configure.yml
+      vars:
+        service: "mongodb"
+
     - name: Initiate config file building for YourSpotify
       include: configure.yml
       vars:
@@ -268,4 +273,5 @@
     - immich
     - snibox
     - bitwarden_backup
+    - mongodb
     - your_spotify
