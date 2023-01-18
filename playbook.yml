@@ -119,6 +119,10 @@
             service: http://localhost:8103
           - hostname: "snibox.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8104
+          - hostname: "ys-api.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8105
+          - hostname: "yspotify.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8106
           - service: http_status:404
       tags:
         - networking
