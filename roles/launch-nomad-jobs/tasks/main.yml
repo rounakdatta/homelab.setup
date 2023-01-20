@@ -235,6 +235,15 @@
         SpotifyPublicKey: "{{ lookup('bitwarden', 'homelab/secrets/spotify/publickey') }}"
         SpotifySecretKey: "{{ lookup('bitwarden', 'homelab/secrets/spotify/secretkey') }}"
 
+    - name: Initiate config file building for memoet
+      include: configure.yml
+      vars:
+        service: "memoet"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/memoet/postgres/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/memoet/postgres/password') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+        SecretKeyBase: "{{ lookup('bitwarden', 'homelab/secrets/memoet/secret') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -275,3 +284,4 @@
     - bitwarden_backup
     - mongodb
     - your_spotify
+    - memoet

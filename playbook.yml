@@ -76,6 +76,7 @@
             - "snibox"
             - "ys-api"
             - "yspotify"
+            - "memoet"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -125,6 +126,8 @@
             service: http://localhost:8105
           - hostname: "yspotify.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8106
+          - hostname: "memoet.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8107
           - service: http_status:404
       tags:
         - networking
