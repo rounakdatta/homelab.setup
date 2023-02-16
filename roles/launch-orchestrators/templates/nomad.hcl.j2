@@ -123,6 +123,10 @@ client {
     path = "{{ hdd_mount_path }}/homelab/souptik/uploads"
   }
 
+  host_volume "smepl_hdd_uploads_volume" {
+    path = "{{ hdd_mount_path }}/homelab/smepl/uploads"
+  }
+
   host_volume "postgresql_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/postgresql"
   }
