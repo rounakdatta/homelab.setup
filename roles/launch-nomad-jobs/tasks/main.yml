@@ -161,16 +161,6 @@
         SouptikDebugLog: "{{ lookup('bitwarden', 'homelab/secrets/souptik/debug') }}"
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
-    - name: Initiate config file building for smepl
-      include: configure.yml
-      vars:
-        service: "smepl"
-        smeplDatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/smepl/username') }}"
-        smeplDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/smepl/password') }}"
-        smeplDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/smepl/database') }}"
-        smeplDebugLog: "{{ lookup('bitwarden', 'homelab/secrets/smepl/debug') }}"
-        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
-
     - name: Initiate config file building for PostgreSQL
       include: configure.yml
       vars:
@@ -254,6 +244,16 @@
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
         SecretKeyBase: "{{ lookup('bitwarden', 'homelab/secrets/memoet/secret') }}"
 
+    - name: Initiate config file building for smepl
+      include: configure.yml
+      vars:
+        service: "smepl"
+        smeplDatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/smepl/username') }}"
+        smeplDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/smepl/password') }}"
+        smeplDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/smepl/database') }}"
+        smeplDebugLog: "{{ lookup('bitwarden', 'homelab/secrets/smepl/debug') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -286,7 +286,6 @@
     - kavita
     - miniflux
     - souptik
-    - smepl
     - monica
     - servarr
     - aops
@@ -296,3 +295,4 @@
     - mongodb
     - your_spotify
     - memoet
+    - smepl

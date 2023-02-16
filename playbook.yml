@@ -69,7 +69,6 @@
             - "mailpile"
             - "miniflux"
             - "souptik"
-            - "smepl"
             - "monica"
             - "jellyfin"
             - "aops"
@@ -78,6 +77,7 @@
             - "ys-api"
             - "yspotify"
             - "memoet"
+            - "smepl"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -113,8 +113,6 @@
             service: http://localhost:8098
           - hostname: "souptik.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8099
-          - hostname: "smepl.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8108
           - hostname: "monica.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8100
           - hostname: "jellyfin.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
@@ -131,6 +129,8 @@
             service: http://localhost:8106
           - hostname: "memoet.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8107
+          - hostname: "smepl.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8108
           - service: http_status:404
       tags:
         - networking
