@@ -27,6 +27,7 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | Monica         | Daily journalling and relationship manager     | https://www.monicahq.com/              |
 | Immich         | Google Photos alternative                      | https://immich.app/                    |
 | Snibox         | Snippets organizer                             | https://github.com/MohamedElashri/Snibox|
+| Memoet         | Modern spaced repetition system                | https://github.com/memoetapp/memoet|
 
 ## Architecture
 

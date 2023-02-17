@@ -61,24 +61,9 @@
     reverse_proxy {{ HostIp }}:3012
 }
 
-# metabase
-:8094 {
-    reverse_proxy {{ HostIp }}:3999
-}
-
-# n8n
-:8095 {
-    reverse_proxy {{ HostIp }}:7339
-}
-
 # kavita
 :8096 {
     reverse_proxy {{ HostIp }}:7246
-}
-
-# mailpile
-:8097 {
-    reverse_proxy {{ HostIp }}:4246
 }
 
 # miniflux
