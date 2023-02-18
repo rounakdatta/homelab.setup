@@ -36,12 +36,11 @@ job "smepl_job" {
       }
 
       env = {
-        WORDPRESS_DB_HOST      = "{{ DatabaseHost }}"
-        WORDPRESS_DB_USER      = "{{ smeplDatabaseUser }}"
-        WORDPRESS_DB_PASSWORD  = "{{ smeplDatabasePassword }}"
-        WORDPRESS_DB_NAME      = "{{ smeplDatabaseName }}"
-        WORDPRESS_DEBUG        = "{{ smeplDebugLog }}"
-        WORDPRESS_CONFIG_EXTRA = "define('FORCE_SSL_ADMIN', true);$_SERVER['HTTPS'] = 'on';"
+        WORDPRESS_DB_HOST     = "{{ DatabaseHost }}"
+        WORDPRESS_DB_USER     = "{{ smeplDatabaseUser }}"
+        WORDPRESS_DB_PASSWORD = "{{ smeplDatabasePassword }}"
+        WORDPRESS_DB_NAME     = "{{ smeplDatabaseName }}"
+        WORDPRESS_DEBUG       = "{{ smeplDebugLog }}"
       }
 
       config {
