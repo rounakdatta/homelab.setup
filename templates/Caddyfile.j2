@@ -137,5 +137,7 @@
 
 # smepl
 :8108 {
-    reverse_proxy {{ HostIp }}:5061
+    reverse_proxy {{ HostIp }}:5061 {
+        header_up +HTTP_X_FORWARDED_PROTO "https"
+    }
 }
