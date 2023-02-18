@@ -41,6 +41,7 @@ job "smepl_job" {
         WORDPRESS_DB_PASSWORD = "{{ smeplDatabasePassword }}"
         WORDPRESS_DB_NAME     = "{{ smeplDatabaseName }}"
         WORDPRESS_DEBUG       = "{{ smeplDebugLog }}"
+        WORDPRESS_CONFIG_EXTRA = "define('FORCE_SSL_ADMIN', true);$_SERVER['HTTPS'] = 'on';"
       }
 
       config {
