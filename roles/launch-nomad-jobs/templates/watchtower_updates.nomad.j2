@@ -1,0 +1,41 @@
+job "watchtower_updates_job" {
+  datacenters = ["246bp"]
+  type        = "batch"
+
+  periodic {
+    # everyday at 3:45AM
+    cron  = "45 3 * * *"
+    prohibit_overlap = true
+  }
+
+  group "watchtower_updates_group" {
+    count = 1
+
+    volume "watchtower_updates_volume" {
+      type      = "host"
+      source    = "watchtower_updates_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 10
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "watchtower_updates" {
+      driver = "docker"
+
+      volume_mount {
+        volume      = "watchtower_updates_volume"
+        destination = "/var/run/docker.sock"
+        read_only   = false
+      }
+
+      config {
+        image = "containrrr/watchtower"
+      }
+    }
+  }
+}
