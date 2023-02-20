@@ -1,19 +1,13 @@
-job "watchtower_updates_job" {
+job "watchtower_job" {
   datacenters = ["246bp"]
-  type        = "batch"
+  type        = "service"
 
-  periodic {
-    # everyday at 3:45AM
-    cron  = "45 3 * * *"
-    prohibit_overlap = true
-  }
-
-  group "watchtower_updates_group" {
+  group "watchtower_group" {
     count = 1
 
-    volume "watchtower_updates_volume" {
+    volume "watchtower_volume" {
       type      = "host"
-      source    = "watchtower_updates_hdd_volume"
+      source    = "watchtower_hdd_volume"
       read_only = false
     }
 
@@ -24,11 +18,11 @@ job "watchtower_updates_job" {
       mode     = "delay"
     }
 
-    task "watchtower_updates" {
+    task "watchtower" {
       driver = "docker"
 
       volume_mount {
-        volume      = "watchtower_updates_volume"
+        volume      = "watchtower_volume"
         destination = "/var/run/docker.sock"
         read_only   = false
       }
