@@ -7,7 +7,7 @@ roles:
 
 - name: papanito.cloudflared
   src: https://github.com/papanito/ansible-role-cloudflared.git
-  version: origin/master
+  version: origin/main
 
 - name: ansible-modules-bitwarden
   src: https://github.com/c0sco/ansible-modules-bitwarden
