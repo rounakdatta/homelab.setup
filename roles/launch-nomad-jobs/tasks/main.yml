@@ -254,6 +254,11 @@
         smeplDebugLog: "{{ lookup('bitwarden', 'homelab/secrets/smepl/debug') }}"
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
+    - name: Initiate config file building for Watchtower
+      include: configure.yml
+      vars:
+        service: "watchtower"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -296,3 +301,4 @@
     - your_spotify
     - memoet
     - smepl
+    - watchtower
