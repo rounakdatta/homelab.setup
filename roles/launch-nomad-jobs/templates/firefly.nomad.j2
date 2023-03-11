@@ -32,6 +32,7 @@ job "firefly-iii_job" {
         APP_URL     = "https://firefly.{{ BaseDomain }}"
         DISABLE_CSP_HEADER = "true"
         TRUSTED_PROXIES = "**"
+        MAPBOX_API_KEY = "{{ MapboxApiToken }}"
       }
 
       config {
