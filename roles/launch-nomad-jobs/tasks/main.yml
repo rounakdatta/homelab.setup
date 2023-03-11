@@ -31,6 +31,7 @@
         FireflyDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/firefly/username') }}"
         FireflyDatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/firefly/password') }}"
         FireflyDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/firefly/database') }}"
+        MapboxApiToken: "{{ lookup('bitwarden', 'homelab/secrets/firefly/mapboxtoken') }}"
 
     - name: Initiate config file building for Bookstack
       include: configure.yml
