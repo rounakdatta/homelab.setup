@@ -186,6 +186,10 @@ client {
   host_volume "watchtower_hdd_volume" {
     path = "/var/run/docker.sock"
   }
+
+  host_volume "mind_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/mind"
+  }
 }
 
 plugin "docker" {

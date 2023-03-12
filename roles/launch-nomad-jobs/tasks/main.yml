@@ -260,6 +260,11 @@
       vars:
         service: "watchtower"
 
+    - name: Initiate config file building for mind
+      include: configure.yml
+      vars:
+        service: "mind"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -303,3 +308,4 @@
     - memoet
     - smepl
     - watchtower
+    - mind
