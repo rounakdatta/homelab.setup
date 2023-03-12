@@ -126,3 +126,8 @@
         header_up X-Forwarded-Proto "https"
     }
 }
+
+# memoet
+:8109 {
+    reverse_proxy {{ HostIp }}:3232
+}
