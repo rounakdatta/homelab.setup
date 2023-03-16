@@ -45,7 +45,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory = 1024
+        memory_max = 1024
       }
 
       env = {
@@ -80,7 +80,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory = 1024
+        memory_max = 1024
       }
 
       env = {
@@ -114,7 +114,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory = 512
+        memory_max = 512
       }
 
       env = {
