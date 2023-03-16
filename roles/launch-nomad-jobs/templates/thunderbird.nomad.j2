@@ -30,7 +30,7 @@ job "thunderbird_job" {
       driver = "docker"
 
       resources {
-        memory = 300
+        memory_max = 1024
       }
 
       env = {
