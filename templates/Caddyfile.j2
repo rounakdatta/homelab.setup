@@ -127,7 +127,12 @@
     }
 }
 
-# memoet
+# mind
 :8109 {
     reverse_proxy {{ HostIp }}:3232
+}
+
+# chatgpt
+:8110 {
+    reverse_proxy {{ HostIp }}:7111
 }

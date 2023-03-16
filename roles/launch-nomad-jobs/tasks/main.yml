@@ -265,6 +265,11 @@
       vars:
         service: "mind"
 
+    - name: Initiate config file building for Chat-With-GPT
+      include: configure.yml
+      vars:
+        service: "chatgpt"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -309,3 +314,4 @@
     - smepl
     - watchtower
     - mind
+    - chatgpt

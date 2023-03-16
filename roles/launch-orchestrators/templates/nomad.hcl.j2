@@ -190,6 +190,10 @@ client {
   host_volume "mind_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/mind"
   }
+
+  host_volume "chatgpt_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/chatgpt"
+  }
 }
 
 plugin "docker" {
