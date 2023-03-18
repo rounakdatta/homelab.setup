@@ -8,7 +8,7 @@ job "xcuzme_job" {
     network {
       port "xcuzme_port" {
         static       = "6522"
-        to           = "8080"
+        to           = "8000"
         host_network = "tailscale"
       }
     }
@@ -24,6 +24,8 @@ job "xcuzme_job" {
       driver = "docker"
 
       env = {
+        DB_ROOT_USER = "{{ DatabaseRootUser }}"
+        DB_ROOT_PASSWORD = "{{ DatabaseRootPassword }}"
         DB_USER     = "{{ DatabaseUser }}"
         DB_PASSWORD     = "{{ DatabasePassword }}"
         DB_NAME = "{{ DatabaseName }}"

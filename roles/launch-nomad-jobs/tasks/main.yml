@@ -259,6 +259,8 @@
       include: configure.yml
       vars:
         service: "xcuzme"
+        DatabaseRootUser: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_user') }}"
+        DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_password') }}"
         DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/xcuzme/username') }}"
         DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/xcuzme/password') }}"
         DatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/xcuzme/dbname') }}"
