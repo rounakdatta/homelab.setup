@@ -1,0 +1,44 @@
+job "xcuzme_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "xcuzme_group" {
+    count = 1
+
+    network {
+      port "xcuzme_port" {
+        static       = "6522"
+        to           = "8000"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 10
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "xcuzme" {
+      driver = "docker"
+
+      env = {
+        DB_ROOT_USER = "{{ DatabaseRootUser }}"
+        DB_ROOT_PASSWORD = "{{ DatabaseRootPassword }}"
+        DB_USER     = "{{ DatabaseUser }}"
+        DB_PASSWORD     = "{{ DatabasePassword }}"
+        DB_NAME = "{{ DatabaseName }}"
+        DB_HOST = "{{ DatabaseHost }}"
+        OPENAI_ORGANIZATION = "{{ OpenAIOrg }}"
+        OPENAI_API_KEY = "{{ OpenAIAPIKey }}"
+      }
+
+      config {
+        image = "rounakdatta/excusez-moi-proxy:latest"
+        ports = ["xcuzme_port"]
+      }
+    }
+  }
+}
+
