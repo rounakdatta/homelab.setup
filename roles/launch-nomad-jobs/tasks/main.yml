@@ -255,6 +255,17 @@
         smeplDebugLog: "{{ lookup('bitwarden', 'homelab/secrets/smepl/debug') }}"
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
+    - name: Initiate config file building for xcuzme
+      include: configure.yml
+      vars:
+        service: "xcuzme"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/xcuzme/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/xcuzme/password') }}"
+        DatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/xcuzme/dbname') }}"
+        OpenAIOrg: "{{ lookup('bitwarden', 'homelab/secrets/xcuzme/openai/org') }}"
+        OpenAIAPIKey: "{{ lookup('bitwarden', 'homelab/secrets/xcuzme/openai/key') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+
     - name: Initiate config file building for Watchtower
       include: configure.yml
       vars:
@@ -315,3 +326,4 @@
     - watchtower
     - mind
     - chatgpt
+    - xcuzme
