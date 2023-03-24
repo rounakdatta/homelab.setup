@@ -194,6 +194,10 @@ client {
   host_volume "chatgpt_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/chatgpt"
   }
+
+  host_volume "immich_typesense_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/immich/typesense"
+  }
 }
 
 plugin "docker" {

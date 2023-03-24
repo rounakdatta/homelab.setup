@@ -207,6 +207,7 @@
         ImmichDatabase: "{{ lookup('bitwarden', 'homelab/secrets/immich/database/database') }}"
         RedisHostname: "{{ HOST_EXTERNAL_IPV4 }}"
         ImmichJwtSecret: "{{ lookup('bitwarden', 'homelab/secrets/immich/jwt/secret') }}"
+        TypesenseAPIKey: "{{ lookup('bitwarden', 'homelab/secrets/immich/typesense/apikey') }}"
 
     - name: Initiate config file building for snibox
       include: configure.yml
