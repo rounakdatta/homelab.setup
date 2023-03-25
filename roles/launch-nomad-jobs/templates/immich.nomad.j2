@@ -111,6 +111,8 @@ job "immich_job" {
         IMMICH_SERVER_URL = "{{ Hostname }}:2283"
         IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:2285"
         TYPESENSE_API_KEY = "{{ TypesenseAPIKey }}"
+        TYPESENSE_HOST = "{{ Hostname }}"
+        TYPESENSE_PORT = "2286"
       }
 
       volume_mount {
