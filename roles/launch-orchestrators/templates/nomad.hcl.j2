@@ -80,7 +80,11 @@ client {
   }
 
   host_volume "ntfy_cache_hdd_volume" {
-    path = "{{ hdd_mount_path }}/homelab/ntfy"
+    path = "{{ hdd_mount_path }}/homelab/ntfy/cache"
+  }
+
+  host_volume "ntfy_user_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/ntfy/user"
   }
 
   host_volume "cronicle_data_hdd_volume" {
