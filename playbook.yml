@@ -57,28 +57,20 @@
             - "vikunja"
             - "nextcloud"
             - "webtrees"
-            - "ainv-dev"
-            - "ainv"
             - "audiobookshelf"
             - "duplicati"
             - "ntfy"
             - "cronicle"
-            - "metabase"
-            - "n8n"
-            - "kavita"
-            - "mailpile"
             - "miniflux"
             - "souptik"
             - "monica"
             - "jellyfin"
-            - "aops"
             - "immich"
             - "snibox"
             - "ys-api"
             - "yspotify"
             - "memoet"
             - "smepl"
-            - "mind"
             - "chatgpt"
             - "xcuzme"
           ingress:
@@ -92,10 +84,6 @@
             service: http://localhost:8084
           - hostname: "webtrees.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8085
-          - hostname: "ainv-dev.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8087
-          - hostname: "ainv.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8088
           - hostname: "audiobookshelf.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8079
           - hostname: "duplicati.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
@@ -104,8 +92,6 @@
             service: http://localhost:8092
           - hostname: "cronicle.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8093
-          - hostname: "kavita.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8096
           - hostname: "miniflux.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8098
           - hostname: "souptik.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
@@ -114,8 +100,6 @@
             service: http://localhost:8100
           - hostname: "jellyfin.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8101
-          - hostname: "aops.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8102
           - hostname: "immich.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8103
           - hostname: "snibox.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
@@ -128,8 +112,6 @@
             service: http://localhost:8107
           - hostname: "smepl.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8108
-          - hostname: "mind.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
-            service: http://localhost:8109
           - hostname: "chatgpt.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8110
           - hostname: "xcuzme.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"

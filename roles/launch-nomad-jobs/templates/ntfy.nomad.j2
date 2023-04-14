@@ -19,6 +19,12 @@ job "ntfy_job" {
       read_only = false
     }
 
+    volume "ntfy_user_volume" {
+      type      = "host"
+      source    = "ntfy_user_hdd_volume"
+      read_only = false
+    }
+
     restart {
       attempts = 3
       interval = "25m"
@@ -28,6 +34,16 @@ job "ntfy_job" {
 
     task "ntfy" {
       driver = "docker"
+
+# this is how we embed a file first into local task directory (host)
+# and then mount that onto the container (look at the `volumes` under `config`)
+      template {
+        data = <<HELLO
+auth-file: "/var/lib/ntfy/user.db"
+auth-default-access: "deny-all"
+        HELLO
+        destination = "config/server.yml"
+      }
 
       env = {
         NTFY_BASE_URL = "https://ntfy.{{ BaseDomain }}"
@@ -44,10 +60,19 @@ job "ntfy_job" {
         read_only   = false
       }
 
+      volume_mount {
+        volume      = "ntfy_user_volume"
+        destination = "/var/lib/ntfy"
+        read_only   = false
+      }
+
       config {
         image = "binwiederhier/ntfy"
         command = "serve"
         ports = ["ntfy_port"]
+        volumes = [
+          "config:/etc/ntfy"
+        ]
       }
     }
   }

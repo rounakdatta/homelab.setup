@@ -31,16 +31,6 @@
     reverse_proxy {{ HostIp }}:3299
 }
 
-# ainv_dev
-:8087 {
-    reverse_proxy {{ HostIp }}:5444
-}
-
-# ainv_prod
-:8088 {
-    reverse_proxy {{ HostIp }}:5445
-}
-
 # audiobookshelf (port is an exception)
 :8079 {
     reverse_proxy {{ HostIp }}:4444
@@ -61,11 +51,6 @@
     reverse_proxy {{ HostIp }}:3012
 }
 
-# kavita
-:8096 {
-    reverse_proxy {{ HostIp }}:7246
-}
-
 # miniflux
 :8098 {
     reverse_proxy {{ HostIp }}:5999
@@ -84,11 +69,6 @@
 # jellyfin
 :8101 {
     reverse_proxy {{ HostIp }}:12005
-}
-
-# aops
-:8102 {
-    reverse_proxy {{ HostIp }}:7444
 }
 
 # immich
@@ -125,11 +105,6 @@
     reverse_proxy {{ HostIp }}:5061 {
         header_up X-Forwarded-Proto "https"
     }
-}
-
-# mind
-:8109 {
-    reverse_proxy {{ HostIp }}:3232
 }
 
 # chatgpt
