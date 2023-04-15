@@ -1,0 +1,61 @@
+job "qdrant_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "qdrant_group" {
+    count = 1
+
+    network {
+      port "qdrant_port" {
+        static       = 6333
+        to           = 6333
+        host_network = "tailscale"
+      }
+    }
+
+    volume "qdrant_storage_volume" {
+      type      = "host"
+      source    = "qdrant_storage_hdd_volume"
+      read_only = false
+    }
+
+    volume "qdrant_config_volume" {
+      type      = "host"
+      source    = "qdrant_config_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 2
+      interval = "10m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "qdrant_server" {
+      driver = "docker"
+
+      resources {
+        memory = 1024
+      }
+
+      volume_mount {
+        volume      = "qdrant_storage_volume"
+        destination = "/qdrant/storage"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "qdrant_config_volume"
+        destination = "/qdrant/config"
+        read_only   = false
+      }
+
+      config {
+        image = "qdrant/qdrant"
+        ports = ["qdrant_port"]
+      }
+    }
+
+  }
+}

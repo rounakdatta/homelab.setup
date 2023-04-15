@@ -202,6 +202,14 @@ client {
   host_volume "immich_typesense_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/immich/typesense"
   }
+
+  host_volume "qdrant_storage_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/qdrant/storage"
+  }
+
+  host_volume "qdrant_config_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/qdrant/config"
+  }
 }
 
 plugin "docker" {
