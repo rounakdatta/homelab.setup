@@ -19,6 +19,7 @@ job "qdrant_job" {
       read_only = false
     }
 
+    # configuration volume is created, but not yet used
     volume "qdrant_config_volume" {
       type      = "host"
       source    = "qdrant_config_hdd_volume"
@@ -42,12 +43,6 @@ job "qdrant_job" {
       volume_mount {
         volume      = "qdrant_storage_volume"
         destination = "/qdrant/storage"
-        read_only   = false
-      }
-
-      volume_mount {
-        volume      = "qdrant_config_volume"
-        destination = "/qdrant/config"
         read_only   = false
       }
 
