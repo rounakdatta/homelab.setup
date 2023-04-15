@@ -284,6 +284,11 @@
       vars:
         service: "chatgpt"
 
+    - name: Initiate config file building for Qdrant vector database
+      include: configure.yml
+      vars:
+        service: "qdrant"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -326,3 +331,4 @@
     - smepl
     - chatgpt
     - xcuzme
+    - qdrant
