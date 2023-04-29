@@ -289,6 +289,12 @@
       vars:
         service: "qdrant"
 
+    - name: Initiate config file building for MyBestOfReddit
+      include: configure.yml
+      vars:
+        service: "my_best_of_reddit"
+        TelegramBotToken: "{{ lookup('bitwarden', 'homelab/secrets/mbor/telegramtoken') }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -329,6 +335,6 @@
     - your_spotify
     - memoet
     - smepl
-    - chatgpt
     - xcuzme
     - qdrant
+    - my_best_of_reddit

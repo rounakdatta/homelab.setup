@@ -210,6 +210,10 @@ client {
   host_volume "qdrant_config_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/qdrant/config"
   }
+
+  host_volume "my_best_of_reddit_data_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/my-best-of-reddit"
+  }
 }
 
 plugin "docker" {
