@@ -21,6 +21,11 @@ job "my_best_of_reddit_job" {
     task "my_best_of_reddit_server" {
       driver = "docker"
 
+      # when puppeteer launches chrome instances to download, memory usage can peak
+      resources {
+        memory_max = 4096
+      }
+
       env = {
         TELEGRAM_TOKEN = "{{ TelegramBotToken }}"
       }
