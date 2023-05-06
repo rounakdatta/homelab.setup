@@ -188,7 +188,7 @@ job "immich_job" {
       driver = "docker"
 
       env = {
-        IMMICH_SERVER_URL = "https://immich.{{ BaseDomain }}/api"
+        IMMICH_SERVER_URL = "http://{{ Hostname }}:2283"
       }
 
       config {
