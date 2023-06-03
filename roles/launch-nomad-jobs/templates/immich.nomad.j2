@@ -84,9 +84,8 @@ job "immich_job" {
       }
 
       config {
-        image = "altran1502/immich-server:release"
-        command = "/bin/sh"
-        args    = ["./start-server.sh"]
+        image = "ghcr.io/immich-app/immich-server:release"
+        command    = "start-server.sh"
         ports = ["immich_server_port"]
       }
     }
@@ -122,9 +121,8 @@ job "immich_job" {
       }
 
       config {
-        image = "altran1502/immich-server:release"
-        command = "/bin/sh"
-        args    = ["./start-microservices.sh"]
+        image = "ghcr.io/immich-app/immich-server:release"
+        command    = "start-microservices.sh"
       }
     }
 
@@ -192,9 +190,7 @@ job "immich_job" {
       }
 
       config {
-        image = "altran1502/immich-web:release"
-        command = "/bin/sh"
-        args    = ["./entrypoint.sh"]
+        image = "ghcr.io/immich-app/immich-web:release"
         ports = ["immich_web_port"]
       }
     }
