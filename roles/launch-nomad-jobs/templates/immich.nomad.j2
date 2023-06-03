@@ -85,8 +85,7 @@ job "immich_job" {
 
       config {
         image = "altran1502/immich-server:release"
-        command = "/bin/sh"
-        args    = ["./start-server.sh"]
+        command    = ["start-server.sh"]
         ports = ["immich_server_port"]
       }
     }
@@ -123,8 +122,7 @@ job "immich_job" {
 
       config {
         image = "altran1502/immich-server:release"
-        command = "/bin/sh"
-        args    = ["./start-microservices.sh"]
+        command    = ["start-microservices.sh"]
       }
     }
 
@@ -193,8 +191,6 @@ job "immich_job" {
 
       config {
         image = "altran1502/immich-web:release"
-        command = "/bin/sh"
-        args    = ["./entrypoint.sh"]
         ports = ["immich_web_port"]
       }
     }
