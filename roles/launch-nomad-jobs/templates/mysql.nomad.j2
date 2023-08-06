@@ -44,8 +44,7 @@ job "mysql_job" {
       }
 
       config {
-        image = "{{ install_arch_mod }}/mariadb:10.3.32"
-
+        image = "{{ install_arch_mod }}/mariadb:10.5.2"
         ports = ["mysql_port"]
 
       }
