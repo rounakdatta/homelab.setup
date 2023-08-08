@@ -1,0 +1,52 @@
+job "linkding_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "linkding_group" {
+    count = 1
+
+    network {
+      port "linkding_port" {
+        static       = 9090
+        to           = 9090
+        host_network = "tailscale"
+      }
+    }
+
+    volume "linkding_volume" {
+      type      = "host"
+      source    = "linkding_hdd_volume"
+      read_only = false
+    }
+
+    restart {
+      attempts = 2
+      interval = "10m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "linkding_server" {
+      driver = "docker"
+
+      volume_mount {
+        volume      = "linkding_volume"
+        destination = "/etc/linkding/data"
+        read_only   = false
+      }
+
+      env = {
+        LD_DB_ENGINE = "postgres"
+        LD_DB_USER = "{{ DatabaseUser }}"
+        LD_DB_PASSWORD = "{{ DatabasePassword }}"
+        LD_DB_HOST = "{{ DatabaseHost }}"
+      }
+
+      config {
+        image = "sissbruecker/linkding:latest"
+        ports = ["linkding_port"]
+      }
+    }
+
+  }
+}

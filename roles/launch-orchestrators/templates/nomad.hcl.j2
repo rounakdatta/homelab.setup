@@ -214,6 +214,10 @@ client {
   host_volume "my_best_of_reddit_data_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/my-best-of-reddit"
   }
+
+  host_volume "linkding_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/linkding"
+  }
 }
 
 plugin "docker" {
