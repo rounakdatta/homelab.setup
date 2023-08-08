@@ -40,6 +40,7 @@ job "linkding_job" {
         LD_DB_USER = "{{ DatabaseUser }}"
         LD_DB_PASSWORD = "{{ DatabasePassword }}"
         LD_DB_HOST = "{{ DatabaseHost }}"
+        LD_CSRF_TRUSTED_ORIGINS = "https://linkding.{{ BaseDomain }}"
       }
 
       config {
