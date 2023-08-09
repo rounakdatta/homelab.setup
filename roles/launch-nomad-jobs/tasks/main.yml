@@ -295,6 +295,14 @@
         service: "my_best_of_reddit"
         TelegramBotToken: "{{ lookup('bitwarden', 'homelab/secrets/mbor/telegramtoken') }}"
 
+    - name: Initiate config file building for Linkding
+      include: configure.yml
+      vars:
+        service: "linkding"
+        DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/linkding/postgres/username') }}"
+        DatabasePassword: "{{ lookup('bitwarden', 'homelab/secrets/linkding/postgres/password') }}"
+        DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
+
 - name: Install the required apt packages
   apt:
     name:
@@ -326,15 +334,11 @@
     - cronicle
     - miniflux
     - souptik
-    - monica
-    - servarr
     - immich
     - snibox
-    - bitwarden_backup
     - mongodb
-    - your_spotify
+    - bitwarden_backup
     - memoet
     - smepl
-    - xcuzme
-    - qdrant
     - my_best_of_reddit
+    - linkding
