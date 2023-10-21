@@ -19,6 +19,12 @@ job "audiobookshelf_job" {
       read_only = false
     }
 
+    volume "audiobookshelf_podcast_data_volume" {
+      type      = "host"
+      source    = "podcasts_hdd_volume"
+      read_only = false
+    }
+
     volume "audiobookshelf_config_volume" {
       type      = "host"
       source    = "audiobookshelf_config_hdd_volume"
@@ -44,6 +50,12 @@ job "audiobookshelf_job" {
       volume_mount {
         volume      = "audiobookshelf_data_volume"
         destination = "/audiobooks"
+        read_only   = false
+      }
+
+      volume_mount {
+        volume      = "audiobookshelf_podcast_data_volume"
+        destination = "/podcasts"
         read_only   = false
       }
 
