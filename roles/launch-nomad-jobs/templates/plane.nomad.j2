@@ -1,0 +1,60 @@
+job "plane_job" {
+  datacenters = ["246bp"]
+  type        = "service"
+
+  group "plane_group" {
+    count = 1
+
+    network {
+      port "plane_port" {
+        static       = "9393"
+        to           = "8080"
+        host_network = "tailscale"
+      }
+    }
+
+    restart {
+      attempts = 3
+      interval = "25m"
+      delay    = "1m"
+      mode     = "delay"
+    }
+
+    task "plane_frontend" {
+      driver = "docker"
+
+      env = {
+        DB_HOST     = "{{ DatabaseHost }}"
+        DB_USERNAME = "{{ BookstackDatabaseUsername }}"
+        DB_PASSWORD = "{{ BookstackDatabasePassword }}"
+        DB_DATABASE = "{{ BookstackDatabaseName }}"
+        APP_URL     = "https://bookstack.{{ BaseDomain }}"
+      }
+
+      config {
+        image = "makeplane/plane-frontend:latest"
+        ports = ["plane_port"]
+        command = "/usr/local/bin/start.sh web/server.js web"
+      }
+    }
+
+    task "plane_space" {
+      driver = "docker"
+
+      env = {
+        DB_HOST     = "{{ DatabaseHost }}"
+        DB_USERNAME = "{{ BookstackDatabaseUsername }}"
+        DB_PASSWORD = "{{ BookstackDatabasePassword }}"
+        DB_DATABASE = "{{ BookstackDatabaseName }}"
+        APP_URL     = "https://bookstack.{{ BaseDomain }}"
+      }
+
+      config {
+        image = "makeplane/plane-frontend:latest"
+        ports = ["plane_port"]
+        command = "/usr/local/bin/start.sh space/server.js space"
+      }
+    }
+
+  }
+}
