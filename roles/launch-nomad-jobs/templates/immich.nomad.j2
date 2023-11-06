@@ -57,7 +57,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory_max = 1024
+        memory = 1024
       }
 
       env = {
@@ -94,7 +94,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory_max = 1024
+        memory = 1024
       }
 
       env = {
@@ -130,7 +130,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory_max = 512
+        memory = 2048
       }
 
       env = {
@@ -154,7 +154,7 @@ job "immich_job" {
       }
 
       config {
-        image = "altran1502/immich-machine-learning:release"
+        image = "ghcr.io/immich-app/immich-machine-learning:release"
       }
     }
 
@@ -162,7 +162,7 @@ job "immich_job" {
       driver = "docker"
 
       resources {
-        memory_max = 512
+        memory = 512
       }
 
       env = {
