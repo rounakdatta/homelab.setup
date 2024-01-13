@@ -32,7 +32,7 @@
     recurse: yes
 
 - name: launch systemd services
-  include: configure.yml
+  include_tasks: configure.yml
   vars:
     HostIp: "{{ HOST_EXTERNAL_IPV4 }}"
     service: "{{ item }}"
