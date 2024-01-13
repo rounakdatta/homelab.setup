@@ -158,30 +158,6 @@ job "immich_job" {
       }
     }
 
-    task "immich_typesense" {
-      driver = "docker"
-
-      resources {
-        memory = 512
-      }
-
-      env = {
-        TYPESENSE_API_KEY = "{{ TypesenseAPIKey }}"
-        TYPESENSE_DATA_DIR = "/data"
-      }
-
-      volume_mount {
-        volume      = "typesense_volume"
-        destination = "/data"
-        read_only   = false
-      }
-
-      config {
-        image = "typesense/typesense:0.24.0"
-        ports = ["immich_typesense_port"]
-      }
-    }
-
     task "immich_web" {
       driver = "docker"
 
