@@ -14,7 +14,7 @@ job "postgresql_job" {
 
       port "immich_postgresql_port" {
         static       = 5433
-        to           = 5433
+        to           = 5432
         host_network = "tailscale"
       }
     }
@@ -75,7 +75,7 @@ job "postgresql_job" {
       }
 
       config {
-        image = "rounakdatta/postgres:14.5"
+        image = "tensorchord/pgvecto-rs:pg14-v0.1.11"
         ports = ["immich_postgresql_port"]
 
       }
