@@ -11,11 +11,23 @@ job "postgresql_job" {
         to           = 5432
         host_network = "tailscale"
       }
+
+      port "immich_postgresql_port" {
+        static       = 5433
+        to           = 5433
+        host_network = "tailscale"
+      }
     }
 
     volume "postgresql_volume" {
       type      = "host"
       source    = "postgresql_hdd_volume"
+      read_only = false
+    }
+
+    volume "immich_postgresql_volume" {
+      type      = "host"
+      source    = "immich_postgresql_hdd_volume"
       read_only = false
     }
 
@@ -41,9 +53,30 @@ job "postgresql_job" {
       }
 
       config {
-        image = "rounakdatta/pgvecto-rs:pg14-v0.1.11"
-
+        image = "rounakdatta/postgres:14.5"
         ports = ["postgresql_port"]
+
+      }
+    }
+
+
+    task "immich_postgresql_server" {
+      driver = "docker"
+
+      env = {
+        POSTGRES_USER = "{{ DatabaseRootUser }}"
+        POSTGRES_PASSWORD = "{{ DatabaseRootPassword }}"
+      }
+
+      volume_mount {
+        volume      = "immich_postgresql_volume"
+        destination = "/var/lib/postgresql/data"
+        read_only   = false
+      }
+
+      config {
+        image = "rounakdatta/postgres:14.5"
+        ports = ["immich_postgresql_port"]
 
       }
     }
