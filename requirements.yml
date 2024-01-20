@@ -3,7 +3,7 @@
 roles:
 - name: caddy_ansible.caddy_ansible
   src: https://github.com/caddy-ansible/caddy-ansible.git
-  version: origin/master
+  version: v3.2.0 
 
 - name: papanito.cloudflared
   src: https://github.com/papanito/ansible-role-cloudflared.git

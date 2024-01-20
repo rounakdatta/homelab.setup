@@ -13,18 +13,18 @@
 
   block:
     - name: Initiate config file building for MySQL
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "mysql"
         DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/mysql/root_password') }}"
 
     - name: Initiate config file building for redis
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "redis"
 
     - name: Initiate config file building for Firefly-III
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "firefly"
         FireflyApplicationEncryptionKey: "{{ lookup('community.general.random_string', special=false, length=32) }}"
@@ -34,7 +34,7 @@
         MapboxApiToken: "{{ lookup('bitwarden', 'homelab/secrets/firefly/mapboxtoken') }}"
 
     - name: Initiate config file building for Bookstack
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "bookstack"
         BookstackDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/bookstack/username') }}"
@@ -42,7 +42,7 @@
         BookstackDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/bookstack/database') }}"
 
     - name: Initiate config file building for Vikunja
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "vikunja"
         VikunjaDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/username') }}"
@@ -56,7 +56,7 @@
         VikunjaJwtSecret: "{{ lookup('bitwarden', 'homelab/secrets/vikunja/jwt/secret') }}"
 
     - name: Initiate config file building for Nextcloud
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "nextcloud"
         NextcloudDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/nextcloud/username') }}"
@@ -66,7 +66,7 @@
         NextcloudRedisPort: "6379"
 
     - name: Initiate config file building for Webtrees
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "webtrees"
         WebtreesDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/webtrees/username') }}"
@@ -74,7 +74,7 @@
         WebtreesDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/webtrees/database') }}"
 
     - name: Initiate config file building for Photoprism
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "photoprism"
         PhotoprismDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/username') }}"
@@ -83,7 +83,7 @@
         PhotoprismAdminPassword: "{{ lookup('bitwarden', 'homelab/secrets/photoprism/admin_password') }}"
 
     - name: Initiate config file building for AINV
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "ainv"
         AinvDevDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/ainv/dev/username') }}"
@@ -94,27 +94,27 @@
         AinvProdDatabaseName: "{{ lookup('bitwarden', 'homelab/secrets/ainv/prod/database') }}"
 
     - name: Initiate config file building for audiobookshelf
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "audiobookshelf"
 
     - name: Initiate config file building for duplicati
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "duplicati"
 
     - name: Initiate config file building for ntfy
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "ntfy"
 
     - name: Initiate config file building for cronicle
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "cronicle"
 
     - name: Initiate config file building for metabase
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "metabase"
         MetabaseDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/metabase/username') }}"
@@ -124,7 +124,7 @@
         MetabaseEncryptionKey: "{{ lookup('bitwarden', 'homelab/secrets/metabase/encryption/key') }}"
 
     - name: Initiate config file building for n8n
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "n8n"
         N8NDatabaseUsername: "{{ lookup('bitwarden', 'homelab/secrets/n8n/username') }}"
@@ -133,17 +133,17 @@
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
     - name: Initiate config file building for kavita
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "kavita"
 
     - name: Initiate config file building for mailpile
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "mailpile"
 
     - name: Initiate config file building for miniflux
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "miniflux"
         DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/postgres/username') }}"
@@ -153,7 +153,7 @@
         MinifluxPassword: "{{ lookup('bitwarden', 'homelab/secrets/miniflux/password') }}"
 
     - name: Initiate config file building for souptik
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "souptik"
         SouptikDatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/souptik/username') }}"
@@ -163,14 +163,14 @@
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
     - name: Initiate config file building for PostgreSQL
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "postgresql"
         DatabaseRootUser: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_user') }}"
         DatabaseRootPassword: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_password') }}"
 
     - name: Initiate config file building for Monica
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "monica"
         AppKey: "{{ lookup('bitwarden', 'homelab/secrets/monica/appkey') }}"
@@ -179,12 +179,12 @@
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
     - name: Initiate config file building for Servarr
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "servarr"
 
     - name: Initiate config file building for AOPS
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "aops"
         FbApiKey: "{{ lookup('bitwarden', 'homelab/secrets/aops/fb/apikey') }}"
@@ -198,7 +198,7 @@
         YPassword: "{{ lookup('bitwarden', 'homelab/secrets/aops/ypassword') }}"
 
     - name: Initiate config file building for Immich
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "immich"
         Hostname: "{{ HOST_EXTERNAL_IPV4 }}"
@@ -210,13 +210,13 @@
         TypesenseAPIKey: "{{ lookup('bitwarden', 'homelab/secrets/immich/typesense/apikey') }}"
 
     - name: Initiate config file building for snibox
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "snibox"
         SecretKeyBase: "{{ lookup('bitwarden', 'homelab/secrets/snibox/secret_key_base') }}"
 
     - name: Initiate config file building for Bitwarden backup
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "bitwarden_backup"
         BitwardenUserName: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/username') }}"
@@ -226,19 +226,19 @@
         BitwardenClientSecret: "{{ lookup('bitwarden', 'homelab/secrets/bitwarden/clientsecret') }}"
 
     - name: Initiate config file building for MongoDB
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "mongodb"
 
     - name: Initiate config file building for YourSpotify
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "your_spotify"
         SpotifyPublicKey: "{{ lookup('bitwarden', 'homelab/secrets/spotify/publickey') }}"
         SpotifySecretKey: "{{ lookup('bitwarden', 'homelab/secrets/spotify/secretkey') }}"
 
     - name: Initiate config file building for memoet
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "memoet"
         DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/memoet/postgres/username') }}"
@@ -247,7 +247,7 @@
         SecretKeyBase: "{{ lookup('bitwarden', 'homelab/secrets/memoet/secret') }}"
 
     - name: Initiate config file building for smepl
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "smepl"
         smeplDatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/smepl/username') }}"
@@ -257,7 +257,7 @@
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
     - name: Initiate config file building for xcuzme
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "xcuzme"
         DatabaseRootUser: "{{ lookup('bitwarden', 'homelab/secrets/postgresql/root_user') }}"
@@ -270,33 +270,33 @@
         DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
 
     - name: Initiate config file building for Watchtower
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "watchtower"
 
     - name: Initiate config file building for mind
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "mind"
 
     - name: Initiate config file building for Chat-With-GPT
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "chatgpt"
 
     - name: Initiate config file building for Qdrant vector database
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "qdrant"
 
     - name: Initiate config file building for MyBestOfReddit
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "my_best_of_reddit"
         TelegramBotToken: "{{ lookup('bitwarden', 'homelab/secrets/mbor/telegramtoken') }}"
 
     - name: Initiate config file building for Linkding
-      include: configure.yml
+      include_tasks: configure.yml
       vars:
         service: "linkding"
         DatabaseUser: "{{ lookup('bitwarden', 'homelab/secrets/linkding/postgres/username') }}"
@@ -315,7 +315,7 @@
     executable: pip3
 
 - name: Launch the nomad jobs
-  include: launch.yml
+  include_tasks: launch.yml
   vars:
     DatabaseHost: "{{ HOST_EXTERNAL_IPV4 }}"
     service: "{{ item }}"

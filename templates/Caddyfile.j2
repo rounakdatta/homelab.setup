@@ -73,11 +73,7 @@
 
 # immich
 :8103 {
-    handle_path /api/* {
-        reverse_proxy {{ HostIp }}:2283
-    }
-
-    reverse_proxy {{ HostIp }}:2282
+    reverse_proxy {{ HostIp }}:2283
 }
 
 # snibox

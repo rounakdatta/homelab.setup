@@ -6,12 +6,6 @@ job "immich_job" {
     count = 1
 
     network {
-      port "immich_web_port" {
-        static       = "2282"
-        to           = "3000"
-        host_network = "tailscale"
-      }
-
       port "immich_server_port" {
         static       = "2283"
         to           = "3001"
@@ -26,23 +20,11 @@ job "immich_job" {
         to           = "3003"
         host_network = "tailscale"
       }
-
-      port "immich_typesense_port" {
-        static       = "2286"
-        to           = "8108"
-        host_network = "tailscale"
-      }
     }
 
     volume "immich_originals_volume" {
       type      = "host"
       source    = "photoprism_originals_hdd_volume"
-      read_only = false
-    }
-
-    volume "typesense_volume" {
-      type      = "host"
-      source    = "immich_typesense_hdd_volume"
       read_only = false
     }
 
@@ -63,6 +45,7 @@ job "immich_job" {
       env = {
         NODE_ENV = "production"
         DB_HOSTNAME = "{{ Hostname }}"
+        DB_PORT = "5433"
         DB_USERNAME = "{{ ImmichUsername }}"
         DB_PASSWORD = "{{ ImmichPassword }}"
         DB_DATABASE_NAME = "{{ ImmichDatabase }}"
@@ -100,6 +83,7 @@ job "immich_job" {
       env = {
         NODE_ENV = "production"
         DB_HOSTNAME = "{{ Hostname }}"
+        DB_PORT = "5433"
         DB_USERNAME = "{{ ImmichUsername }}"
         DB_PASSWORD = "{{ ImmichPassword }}"
         DB_DATABASE_NAME = "{{ ImmichDatabase }}"
@@ -136,6 +120,7 @@ job "immich_job" {
       env = {
         NODE_ENV = "production"
         DB_HOSTNAME = "{{ Hostname }}"
+        DB_PORT = "5433"
         DB_USERNAME = "{{ ImmichUsername }}"
         DB_PASSWORD = "{{ ImmichPassword }}"
         DB_DATABASE_NAME = "{{ ImmichDatabase }}"
@@ -157,43 +142,5 @@ job "immich_job" {
         image = "ghcr.io/immich-app/immich-machine-learning:release"
       }
     }
-
-    task "immich_typesense" {
-      driver = "docker"
-
-      resources {
-        memory = 512
-      }
-
-      env = {
-        TYPESENSE_API_KEY = "{{ TypesenseAPIKey }}"
-        TYPESENSE_DATA_DIR = "/data"
-      }
-
-      volume_mount {
-        volume      = "typesense_volume"
-        destination = "/data"
-        read_only   = false
-      }
-
-      config {
-        image = "typesense/typesense:0.24.0"
-        ports = ["immich_typesense_port"]
-      }
-    }
-
-    task "immich_web" {
-      driver = "docker"
-
-      env = {
-        IMMICH_SERVER_URL = "http://{{ Hostname }}:2283"
-      }
-
-      config {
-        image = "ghcr.io/immich-app/immich-web:release"
-        ports = ["immich_web_port"]
-      }
-    }
-
   }
 }

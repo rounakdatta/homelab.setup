@@ -139,6 +139,10 @@ client {
     path = "{{ hdd_mount_path }}/homelab/postgresql"
   }
 
+  host_volume "immich_postgresql_hdd_volume" {
+    path = "{{ hdd_mount_path }}/homelab/immich_postgresql"
+  }
+
   host_volume "monica_hdd_volume" {
     path = "{{ hdd_mount_path }}/homelab/monica"
   }
