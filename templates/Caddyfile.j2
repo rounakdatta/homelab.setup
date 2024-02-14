@@ -15,10 +15,7 @@
 
 # vikunja
 :8083 {
-    reverse_proxy /api/* {{ HostIp }}:45566
-    reverse_proxy /.well-known/* {{ HostIp }}:45566
-    reverse_proxy /dav/* {{ HostIp }}:45566
-    reverse_proxy {{ HostIp }}:55566
+    reverse_proxy {{ HostIp }}:45566
 }
 
 # nextcloud

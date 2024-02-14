@@ -6,20 +6,14 @@ job "vikunja_job" {
     count = 1
 
     network {
-      port "vikunja_api_port" {
+      port "vikunja_port" {
         static       = "45566"
         to           = "3456"
         host_network = "tailscale"
       }
-
-      port "vikunja_frontend_port" {
-        static       = "55566"
-        to           = "80"
-        host_network = "tailscale"
-      }
     }
 
-    volume "vikunja_api_volume" {
+    volume "vikunja_volume" {
       type      = "host"
       source    = "vikunja_hdd_volume"
       read_only = false
@@ -32,7 +26,7 @@ job "vikunja_job" {
       mode     = "delay"
     }
 
-    task "vikunja_api" {
+    task "vikunja" {
       driver = "docker"
 
       env = {
@@ -55,31 +49,17 @@ job "vikunja_job" {
       }
 
       volume_mount {
-        volume      = "vikunja_api_volume"
+        volume      = "vikunja_volume"
         destination = "/app/vikunja/files"
         read_only   = false
       }
 
       config {
-        image = "vikunja/api"
-        ports = ["vikunja_api_port"]
+        image = "vikunja/vikunja"
+        ports = ["vikunja_port"]
 
       }
     }
-
-    task "vikunja_frontend" {
-      driver = "docker"
-
-      env = {
-        VIKUNJA_API_URL = "https://vikunja.{{ BaseDomain }}/api/v1"
-      }
-
-      config {
-        image = "vikunja/frontend"
-        ports = ["vikunja_frontend_port"]
-      }
-    }
-
   }
 }
 
