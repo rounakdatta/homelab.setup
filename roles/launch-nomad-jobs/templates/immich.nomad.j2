@@ -68,45 +68,7 @@ job "immich_job" {
 
       config {
         image = "ghcr.io/immich-app/immich-server:release"
-        command    = "start-server.sh"
         ports = ["immich_server_port"]
-      }
-    }
-
-    task "immich_microservices" {
-      driver = "docker"
-
-      resources {
-        memory = 1024
-      }
-
-      env = {
-        NODE_ENV = "production"
-        DB_HOSTNAME = "{{ Hostname }}"
-        DB_PORT = "5433"
-        DB_USERNAME = "{{ ImmichUsername }}"
-        DB_PASSWORD = "{{ ImmichPassword }}"
-        DB_DATABASE_NAME = "{{ ImmichDatabase }}"
-        REDIS_HOSTNAME = "{{ RedisHostname }}"
-        JWT_SECRET = "{{ ImmichJwtSecret }}"
-        ENABLE_MAPBOX = "false"
-        IMMICH_WEB_URL = "{{ Hostname }}:2282"
-        IMMICH_SERVER_URL = "{{ Hostname }}:2283"
-        IMMICH_MACHINE_LEARNING_URL = "{{ Hostname }}:2285"
-        TYPESENSE_API_KEY = "{{ TypesenseAPIKey }}"
-        TYPESENSE_HOST = "{{ Hostname }}"
-        TYPESENSE_PORT = "2286"
-      }
-
-      volume_mount {
-        volume      = "immich_originals_volume"
-        destination = "/usr/src/app/upload"
-        read_only   = false
-      }
-
-      config {
-        image = "ghcr.io/immich-app/immich-server:release"
-        command    = "start-microservices.sh"
       }
     }
 
