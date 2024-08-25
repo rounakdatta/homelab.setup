@@ -74,6 +74,7 @@
             - "chatgpt"
             - "xcuzme"
             - "linkding"
+            - "aops"
           ingress:
           - hostname: "firefly.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8081
@@ -119,6 +120,8 @@
             service: http://localhost:8111
           - hostname: "linkding.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
             service: http://localhost:8112
+          - hostname: "aops.{{ lookup('bitwarden', 'homelab/secrets/domain/public/base') }}"
+            service: http://localhost:8113
           - service: http_status:404
       tags:
         - networking
