@@ -5,7 +5,7 @@
 
 - name: Download nomad package
   get_url:
-    url: "https://releases.hashicorp.com/nomad/1.3.5/nomad_1.3.5_linux_{{ install_arch }}.zip"
+    url: "https://releases.hashicorp.com/nomad/1.9.4/nomad_1.9.4_linux_{{ install_arch }}.zip"
     dest: "/tmp/"
 
 - name: Install the required apt packages
