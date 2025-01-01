@@ -15,7 +15,7 @@
 
 - name: Inflate the package
   ansible.builtin.unarchive:
-    src: "/tmp/nomad_1.3.5_linux_{{ install_arch }}.zip"
+    src: "/tmp/nomad_1.9.4_linux_{{ install_arch }}.zip"
     dest: "/usr/bin"
     remote_src: yes
 
