@@ -1,0 +1,12 @@
+---
+collections:
+  # For bitwarden lookups
+  - name: community.general
+    version: ">=3.0.0"
+
+  # For Kubernetes module (k8s, k8s_info)
+  - name: kubernetes.core
+    version: ">=2.0.0"
+
+# No external roles needed - we'll write minimal custom roles
+roles: []

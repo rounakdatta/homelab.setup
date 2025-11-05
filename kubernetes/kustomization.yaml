@@ -1,0 +1,19 @@
+---
+# Root kustomization file
+# This is the entry point for deploying all services
+# Deploy order: namespaces → external-secrets → infrastructure → databases → apps
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # 1. Create namespaces first
+  - namespaces.yaml
+
+  # 2. Setup infrastructure (cert-manager, ingress)
+  - infrastructure/
+
+  # 3. Deploy databases
+  - databases/
+
+  # 4. Deploy applications
+  - apps/

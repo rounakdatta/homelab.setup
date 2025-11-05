@@ -1,0 +1,74 @@
+---
+# Setup Kubernetes tools and External Secrets Operator
+# This installs ESO which will sync secrets from Bitwarden to K8s
+
+- name: Install kubectl (if not present from K3s)
+  ansible.builtin.get_url:
+    url: https://dl.k8s.io/release/stable.txt
+    dest: /tmp/kubectl-version.txt
+  register: kubectl_version_file
+
+- name: Read kubectl version
+  ansible.builtin.slurp:
+    src: /tmp/kubectl-version.txt
+  register: kubectl_version_content
+
+- name: Set kubectl version
+  ansible.builtin.set_fact:
+    kubectl_version: "{{ kubectl_version_content.content | b64decode | trim }}"
+
+- name: Check if kubectl exists
+  ansible.builtin.stat:
+    path: /usr/local/bin/kubectl
+  register: kubectl_binary
+
+- name: Download kubectl
+  ansible.builtin.get_url:
+    url: "https://dl.k8s.io/release/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+    dest: /usr/local/bin/kubectl
+    mode: '0755'
+  when: not kubectl_binary.stat.exists
+
+- name: Install Helm
+  ansible.builtin.shell: |
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    executable: /bin/bash
+    creates: /usr/local/bin/helm
+
+- name: Check if cert-manager is already installed
+  ansible.builtin.command: |
+    kubectl get namespace cert-manager
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  register: certmanager_ns_check
+  failed_when: false
+  changed_when: false
+
+- name: Install cert-manager
+  ansible.builtin.command: |
+    kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.15.1/cert-manager.yaml
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: certmanager_ns_check.rc != 0
+  register: certmanager_install
+  changed_when: certmanager_install.rc == 0
+
+- name: Wait for cert-manager to be ready
+  ansible.builtin.command: |
+    kubectl wait --for=condition=Available --timeout=120s deployment --all -n cert-manager
+  environment:
+    KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+  when: certmanager_install.changed
+  register: certmanager_ready
+  changed_when: false
+  retries: 3
+  delay: 10
+  until: certmanager_ready.rc == 0
+
+- name: Display installation summary
+  ansible.builtin.debug:
+    msg:
+      - "K8s setup complete!"
+      - "cert-manager installed"
+      - "Ready to deploy applications"

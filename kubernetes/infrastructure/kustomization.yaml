@@ -1,0 +1,12 @@
+---
+# Infrastructure components
+# These are foundational resources that apps depend on
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # cert-manager ClusterIssuers (for TLS certificates)
+  - cert-manager/
+
+  # Ingress resources (for exposing services)
+  - ingress/

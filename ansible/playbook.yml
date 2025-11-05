@@ -1,0 +1,133 @@
+---
+# Homelab infrastructure and secrets management playbook
+#
+# Usage:
+#   Full setup:     ansible-playbook ansible/playbook.yml
+#   Secrets only:   ansible-playbook ansible/playbook.yml --tags secrets
+#   Infra only:     ansible-playbook ansible/playbook.yml --tags infra
+#
+# Prerequisites: Tailscale must be installed and authenticated on the target machine
+
+- name: Setup homelab infrastructure
+  hosts: homelab
+  become: yes
+  vars_files:
+    - ../config.yml
+
+  pre_tasks:
+    - name: Verify Tailscale is installed and running
+      ansible.builtin.command: tailscale status
+      register: tailscale_check
+      changed_when: false
+      failed_when: false
+
+    - name: Fail if Tailscale is not running
+      ansible.builtin.fail:
+        msg: "Tailscale is not running on this machine. Please install and authenticate Tailscale first: curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up"
+      when: tailscale_check.rc != 0
+
+    - name: Get Tailscale IP address
+      ansible.builtin.command: tailscale ip -4
+      register: tailscale_ip
+      changed_when: false
+
+    - name: Set Tailscale IP as fact
+      ansible.builtin.set_fact:
+        host_tailscale_ip: "{{ tailscale_ip.stdout }}"
+
+    - name: Display Tailscale IP
+      ansible.builtin.debug:
+        msg: "Using Tailscale IP: {{ host_tailscale_ip }}"
+
+  roles:
+    # Install and configure K3s with Tailscale binding
+    - role: k3s
+      tags: [k3s, infra]
+
+    # Setup kubectl access and External Secrets Operator
+    - role: k8s-setup
+      tags: [k8s, infra]
+
+# Secrets management play
+# Runs on localhost to sync Bitwarden secrets to Kubernetes
+- name: Sync secrets from Bitwarden to Kubernetes
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tags: [secrets]
+
+  vars:
+    # Secret definitions - add new services here
+    k8s_secrets:
+      # MySQL credentials (consolidated)
+      - name: mysql-credentials
+        namespace: databases
+        data:
+          root-password: mysql/root_password
+
+      # Firefly III credentials (consolidated)
+      - name: firefly-credentials
+        namespace: apps
+        data:
+          app-key: firefly/app_key
+          db-name: firefly/db_name
+          db-username: firefly/db_username
+          db-password: firefly/db_password
+
+  pre_tasks:
+    - name: Verify required environment variables
+      ansible.builtin.fail:
+        msg: "Required environment variable {{ item }} is not set"
+      when: lookup('env', item) == ''
+      loop:
+        - BW_CLIENTID
+        - BW_CLIENTSECRET
+        - BW_PASSWORD
+
+    - name: Verify Bitwarden CLI is installed
+      ansible.builtin.command: bw --version
+      register: bw_check
+      changed_when: false
+
+    - name: Unlock Bitwarden vault
+      ansible.builtin.shell: |
+        export BW_CLIENTID="{{ lookup('env', 'BW_CLIENTID') }}"
+        export BW_CLIENTSECRET="{{ lookup('env', 'BW_CLIENTSECRET') }}"
+        export BW_PASSWORD="{{ lookup('env', 'BW_PASSWORD') }}"
+        bw login --apikey --raw || bw unlock --passwordenv BW_PASSWORD --raw
+      register: bw_session
+      changed_when: false
+      no_log: true
+
+    - name: Set Bitwarden session fact
+      ansible.builtin.set_fact:
+        BW_SESSION: "{{ bw_session.stdout }}"
+      no_log: true
+
+    - name: Ensure required namespaces exist
+      ansible.builtin.shell: kubectl create namespace {{ item }} --dry-run=client -o yaml | kubectl apply -f -
+      loop:
+        - databases
+        - apps
+      register: ns_result
+      changed_when: "'created' in ns_result.stdout"
+      failed_when: false
+
+  tasks:
+    - name: Create/Update K8s secrets from Bitwarden
+      ansible.builtin.shell: |
+        export BW_SESSION="{{ BW_SESSION }}"
+        kubectl create secret generic {{ item.name }} \
+          --namespace={{ item.namespace }} \
+          {% for key, bw_path in item.data.items() %}
+          --from-literal={{ key }}="$(bw get password '{{ bw_path }}' --session "$BW_SESSION")" \
+          {% endfor %}
+          --dry-run=client -o yaml | kubectl apply -f -
+      loop: "{{ k8s_secrets }}"
+      register: secret_result
+      changed_when: "'configured' in secret_result.stdout or 'created' in secret_result.stdout"
+      no_log: true
+
+    - name: Display sync results
+      ansible.builtin.debug:
+        msg: "✓ Synced {{ k8s_secrets | length }} secrets to Kubernetes"

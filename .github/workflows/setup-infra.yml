@@ -1,0 +1,63 @@
+name: Setup Infrastructure
+
+# This workflow sets up the base infrastructure (Tailscale, K3s, ESO)
+# It should be run manually when setting up a new machine or updating infrastructure
+# Regular deployments use deploy.yml instead
+
+on:
+  workflow_dispatch:  # Manual trigger only
+    inputs:
+      force_reinstall:
+        description: 'Force reinstall K3s even if it exists'
+        required: false
+        default: 'false'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Fetch repository
+        uses: actions/checkout@v3
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v1
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+
+      - name: Add SSH key
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          MACHINE_NAME: ${{ secrets.MACHINE_NAME }}
+        run: |
+          mkdir -p ~/.ssh
+          MACHINE_IP="$(tailscale ip -4 ${MACHINE_NAME})"
+          echo "::add-mask::${MACHINE_IP}"
+          echo "GITHUB_MACHINE_IP=${MACHINE_IP}" >> ${GITHUB_ENV}
+          ssh-keyscan ${MACHINE_IP} >> ~/.ssh/known_hosts
+          printf "%s" "${SSH_KEY}" > ~/.ssh/key
+          chmod 600 ~/.ssh/key
+          printf "Host homelab\n\tUser %s\n\tIdentityFile %s\n\tHostName %s" "${SSH_USER}" "~/.ssh/key" "${MACHINE_IP}" > ~/.ssh/config
+
+      - name: Run Ansible infrastructure setup
+        uses: dawidd6/action-ansible-playbook@v2
+        with:
+          playbook: ansible/playbook.yml
+          requirements: ansible/requirements.yml
+          directory: ./
+          options: |
+            --inventory ansible/hosts
+            --verbose
+
+      - name: Verify infrastructure
+        run: |
+          # Setup kubeconfig locally to verify
+          mkdir -p ~/.kube
+          cp .k3s-kubeconfig.yaml ~/.kube/config
+          sed -i "s|https://127.0.0.1:6443|https://${{ env.GITHUB_MACHINE_IP }}:6443|g" ~/.kube/config
+
+          # Verify cluster is up
+          kubectl get nodes
+          kubectl get pods -A
+          echo "Infrastructure setup complete!"

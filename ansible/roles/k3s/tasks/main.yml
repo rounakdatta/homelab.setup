@@ -1,0 +1,58 @@
+---
+# Install and configure K3s with Tailscale binding
+# Prerequisites: host_tailscale_ip must be set in playbook pre_tasks
+# This role is idempotent and can be run multiple times safely
+
+- name: Check if K3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Install K3s with Tailscale configuration
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
+      --cluster-init \
+      --node-ip={{ host_tailscale_ip }} \
+      --bind-address={{ host_tailscale_ip }} \
+      --advertise-address={{ host_tailscale_ip }} \
+      --flannel-iface=tailscale0 \
+      --write-kubeconfig-mode=644" sh -
+  args:
+    executable: /bin/bash
+  when: not k3s_binary.stat.exists
+  register: k3s_install
+  changed_when: k3s_install.rc == 0
+
+- name: Wait for K3s to be ready
+  ansible.builtin.wait_for:
+    path: /etc/rancher/k3s/k3s.yaml
+    timeout: 60
+  when: k3s_install.changed
+
+- name: Ensure K3s service is running
+  ansible.builtin.systemd:
+    name: k3s
+    state: started
+    enabled: yes
+
+- name: Wait for K3s node to be ready
+  ansible.builtin.command: k3s kubectl wait --for=condition=Ready node --all --timeout=120s
+  register: k3s_ready
+  changed_when: false
+  retries: 5
+  delay: 10
+  until: k3s_ready.rc == 0
+
+- name: Fetch kubeconfig file
+  ansible.builtin.fetch:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ playbook_dir }}/../.k3s-kubeconfig.yaml"
+    flat: yes
+  register: kubeconfig_fetch
+
+- name: Display K3s installation status
+  ansible.builtin.debug:
+    msg:
+      - "K3s installed successfully"
+      - "Tailscale IP: {{ host_tailscale_ip }}"
+      - "Kubeconfig saved to: {{ playbook_dir }}/../.k3s-kubeconfig.yaml"
