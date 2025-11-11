@@ -1,0 +1,78 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memoet
+  namespace: apps
+  labels:
+    app: memoet
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memoet
+  template:
+    metadata:
+      labels:
+        app: memoet
+    spec:
+      containers:
+      - name: memoet
+        image: rounakdatta/memoet:latest
+        ports:
+        - containerPort: 4000
+          name: http
+        env:
+        # Database configuration
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: memoet-credentials
+              key: db-name
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: memoet-credentials
+              key: db-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: memoet-credentials
+              key: db-password
+        - name: DATABASE_URL
+          value: "postgres://$(DB_USER):$(DB_PASSWORD)@postgres.databases.svc.cluster.local/$(DB_NAME)"
+
+        # Application configuration
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: memoet-credentials
+              key: secret-key-base
+        - name: URL_HOST
+          value: "memoet.taptappers.club"
+        - name: URL_SCHEMA
+          value: "https"
+        - name: URL_PORT
+          value: "443"
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 4000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 4000
+          initialDelaySeconds: 10
+          periodSeconds: 5

@@ -1,5 +1,0 @@
-[homelab]
-homelab
-
-[homelab:vars]
-ansible_ssh_user=root

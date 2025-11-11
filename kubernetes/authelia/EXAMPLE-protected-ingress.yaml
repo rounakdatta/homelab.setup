@@ -1,0 +1,75 @@
+# Example: How to protect an app with Authelia
+#
+# To protect any app, simply add this annotation to its Ingress:
+#   traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia-chain@kubernetescrd
+#
+# Example for Vikunja:
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vikunja
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # ⬇️ Add this line to enable Authelia protection
+    traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia-chain@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: vikunja.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: vikunja
+            port:
+              number: 3456
+  tls:
+  - hosts:
+    - vikunja.taptappers.club
+    secretName: vikunja-tls-secret
+
+---
+# Example for Bookstack:
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bookstack
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # ⬇️ Add this line to enable Authelia protection
+    traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia-chain@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: bookstack.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bookstack
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - bookstack.taptappers.club
+    secretName: bookstack-tls-secret
+
+---
+# Apps that DON'T need Authelia protection:
+#
+# 1. Nextcloud - Has its own authentication and doesn't work well with forward auth
+# 2. Firefly III - Already has strong built-in auth (optional to protect)
+# 3. Any truly public-facing services (if you have any)
+#
+# For these apps, simply omit the middleware annotation.

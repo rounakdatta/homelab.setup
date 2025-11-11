@@ -1,0 +1,1 @@
+The remote machine would be available as a node called `vizerizz` in the Tailscale network. So all you'd need to do is `ssh vizerizz`. In Ansible, we're performing operations on the host machine, and it should be this easy.

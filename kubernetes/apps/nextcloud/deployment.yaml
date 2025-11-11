@@ -1,0 +1,121 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-data-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 100Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-config-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud
+  namespace: apps
+  labels:
+    app: nextcloud
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nextcloud
+  template:
+    metadata:
+      labels:
+        app: nextcloud
+    spec:
+      containers:
+      - name: nextcloud
+        image: nextcloud:latest
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        # Database configuration
+        - name: MYSQL_HOST
+          value: "mysql.databases.svc.cluster.local"
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: nextcloud-credentials
+              key: db-username
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: nextcloud-credentials
+              key: db-password
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: nextcloud-credentials
+              key: db-name
+
+        # Application configuration
+        - name: OVERWRITEPROTOCOL
+          value: "https"
+        - name: NEXTCLOUD_TRUSTED_DOMAINS
+          value: "nextcloud.taptappers.club"
+
+        volumeMounts:
+        - name: data
+          mountPath: /var/www/html/data
+        - name: config
+          mountPath: /var/www/html/config
+
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+
+        livenessProbe:
+          httpGet:
+            path: /status.php
+            port: 80
+            httpHeaders:
+            - name: Host
+              value: nextcloud.taptappers.club
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /status.php
+            port: 80
+            httpHeaders:
+            - name: Host
+              value: nextcloud.taptappers.club
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 10
+
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: nextcloud-data-pvc
+      - name: config
+        persistentVolumeClaim:
+          claimName: nextcloud-config-pvc

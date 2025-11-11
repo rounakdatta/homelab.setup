@@ -17,6 +17,9 @@ metadata:
       X-Frame-Options: SAMEORIGIN
       X-Content-Type-Options: nosniff
 
+    # Authelia authentication
+    traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia@kubernetescrd
+
 spec:
   tls:
   - hosts:

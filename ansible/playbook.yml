@@ -65,6 +65,12 @@
         data:
           root-password: mysql/root_password
 
+      # PostgreSQL credentials (consolidated)
+      - name: postgres-credentials
+        namespace: databases
+        data:
+          root-password: postgres/root_password
+
       # Firefly III credentials (consolidated)
       - name: firefly-credentials
         namespace: apps
@@ -73,6 +79,59 @@
           db-name: firefly/db_name
           db-username: firefly/db_username
           db-password: firefly/db_password
+
+      # Memoet credentials (consolidated)
+      - name: memoet-credentials
+        namespace: apps
+        data:
+          db-name: memoet/db_name
+          db-username: memoet/db_username
+          db-password: memoet/db_password
+          secret-key-base: memoet/secret_key_base
+
+      # Snibox credentials (consolidated)
+      - name: snibox-credentials
+        namespace: apps
+        data:
+          secret-key-base: snibox/secret_key_base
+
+      # Bookstack credentials (consolidated)
+      - name: bookstack-credentials
+        namespace: apps
+        data:
+          db-name: bookstack/db_name
+          db-username: bookstack/db_username
+          db-password: bookstack/db_password
+
+      # Vikunja credentials (consolidated)
+      - name: vikunja-credentials
+        namespace: apps
+        data:
+          db-name: vikunja/db_name
+          db-username: vikunja/db_username
+          db-password: vikunja/db_password
+          jwt-secret: vikunja/jwt_secret
+          mailer-host: vikunja/mailer_host
+          mailer-port: vikunja/mailer_port
+          mailer-username: vikunja/mailer_username
+          mailer-password: vikunja/mailer_password
+          mailer-sender: vikunja/mailer_sender
+
+      # Webtrees credentials (consolidated)
+      - name: webtrees-credentials
+        namespace: apps
+        data:
+          db-name: webtrees/db_name
+          db-username: webtrees/db_username
+          db-password: webtrees/db_password
+
+      # Nextcloud credentials (consolidated)
+      - name: nextcloud-credentials
+        namespace: apps
+        data:
+          db-name: nextcloud/db_name
+          db-username: nextcloud/db_username
+          db-password: nextcloud/db_password
 
   pre_tasks:
     - name: Verify required environment variables
@@ -109,6 +168,8 @@
       loop:
         - databases
         - apps
+      environment:
+        KUBECONFIG: "/Users/rounak/personal/homelab.setup/.k3s-kubeconfig.yaml"
       register: ns_result
       changed_when: "'created' in ns_result.stdout"
       failed_when: false
@@ -124,6 +185,8 @@
           {% endfor %}
           --dry-run=client -o yaml | kubectl apply -f -
       loop: "{{ k8s_secrets }}"
+      environment:
+        KUBECONFIG: "/Users/rounak/personal/homelab.setup/.k3s-kubeconfig.yaml"
       register: secret_result
       changed_when: "'configured' in secret_result.stdout or 'created' in secret_result.stdout"
       no_log: true

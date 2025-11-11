@@ -27,6 +27,7 @@ Thumbs.db
 
 # Secrets and sensitive data
 secrets/
+secrets.yaml
 *.pem
 *.key
 *.crt
