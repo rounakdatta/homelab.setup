@@ -33,34 +33,57 @@ jobs:
           cat > /tmp/tailscale-ssh-wrapper << 'WRAPPER'
           #!/bin/bash
           # Wrapper to make tailscale ssh work with Ansible
-          # Ansible calls: ssh [options] -l user host command
-          # We need: tailscale ssh user@host command
+          # Ansible passes: ssh -o User="root" -o OtherOpt=val hostname 'command'
+          # We need: tailscale ssh root@hostname 'command'
 
-          # Parse arguments, capturing user from -l option
           host=""
           user=""
           cmd=""
           skip_next=false
-          capture_user=false
+          next_is_opt=false
 
           for arg in "$@"; do
             if $skip_next; then
               skip_next=false
               continue
             fi
-            if $capture_user; then
-              user="$arg"
-              capture_user=false
+            if $next_is_opt; then
+              # Parse -o 'Option=value' or -o 'Option="value"'
+              if [[ "$arg" == User=* ]]; then
+                user="${arg#User=}"
+                user="${user//\"/}"  # Remove quotes
+              fi
+              next_is_opt=false
               continue
             fi
 
             case "$arg" in
-              -l) capture_user=true ;;  # Capture the next arg as user
-              -l*) user="${arg#-l}" ;;  # Handle -lroot format
-              -o|-i|-F|-p|-L|-R|-D|-W|-S|-E|-J|-B) skip_next=true ;;
-              -o*|-i*|-F*|-p*) ;; # Skip combined options
-              -[CvqTtNfngAKXYG]*) ;; # Skip single-letter options
-              -*)  ;; # Skip any other options
+              -o)
+                next_is_opt=true
+                ;;
+              -o*)
+                # Handle -oUser=root format
+                opt="${arg#-o}"
+                if [[ "$opt" == User=* ]]; then
+                  user="${opt#User=}"
+                  user="${user//\"/}"
+                fi
+                ;;
+              -l)
+                skip_next=true
+                ;;
+              -l*)
+                user="${arg#-l}"
+                ;;
+              -i|-F|-p|-L|-R|-D|-W|-S|-E|-J|-B)
+                skip_next=true
+                ;;
+              -i*|-F*|-p*)
+                ;;
+              -[CvqTtNfngAKXYG]*)
+                ;;
+              -*)
+                ;;
               *)
                 if [[ -z "$host" ]]; then
                   host="$arg"
@@ -71,7 +94,7 @@ jobs:
             esac
           done
 
-          # Construct user@host if user was specified separately
+          # Construct user@host if user was specified via -o User= or -l
           if [[ -n "$user" && "$host" != *@* ]]; then
             host="${user}@${host}"
           fi
