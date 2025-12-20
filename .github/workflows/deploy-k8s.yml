@@ -40,7 +40,7 @@ jobs:
           npm install -g @bitwarden/cli
           pip install ansible
           ansible-galaxy collection install -r ansible/requirements.yml
-          ansible-playbook ansible/playbook.yml --tags secrets
+          ansible-playbook ansible/playbook.yml --tags secrets -i localhost,
 
       - name: Deploy manifests
         run: |
