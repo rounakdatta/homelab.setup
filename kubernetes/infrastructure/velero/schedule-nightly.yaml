@@ -1,0 +1,30 @@
+---
+# Nightly full backup at 4 AM IST (22:30 UTC)
+# Backs up all application namespaces with PVC data using Kopia
+apiVersion: velero.io/v1
+kind: Schedule
+metadata:
+  name: nightly-full-backup
+  namespace: velero
+spec:
+  # 4 AM IST = 22:30 UTC (previous day)
+  schedule: "30 22 * * *"
+  template:
+    # Include all application namespaces
+    includedNamespaces:
+      - databases
+      - apps
+      - authelia
+      - cert-manager
+    # Exclude noisy resources
+    excludedResources:
+      - events
+      - events.events.k8s.io
+    # Use file-level backup for all PVCs (via Kopia)
+    defaultVolumesToFsBackup: true
+    # 30-day retention
+    ttl: 720h
+    # Use the default (R2) storage location
+    storageLocation: default
+    # Include cluster-scoped resources (ClusterIssuers, etc.)
+    includeClusterResources: true

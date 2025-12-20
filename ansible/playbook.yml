@@ -152,6 +152,20 @@
           STORAGE_ENCRYPTION_KEY: authelia/storage_encryption_key
           SMTP_PASSWORD: authelia/smtp_password
 
+      # Authelia users database (YAML file)
+      - name: authelia-users
+        namespace: authelia
+        type: note
+        data:
+          users_database.yml: authelia/users_database
+
+      # Velero credentials (INI file)
+      - name: velero-credentials
+        namespace: velero
+        type: note
+        data:
+          cloud: velero/r2_credentials_file
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:
@@ -188,6 +202,7 @@
         - databases
         - apps
         - authelia
+        - velero
       register: ns_result
       changed_when: "'created' in ns_result.stdout"
       failed_when: false
@@ -199,7 +214,7 @@
         kubectl create secret generic {{ item.name }} \
           --namespace={{ item.namespace }} \
           {% for key, bw_path in item.data.items() %}
-          --from-literal={{ key }}="$(bw get password '{{ bw_path }}' --session "$BW_SESSION")" \
+          --from-literal={{ key }}="$(bw get {{ item.type | default('password') }} '{{ bw_path }}' --session "$BW_SESSION")" \
           {% endfor %}
           --dry-run=client -o yaml | kubectl apply -f -
       loop: "{{ k8s_secrets }}"
@@ -207,17 +222,38 @@
       changed_when: "'configured' in secret_result.stdout or 'created' in secret_result.stdout"
       no_log: true
 
-    - name: Create/Update Authelia users database from Bitwarden
+    - name: Create/Update Velero BackupStorageLocation from Bitwarden
       ansible.builtin.shell: |
         export BW_SESSION="{{ BW_SESSION }}"
-        kubectl create secret generic authelia-users \
-          --namespace=authelia \
-          --from-literal=users_database.yml="$(bw get notes 'authelia/users_database' --session "$BW_SESSION")" \
-          --dry-run=client -o yaml | kubectl apply -f -
-      register: authelia_users_result
-      changed_when: "'configured' in authelia_users_result.stdout or 'created' in authelia_users_result.stdout"
+        R2_S3_URL="$(bw get password 'velero/r2_s3_url' --session "$BW_SESSION")"
+        R2_BUCKET="$(bw get password 'velero/r2_bucket' --session "$BW_SESSION")"
+        cat <<EOF | kubectl apply -f -
+        apiVersion: velero.io/v1
+        kind: BackupStorageLocation
+        metadata:
+          name: default
+          namespace: velero
+          labels:
+            app.kubernetes.io/name: velero
+        spec:
+          credential:
+            name: velero-credentials
+            key: cloud
+          provider: aws
+          accessMode: ReadWrite
+          default: true
+          objectStorage:
+            bucket: "${R2_BUCKET}"
+            prefix: velero
+          config:
+            region: "auto"
+            s3ForcePathStyle: "true"
+            s3Url: "${R2_S3_URL}"
+        EOF
+      register: velero_bsl_result
+      changed_when: "'configured' in velero_bsl_result.stdout or 'created' in velero_bsl_result.stdout"
       no_log: true
 
     - name: Display sync results
       ansible.builtin.debug:
-        msg: "✓ Synced {{ k8s_secrets | length + 1 }} secrets to Kubernetes (including authelia-users)"
+        msg: "✓ Synced {{ k8s_secrets | length + 1 }} secrets/resources to Kubernetes ({{ k8s_secrets | length }} secrets + velero BSL)"
