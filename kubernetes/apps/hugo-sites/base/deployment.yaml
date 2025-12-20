@@ -41,6 +41,9 @@ spec:
             - name: content
               mountPath: /usr/share/nginx/html
               readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
           resources:
             requests:
               memory: "32Mi"
@@ -51,3 +54,6 @@ spec:
       volumes:
         - name: content
           emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: nginx-config

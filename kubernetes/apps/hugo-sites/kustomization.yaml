@@ -4,6 +4,7 @@ kind: Kustomization
 
 resources:
   - namespace.yaml
+  - nginx-config.yaml
   - sites/rounak2025
   - sites/rounak2020
   - sites/rounak2018

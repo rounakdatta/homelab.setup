@@ -1,0 +1,18 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: sites
+data:
+  default.conf: |
+    server {
+        listen 80;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location / {
+            # GitHub Pages-style: serve .html files without extension
+            try_files $uri $uri.html $uri/ =404;
+        }
+    }
