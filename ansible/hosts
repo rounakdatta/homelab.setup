@@ -1,3 +1,15 @@
+# Ansible inventory template
+#
+# This file uses MACHINE_NAME which should be set in .env
+# For local development, use the Makefile which generates inventory dynamically:
+#
+#   make infra    - Run infrastructure setup
+#   make secrets  - Sync secrets from Bitwarden
+#
+# Or manually:
+#   source .env
+#   echo -e "[homelab]\n${MACHINE_NAME} ansible_user=root" > /tmp/inventory
+#   ansible-playbook ansible/playbook.yml -i /tmp/inventory --tags infra
+
 [homelab]
-# Using SSH config entry 'vizerizz' which has the Tailscale IP and credentials
-homelab ansible_host=vizerizz
+# Set MACHINE_NAME in .env (e.g., MACHINE_NAME=your-tailscale-hostname)
