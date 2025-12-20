@@ -155,14 +155,14 @@
       # Authelia users database (YAML file)
       - name: authelia-users
         namespace: authelia
-        type: note
+        type: notes
         data:
           users_database.yml: authelia/users_database
 
       # Velero credentials (INI file)
       - name: velero-credentials
         namespace: velero
-        type: note
+        type: notes
         data:
           cloud: velero/r2_credentials_file
 
