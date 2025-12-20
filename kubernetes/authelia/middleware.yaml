@@ -1,0 +1,48 @@
+---
+# Traefik ForwardAuth Middleware for Authelia
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia
+  namespace: authelia
+spec:
+  forwardAuth:
+    address: http://authelia.authelia.svc.cluster.local:9091/api/verify?rd=https://auth.taptappers.club
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Groups
+      - Remote-Name
+      - Remote-Email
+---
+# Optional: Middleware to add security headers
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers
+  namespace: authelia
+spec:
+  headers:
+    browserXssFilter: true
+    contentTypeNosniff: true
+    forceSTSHeader: true
+    frameDeny: true
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 31536000
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+---
+# Chain middleware for protected apps
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: authelia-chain
+  namespace: authelia
+spec:
+  chain:
+    middlewares:
+      - name: authelia
+        namespace: authelia
+      - name: security-headers
+        namespace: authelia

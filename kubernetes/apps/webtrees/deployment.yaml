@@ -1,0 +1,97 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: webtrees-data-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: webtrees-media-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webtrees
+  namespace: apps
+  labels:
+    app: webtrees
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: webtrees
+  template:
+    metadata:
+      labels:
+        app: webtrees
+    spec:
+      containers:
+      - name: webtrees
+        image: ghcr.io/nathanvaughn/webtrees:latest
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        # Database configuration
+        - name: DB_HOST
+          value: "mysql.databases.svc.cluster.local"
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: webtrees-credentials
+              key: db-username
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: webtrees-credentials
+              key: db-password
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: webtrees-credentials
+              key: db-name
+
+        # Application configuration
+        - name: BASE_URL
+          value: "https://webtrees.taptappers.club"
+
+        volumeMounts:
+        - name: data
+          mountPath: /var/www/webtrees/data
+        - name: media
+          mountPath: /var/www/webtrees/media
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: webtrees-data-pvc
+      - name: media
+        persistentVolumeClaim:
+          claimName: webtrees-media-pvc

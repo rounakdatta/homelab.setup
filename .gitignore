@@ -1,0 +1,41 @@
+# Kubeconfig files
+.k3s-kubeconfig.yaml
+*.kubeconfig
+
+# Ansible retry files
+*.retry
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Secrets and sensitive data
+secrets/
+secrets.yaml
+*.pem
+*.key
+*.crt
+!ansible/roles/*/files/*.crt  # Allow role-specific certs if needed
+
+# Backup files
+*.backup
+*.bak
+
+# Logs
+*.log

@@ -1,0 +1,47 @@
+---
+# Template for creating new ingress resources
+# Copy this file and replace the placeholders:
+#   - {{ SERVICE_NAME }}: Name of your service (e.g., firefly, nextcloud)
+#   - {{ NAMESPACE }}: Kubernetes namespace (e.g., apps, media)
+#   - {{ DOMAIN }}: Your domain (e.g., firefly.taptappers.club)
+#   - {{ SERVICE_PORT }}: Service port number (e.g., 8080, 80)
+#
+# Example usage:
+#   cp ingress-template.yaml ../apps/firefly/ingress.yaml
+#   # Then edit and replace placeholders
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ SERVICE_NAME }}-ingress
+  namespace: {{ NAMESPACE }}
+  annotations:
+    # Automatically provision TLS certificate with Let's Encrypt
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Force HTTPS redirect
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+
+    # Optional: Add custom headers
+    # traefik.ingress.kubernetes.io/custom-response-headers: |
+    #   X-Frame-Options: SAMEORIGIN
+    #   X-Content-Type-Options: nosniff
+
+spec:
+  tls:
+  - hosts:
+    - {{ DOMAIN }}
+    # cert-manager will auto-create this secret
+    secretName: {{ SERVICE_NAME }}-tls-secret
+
+  rules:
+  - host: {{ DOMAIN }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ SERVICE_NAME }}
+            port:
+              number: {{ SERVICE_PORT }}

@@ -1,0 +1,40 @@
+---
+# Firefly III Ingress with automatic TLS from Let's Encrypt
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: firefly-ingress
+  namespace: apps
+  annotations:
+    # Automatically provision TLS certificate with Let's Encrypt
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Force HTTPS redirect
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+
+    # Security headers
+    traefik.ingress.kubernetes.io/custom-response-headers: |
+      X-Frame-Options: SAMEORIGIN
+      X-Content-Type-Options: nosniff
+
+    # Authelia authentication
+    traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia@kubernetescrd
+
+spec:
+  tls:
+  - hosts:
+    - firefly.taptappers.club
+    # cert-manager will auto-create this secret
+    secretName: firefly-tls-secret
+
+  rules:
+  - host: firefly.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: firefly
+            port:
+              number: 8080

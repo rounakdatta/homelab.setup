@@ -1,0 +1,27 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: memoet
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: memoet.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: memoet
+            port:
+              number: 4000
+  tls:
+  - hosts:
+    - memoet.taptappers.club
+    secretName: memoet-tls-secret

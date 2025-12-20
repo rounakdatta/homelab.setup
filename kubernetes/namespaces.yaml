@@ -1,0 +1,15 @@
+---
+# Namespace definitions for organizing services
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: databases
+  labels:
+    name: databases
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+  labels:
+    name: apps

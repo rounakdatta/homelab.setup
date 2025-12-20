@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: snibox-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snibox
+  namespace: apps
+  labels:
+    app: snibox
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: snibox
+  template:
+    metadata:
+      labels:
+        app: snibox
+    spec:
+      containers:
+      - name: snibox
+        image: melashri/snibox:latest
+        ports:
+        - containerPort: 3000
+          name: http
+        env:
+        - name: SECRET_KEY_BASE
+          valueFrom:
+            secretKeyRef:
+              name: snibox-credentials
+              key: secret-key-base
+        volumeMounts:
+        - name: snibox-data
+          mountPath: /app/db/database
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: snibox-data
+        persistentVolumeClaim:
+          claimName: snibox-pvc

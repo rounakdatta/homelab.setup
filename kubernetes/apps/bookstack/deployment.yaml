@@ -1,0 +1,98 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bookstack-uploads-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstack
+  namespace: apps
+  labels:
+    app: bookstack
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bookstack
+  template:
+    metadata:
+      labels:
+        app: bookstack
+    spec:
+      containers:
+      - name: bookstack
+        image: rounakdatta/docker-bookstack:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        # Database configuration
+        - name: DB_HOST
+          value: "mysql.databases.svc.cluster.local"
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: bookstack-credentials
+              key: db-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bookstack-credentials
+              key: db-password
+        - name: DB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: bookstack-credentials
+              key: db-name
+
+        # Application configuration
+        - name: APP_URL
+          value: "https://bookstack.taptappers.club"
+        - name: APP_KEY
+          valueFrom:
+            secretKeyRef:
+              name: bookstack-credentials
+              key: app-key
+
+        volumeMounts:
+        - name: uploads
+          mountPath: /var/www/bookstack/public/uploads
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+      volumes:
+      - name: uploads
+        persistentVolumeClaim:
+          claimName: bookstack-uploads-pvc

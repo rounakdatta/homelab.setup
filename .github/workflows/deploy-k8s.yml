@@ -1,0 +1,50 @@
+name: Deploy to K8s
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'kubernetes/**'
+      - 'ansible/**'
+      - '.github/workflows/deploy-k8s.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: 1.76.1
+
+      - name: Fetch kubeconfig via Tailscale SSH
+        run: |
+          # Tailscale SSH - no keys needed!
+          mkdir -p ~/.kube
+          tailscale ssh root@${{ secrets.MACHINE_NAME }} "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
+          sed -i "s|https://127.0.0.1:6443|https://${{ secrets.MACHINE_NAME }}:6443|g" ~/.kube/config
+          kubectl cluster-info
+
+      - name: Sync secrets from Bitwarden
+        env:
+          BW_CLIENTID: ${{ secrets.BW_CLIENTID }}
+          BW_CLIENTSECRET: ${{ secrets.BW_CLIENTSECRET }}
+          BW_PASSWORD: ${{ secrets.BW_PASSWORD }}
+        run: |
+          npm install -g @bitwarden/cli
+          pip install ansible
+          ansible-galaxy collection install -r ansible/requirements.yml
+          ansible-playbook ansible/playbook.yml --tags secrets
+
+      - name: Deploy manifests
+        run: |
+          kubectl apply -k kubernetes/
+          echo ""
+          echo "=== Deployment Status ==="
+          kubectl get pods -A | grep -v kube-system

@@ -1,0 +1,107 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: firefly-upload-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: local-path  # K3s default storage class
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: firefly
+  namespace: apps
+  labels:
+    app: firefly
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: firefly
+  template:
+    metadata:
+      labels:
+        app: firefly
+    spec:
+      containers:
+      - name: firefly
+        image: fireflyiii/core:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        # Database configuration
+        - name: DB_HOST
+          value: "mysql.databases.svc.cluster.local"
+        - name: DB_PORT
+          value: "3306"
+        - name: DB_CONNECTION
+          value: "mysql"
+        - name: DB_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: firefly-credentials
+              key: db-name
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: firefly-credentials
+              key: db-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: firefly-credentials
+              key: db-password
+
+        # App configuration
+        - name: APP_KEY
+          valueFrom:
+            secretKeyRef:
+              name: firefly-credentials
+              key: app-key
+        - name: APP_URL
+          value: "https://firefly.taptappers.club"
+        - name: TRUSTED_PROXIES
+          value: "**"
+        - name: TZ
+          value: "UTC"
+
+        volumeMounts:
+        - name: firefly-upload
+          mountPath: /var/www/html/storage/upload
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+
+      volumes:
+      - name: firefly-upload
+        persistentVolumeClaim:
+          claimName: firefly-upload-pvc

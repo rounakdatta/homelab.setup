@@ -1,0 +1,123 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vikunja-files-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vikunja
+  namespace: apps
+  labels:
+    app: vikunja
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: vikunja
+  template:
+    metadata:
+      labels:
+        app: vikunja
+    spec:
+      containers:
+      - name: vikunja
+        image: vikunja/vikunja:latest
+        ports:
+        - containerPort: 3456
+          name: http
+        env:
+        # Database configuration
+        - name: VIKUNJA_DATABASE_HOST
+          value: "mysql.databases.svc.cluster.local"
+        - name: VIKUNJA_DATABASE_USER
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: db-username
+        - name: VIKUNJA_DATABASE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: db-password
+        - name: VIKUNJA_DATABASE_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: db-name
+        - name: VIKUNJA_DATABASE_TYPE
+          value: "mysql"
+
+        # Service configuration
+        - name: VIKUNJA_SERVICE_JWTSECRET
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: jwt-secret
+        - name: VIKUNJA_SERVICE_PUBLICURL
+          value: "https://vikunja.taptappers.club"
+        - name: VIKUNJA_SERVICE_FRONTENDURL
+          value: "https://vikunja.taptappers.club"
+        - name: VIKUNJA_SERVICE_ENABLEREGISTRATION
+          value: "false"
+        - name: VIKUNJA_SERVICE_ENABLEEMAILREMINDERS
+          value: "true"
+
+        # Mailer configuration
+        - name: VIKUNJA_MAILER_ENABLED
+          value: "true"
+        - name: VIKUNJA_MAILER_FORCESSL
+          value: "true"
+        - name: VIKUNJA_MAILER_HOST
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: mailer-host
+        - name: VIKUNJA_MAILER_PORT
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: mailer-port
+        - name: VIKUNJA_MAILER_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: mailer-username
+        - name: VIKUNJA_MAILER_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: mailer-password
+        - name: VIKUNJA_MAILER_FROMEMAIL
+          valueFrom:
+            secretKeyRef:
+              name: vikunja-credentials
+              key: mailer-sender
+
+        volumeMounts:
+        - name: files
+          mountPath: /app/vikunja/files
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+
+      volumes:
+      - name: files
+        persistentVolumeClaim:
+          claimName: vikunja-files-pvc

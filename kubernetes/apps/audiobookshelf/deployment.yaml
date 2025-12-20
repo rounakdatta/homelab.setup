@@ -1,0 +1,107 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiobookshelf-audiobooks-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 50Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiobookshelf-podcasts-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiobookshelf-config-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: audiobookshelf-metadata-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: audiobookshelf
+  namespace: apps
+  labels:
+    app: audiobookshelf
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: audiobookshelf
+  template:
+    metadata:
+      labels:
+        app: audiobookshelf
+    spec:
+      containers:
+      - name: audiobookshelf
+        image: advplyr/audiobookshelf:latest
+        ports:
+        - containerPort: 80
+          name: http
+        volumeMounts:
+        - name: audiobooks
+          mountPath: /audiobooks
+        - name: podcasts
+          mountPath: /podcasts
+        - name: config
+          mountPath: /config
+        - name: metadata
+          mountPath: /metadata
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+      volumes:
+      - name: audiobooks
+        persistentVolumeClaim:
+          claimName: audiobookshelf-audiobooks-pvc
+      - name: podcasts
+        persistentVolumeClaim:
+          claimName: audiobookshelf-podcasts-pvc
+      - name: config
+        persistentVolumeClaim:
+          claimName: audiobookshelf-config-pvc
+      - name: metadata
+        persistentVolumeClaim:
+          claimName: audiobookshelf-metadata-pvc

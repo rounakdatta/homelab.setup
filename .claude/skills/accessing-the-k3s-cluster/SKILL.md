@@ -1,0 +1,1 @@
+To access the k3s cluster, you'd have to derive the kubeconfig first from the remote machine, and then use it. Be very very careful in these situations to install stuff only in the required kubernetes cluster. Always pass the kubeconfig explicitly here.

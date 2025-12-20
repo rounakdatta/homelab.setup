@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memoet
+  namespace: apps
+spec:
+  selector:
+    app: memoet
+  ports:
+  - port: 4000
+    targetPort: 4000
+  type: ClusterIP

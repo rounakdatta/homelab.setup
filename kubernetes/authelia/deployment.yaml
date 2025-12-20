@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: authelia-config-pvc
+  namespace: authelia
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authelia
+  namespace: authelia
+  labels:
+    app: authelia
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: authelia
+  template:
+    metadata:
+      labels:
+        app: authelia
+    spec:
+      enableServiceLinks: false
+      containers:
+      - name: authelia
+        image: authelia/authelia:latest
+        ports:
+        - containerPort: 9091
+          name: http
+        env:
+        - name: AUTHELIA_STORAGE_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: STORAGE_ENCRYPTION_KEY
+        - name: AUTHELIA_SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: SESSION_SECRET
+        - name: AUTHELIA_NOTIFIER_SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: authelia-secrets
+              key: SMTP_PASSWORD
+        - name: TZ
+          value: "UTC"
+        volumeMounts:
+        - name: config
+          mountPath: /config
+          readOnly: false
+        - name: authelia-config
+          mountPath: /config/configuration.yml
+          subPath: configuration.yml
+          readOnly: true
+        - name: authelia-users
+          mountPath: /config/users_database.yml
+          subPath: users_database.yml
+          readOnly: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 9091
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 9091
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: config
+        persistentVolumeClaim:
+          claimName: authelia-config-pvc
+      - name: authelia-config
+        configMap:
+          name: authelia-config
+          items:
+          - key: configuration.yml
+            path: configuration.yml
+      - name: authelia-users
+        secret:
+          secretName: authelia-users
+          items:
+          - key: users_database.yml
+            path: users_database.yml

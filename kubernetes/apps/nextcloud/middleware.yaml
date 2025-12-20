@@ -1,0 +1,19 @@
+---
+# Traefik Middleware for Nextcloud headers
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: nextcloud-headers
+  namespace: apps
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+    customResponseHeaders:
+      X-Frame-Options: "SAMEORIGIN"
+      X-Content-Type-Options: "nosniff"
+      X-XSS-Protection: "1; mode=block"
+      Referrer-Policy: "no-referrer"
+    stsSeconds: 31536000
+    stsIncludeSubdomains: true
+    stsPreload: true

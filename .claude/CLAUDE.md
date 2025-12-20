@@ -1,0 +1,1 @@
+When working with the Kubernetes cluster, please please make sure to figure out the k3s cluster kubeconfig and then only start working. Don't assume we are in the right kubecontext.

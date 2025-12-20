@@ -1,0 +1,3 @@
+[homelab]
+# Using SSH config entry 'vizerizz' which has the Tailscale IP and credentials
+homelab ansible_host=vizerizz
