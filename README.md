@@ -2,40 +2,30 @@
 
 This repository hosts all the playbooks required to deploy and run my homelab. You have to bring your own hardware, Linux operating system, configuration secrets and *data* though.
 
-My homelab is a single-node x64 (previously ARM) machine, and applications are deployed containerized via Hashicorp Nomad. Tailscale takes care of all the networking required for administration and deployments. Cloudflare Tunnels help in exposing the services to the internet.
+My homelab is a single-node x64 (previously ARM) machine, and applications are deployed containerized via K3s (lightweight Kubernetes). Tailscale takes care of all the networking required for administration and deployments. Traefik handles ingress with automatic TLS certificates from Let's Encrypt.
 
 ## List of self-hosted applications
 
-| App            | Purpose                                        | Project homepage                       |
-|----------------|------------------------------------------------|----------------------------------------|
-| MySQL          | Database (common dependency for multiple apps) | https://dev.mysql.com/downloads/mysql/ |
-| Firefly-III    | Personal finance                               | https://www.firefly-iii.org/           |
-| Bookstack      | Documentation & Diary                          | https://www.bookstackapp.com/          |
-| Vikunja        | Todo list                                      | https://vikunja.io/                    |
-| Nextcloud      | Google Drive alternative                       | https://nextcloud.com/                 |
-| Webtrees       | Family tree (genealogy)                        | https://www.webtrees.net/index.php/en/ |
-| Photoprism     | Google Photos alternative                      | https://photoprism.app/                |
-| Audiobookshelf | Audiobook server (Audible alternative)         | https://www.audiobookshelf.org/        |
-| Kavita         | Ebook reader (think Apple Books on the web)    | https://www.kavitareader.com/          |
-| Duplicati      | Encrypted, incremental backups                 | https://www.duplicati.com/             |
-| NTFY           | Push Notifications REST service                | https://ntfy.sh/                       |
-| Cronicle       | Powerful cron scheduler                        | http://cronicle.net/                   |
-| Mailpile       | Web archive for email                          | https://www.mailpile.is/               |
-| Miniflux       | RSS reader                                     | https://miniflux.app/                  |
-| Metabase       | SQL / analytics interface                      | https://www.metabase.com/              |
-| n8n            | Scheduled and on-demand DAGs and workflows     | https://n8n.io/                        |
-| Monica         | Daily journalling and relationship manager     | https://www.monicahq.com/              |
-| Immich         | Google Photos alternative                      | https://immich.app/                    |
+| App            | Purpose                                        | Project homepage                        |
+|----------------|------------------------------------------------|-----------------------------------------|
+| MySQL          | Database (common dependency for multiple apps) | https://dev.mysql.com/downloads/mysql/  |
+| PostgreSQL     | Database (for apps that prefer Postgres)       | https://www.postgresql.org/             |
+| Redis          | In-memory cache (sessions, queues)             | https://redis.io/                       |
+| Firefly-III    | Personal finance                               | https://www.firefly-iii.org/            |
+| Bookstack      | Documentation & Diary                          | https://www.bookstackapp.com/           |
+| Vikunja        | Todo list                                      | https://vikunja.io/                     |
+| Nextcloud      | Google Drive alternative                       | https://nextcloud.com/                  |
+| Webtrees       | Family tree (genealogy)                        | https://www.webtrees.net/index.php/en/  |
+| Audiobookshelf | Audiobook server (Audible alternative)         | https://www.audiobookshelf.org/         |
 | Snibox         | Snippets organizer                             | https://github.com/MohamedElashri/Snibox|
-| Memoet         | Modern spaced repetition system                | https://github.com/memoetapp/memoet|
+| Memoet         | Modern spaced repetition system                | https://github.com/memoetapp/memoet     |
+| Authelia       | Single sign-on & 2FA for all apps              | https://www.authelia.com/               |
 
 ## Architecture
 
-Hashicorp Nomad is undoubtedly a very good orchestrator of services and the declarative design of deployments make it even easier to administer. I also have setup a Caddy webserver as an ingress gateway. There's one Cloudflare Tunnel for each application, and that channels the requests to directly hit the Caddy endpoints. A simple diagram to illustrate the lifecycle of requests is:
+K3s is a lightweight Kubernetes distribution that's perfect for single-node homelabs. Traefik (bundled with K3s) handles all ingress routing with automatic TLS via cert-manager and Let's Encrypt. Authelia sits in front of apps providing single sign-on with two-factor authentication.
 
-![request-lifecycle](https://i.imgur.com/VgvjzC6.png)
-
-The way the Ansible playbook is structured makes it super-easy to onboard a new application. Look at some of the past pull-requests to understand how it's only about copy-pasting, filling up templates and adding some secrets.
+All manifests are organized using Kustomize, and secrets are managed through Bitwarden - synced to the cluster via Ansible. The setup is fully declarative - adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
 
 ## Philosophy
 
@@ -43,7 +33,15 @@ The project was born as a hobby idea to organize knowledge. The core idea is to 
 
 ## Deployment mechanism
 
-Deployments happen whenever a PR gets merged to the `main` branch. GitHub CI is used for all deployments and the secrets are kept in Bitwarden (non self-hosted). Whenever there's code merged, the CI instance boots up, joins my Tailscale network, picks up the Bitwarden secrets, runs the Ansible playbook and goes away once successful. Needless to say, idempotence is therefore a strict requirement here.
+Deployments happen whenever a PR gets merged to the `main` branch. GitHub Actions is used for all deployments and secrets are kept in Bitwarden. Whenever there's code merged, the CI runner:
+
+1. Joins my Tailscale network
+2. SSHs into the homelab via Tailscale SSH (no keys needed!)
+3. Fetches the kubeconfig
+4. Syncs secrets from Bitwarden to Kubernetes
+5. Applies all manifests via `kubectl apply -k`
+
+The whole setup requires just 5 GitHub secrets: `TAILSCALE_AUTHKEY`, `MACHINE_NAME`, and Bitwarden credentials. Idempotence is a strict requirement - running the same deployment twice should have no effect.
 
 ## Backup mechanism
 
@@ -70,7 +68,16 @@ Yeah I'm a [one-machine](https://thume.ca/2023/01/02/one-machine-twitter/) fan.
     - The second-hand-purchased gaming desktop sports i5 7th generation and 16GB RAM (early 2018 model).
     - Has powerful motherboard with efficient cooling and power unit.
     - Nextcloud, Photoprism, Duplicati performance has clear visible improvements upon migration to this desktop homelab.
+5. VM (current)
+    - Migrated from Nomad to K3s (lightweight Kubernetes) for better ecosystem support.
+    - Tailscale SSH eliminates the need for managing SSH keys.
+    - All secrets managed in Bitwarden, synced automatically during deployments.
+    - Traefik + cert-manager handles ingress and TLS certificates.
 
 ## Future scopes
 
-Oracle Cloud offers high-spec ARM machines at free tier, I'm yet to explore if that offering can be put to good use. With that in mind, I'm also looking into distributed deployments. One of the main challenges in that is exposing a distributed interface for storage (like Ceph, SeaweedFS etc). Another point of future focus would be good metric collection and monitoring setup.
+With the migration to K3s complete, the next focus areas are:
+- Adding more applications back (Immich for photos, Miniflux for RSS)
+- Metric collection and monitoring (Prometheus + Grafana)
+- Exploring multi-node K3s with Oracle Cloud's free ARM instances
+- Distributed storage solutions (Longhorn, SeaweedFS)
