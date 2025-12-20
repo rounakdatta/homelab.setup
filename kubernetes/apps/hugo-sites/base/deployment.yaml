@@ -15,31 +15,38 @@ spec:
         app: hugo-site
     spec:
       initContainers:
-        - name: hugo-builder
-          image: hugomods/hugo:exts-0.140.1
+        - name: site-fetcher
+          image: alpine/git:latest
           command:
             - /bin/sh
             - -c
             - |
               set -e
-              echo "Cloning ${HUGO_REPO} branch ${HUGO_BRANCH}..."
-              git clone --depth 1 --branch "${HUGO_BRANCH}" "${HUGO_REPO}" /src
-              cd /src
-              echo "Building Hugo site..."
-              hugo --minify --destination /output
-              echo "Build complete. Files:"
+              echo "Cloning ${SITE_REPO} branch ${SITE_BRANCH}..."
+              git clone --depth 1 --branch "${SITE_BRANCH}" "${SITE_REPO}" /repo
+              # Copy serve directory (default: root) to output
+              SERVE_DIR="${SITE_SERVE_DIR:-.}"
+              echo "Copying ${SERVE_DIR} to output..."
+              cp -r "/repo/${SERVE_DIR}/." /output/
+              echo "Done. Files:"
               ls -la /output
           env:
-            - name: HUGO_REPO
+            - name: SITE_REPO
               valueFrom:
                 configMapKeyRef:
-                  name: hugo-config
-                  key: HUGO_REPO
-            - name: HUGO_BRANCH
+                  name: site-config
+                  key: SITE_REPO
+            - name: SITE_BRANCH
               valueFrom:
                 configMapKeyRef:
-                  name: hugo-config
-                  key: HUGO_BRANCH
+                  name: site-config
+                  key: SITE_BRANCH
+            - name: SITE_SERVE_DIR
+              valueFrom:
+                configMapKeyRef:
+                  name: site-config
+                  key: SITE_SERVE_DIR
+                  optional: true
           volumeMounts:
             - name: site-content
               mountPath: /output

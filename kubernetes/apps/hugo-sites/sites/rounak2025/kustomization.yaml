@@ -17,10 +17,11 @@ generatorOptions:
 
 # Site-specific configuration
 configMapGenerator:
-  - name: hugo-config
+  - name: site-config
     literals:
-      - HUGO_REPO=https://github.com/rounakdatta/rounakdatta.github.io
-      - HUGO_BRANCH=2025
+      - SITE_REPO=https://github.com/rounakdatta/rounakdatta.github.io
+      - SITE_BRANCH=2025
+      - SITE_SERVE_DIR=docs
 
 # Patch hostname in ingress and fix configmap references
 patches:
@@ -54,7 +55,10 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/initContainers/0/env/0/valueFrom/configMapKeyRef/name
-        value: rounak2025-hugo-config
+        value: rounak2025-site-config
       - op: replace
         path: /spec/template/spec/initContainers/0/env/1/valueFrom/configMapKeyRef/name
-        value: rounak2025-hugo-config
+        value: rounak2025-site-config
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/2/valueFrom/configMapKeyRef/name
+        value: rounak2025-site-config
