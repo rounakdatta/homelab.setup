@@ -152,8 +152,19 @@
           STORAGE_ENCRYPTION_KEY: authelia/storage_encryption_key
           SMTP_PASSWORD: authelia/smtp_password
 
-      # Velero credentials are handled separately (uses secure notes)
-      # See the "Create Velero credentials" task below
+      # Authelia users database (YAML file)
+      - name: authelia-users
+        namespace: authelia
+        type: note
+        data:
+          users_database.yml: authelia/users_database
+
+      # Velero credentials (INI file)
+      - name: velero-credentials
+        namespace: velero
+        type: note
+        data:
+          cloud: velero/r2_credentials_file
 
   pre_tasks:
     - name: Verify required environment variables
@@ -203,34 +214,12 @@
         kubectl create secret generic {{ item.name }} \
           --namespace={{ item.namespace }} \
           {% for key, bw_path in item.data.items() %}
-          --from-literal={{ key }}="$(bw get password '{{ bw_path }}' --session "$BW_SESSION")" \
+          --from-literal={{ key }}="$(bw get {{ item.type | default('password') }} '{{ bw_path }}' --session "$BW_SESSION")" \
           {% endfor %}
           --dry-run=client -o yaml | kubectl apply -f -
       loop: "{{ k8s_secrets }}"
       register: secret_result
       changed_when: "'configured' in secret_result.stdout or 'created' in secret_result.stdout"
-      no_log: true
-
-    - name: Create/Update Authelia users database from Bitwarden
-      ansible.builtin.shell: |
-        export BW_SESSION="{{ BW_SESSION }}"
-        kubectl create secret generic authelia-users \
-          --namespace=authelia \
-          --from-literal=users_database.yml="$(bw get notes 'authelia/users_database' --session "$BW_SESSION")" \
-          --dry-run=client -o yaml | kubectl apply -f -
-      register: authelia_users_result
-      changed_when: "'configured' in authelia_users_result.stdout or 'created' in authelia_users_result.stdout"
-      no_log: true
-
-    - name: Create/Update Velero credentials from Bitwarden
-      ansible.builtin.shell: |
-        export BW_SESSION="{{ BW_SESSION }}"
-        kubectl create secret generic velero-credentials \
-          --namespace=velero \
-          --from-literal=cloud="$(bw get notes 'velero/r2_credentials_file' --session "$BW_SESSION")" \
-          --dry-run=client -o yaml | kubectl apply -f -
-      register: velero_creds_result
-      changed_when: "'configured' in velero_creds_result.stdout or 'created' in velero_creds_result.stdout"
       no_log: true
 
     - name: Create/Update Velero BackupStorageLocation from Bitwarden
@@ -267,4 +256,4 @@
 
     - name: Display sync results
       ansible.builtin.debug:
-        msg: "✓ Synced {{ k8s_secrets | length + 3 }} secrets/resources to Kubernetes (including authelia-users, velero-credentials, velero BSL)"
+        msg: "✓ Synced {{ k8s_secrets | length + 1 }} secrets/resources to Kubernetes ({{ k8s_secrets | length }} secrets + velero BSL)"
