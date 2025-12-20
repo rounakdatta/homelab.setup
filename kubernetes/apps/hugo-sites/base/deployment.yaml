@@ -2,53 +2,35 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hugo-site
+  name: static-site
   namespace: sites
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: hugo-site
+      app: static-site
   template:
     metadata:
       labels:
-        app: hugo-site
+        app: static-site
     spec:
       initContainers:
-        - name: site-fetcher
+        - name: fetch
           image: alpine/git:latest
-          command:
-            - /bin/sh
-            - -c
+          command: ["/bin/sh", "-c"]
+          args:
             - |
-              set -e
-              echo "Cloning ${SITE_REPO} branch ${SITE_BRANCH}..."
-              git clone --depth 1 --branch "${SITE_BRANCH}" "${SITE_REPO}" /repo
-              # Copy serve directory (default: root) to output
-              SERVE_DIR="${SITE_SERVE_DIR:-.}"
-              echo "Copying ${SERVE_DIR} to output..."
-              cp -r "/repo/${SERVE_DIR}/." /output/
-              echo "Done. Files:"
-              ls -la /output
+              git clone --depth 1 --branch "${BRANCH}" "${REPO}" /repo
+              cp -r "/repo/${SERVE_DIR:-.}/." /output/
           env:
-            - name: SITE_REPO
-              valueFrom:
-                configMapKeyRef:
-                  name: site-config
-                  key: SITE_REPO
-            - name: SITE_BRANCH
-              valueFrom:
-                configMapKeyRef:
-                  name: site-config
-                  key: SITE_BRANCH
-            - name: SITE_SERVE_DIR
-              valueFrom:
-                configMapKeyRef:
-                  name: site-config
-                  key: SITE_SERVE_DIR
-                  optional: true
+            - name: REPO
+              value: PLACEHOLDER
+            - name: BRANCH
+              value: PLACEHOLDER
+            - name: SERVE_DIR
+              value: PLACEHOLDER
           volumeMounts:
-            - name: site-content
+            - name: content
               mountPath: /output
       containers:
         - name: nginx
@@ -56,7 +38,7 @@ spec:
           ports:
             - containerPort: 80
           volumeMounts:
-            - name: site-content
+            - name: content
               mountPath: /usr/share/nginx/html
               readOnly: true
           resources:
@@ -67,5 +49,5 @@ spec:
               memory: "64Mi"
               cpu: "100m"
       volumes:
-        - name: site-content
+        - name: content
           emptyDir: {}

@@ -1,9 +1,4 @@
 ---
-# To add a new site, copy this file and change:
-# 1. namePrefix (site name, e.g., "mysite-")
-# 2. All occurrences of the site name in patches below
-# 3. SITE_REPO, SITE_BRANCH, SITE_DIR values
-# 4. hostname and tls secretName
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -11,50 +6,47 @@ resources:
   - ../../base
 
 namespace: sites
-namePrefix: rounak2025-
+namePrefix: rounak2018-
 
 patches:
-  # Set site-specific labels and env vars
   - target:
       kind: Deployment
       name: static-site
     patch: |-
       - op: replace
         path: /spec/selector/matchLabels/app
-        value: rounak2025
+        value: rounak2018
       - op: replace
         path: /spec/template/metadata/labels/app
-        value: rounak2025
+        value: rounak2018
       - op: replace
         path: /spec/template/spec/initContainers/0/env/0/value
         value: https://github.com/rounakdatta/rounakdatta.github.io
       - op: replace
         path: /spec/template/spec/initContainers/0/env/1/value
-        value: "2025"
+        value: "2018"
       - op: replace
         path: /spec/template/spec/initContainers/0/env/2/value
-        value: docs
+        value: "."
 
-  # Set site-specific selector
   - target:
       kind: Service
       name: static-site
     patch: |-
       - op: replace
         path: /spec/selector/app
-        value: rounak2025
+        value: rounak2018
 
-  # Set hostname and TLS
   - target:
       kind: Ingress
       name: static-site
     patch: |-
       - op: replace
         path: /spec/rules/0/host
-        value: rounak2025.taptappers.club
+        value: rounak2018.taptappers.club
       - op: replace
         path: /spec/tls/0/hosts/0
-        value: rounak2025.taptappers.club
+        value: rounak2018.taptappers.club
       - op: replace
         path: /spec/tls/0/secretName
-        value: rounak2025-tls
+        value: rounak2018-tls

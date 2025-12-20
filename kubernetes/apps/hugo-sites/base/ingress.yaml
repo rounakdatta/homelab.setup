@@ -2,25 +2,24 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: hugo-site
+  name: static-site
   namespace: sites
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.tls: "true"
 spec:
+  ingressClassName: traefik
   tls:
     - hosts:
-        - HOSTNAME_PLACEHOLDER
-      secretName: hugo-site-tls
+        - placeholder.example.com
+      secretName: static-site-tls
   rules:
-    - host: HOSTNAME_PLACEHOLDER
+    - host: placeholder.example.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: hugo-site
+                name: static-site
                 port:
                   number: 80

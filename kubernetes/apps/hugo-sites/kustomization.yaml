@@ -4,5 +4,6 @@ kind: Kustomization
 
 resources:
   - namespace.yaml
-  - base/rbac.yaml
   - sites/rounak2025
+  - sites/rounak2020
+  - sites/rounak2018
