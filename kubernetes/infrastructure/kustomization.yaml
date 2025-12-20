@@ -10,3 +10,6 @@ resources:
 
   # Ingress resources (for exposing services)
   - ingress/
+
+  # Velero backup system (Cloudflare R2)
+  - velero/

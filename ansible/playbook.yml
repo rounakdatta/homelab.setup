@@ -152,6 +152,9 @@
           STORAGE_ENCRYPTION_KEY: authelia/storage_encryption_key
           SMTP_PASSWORD: authelia/smtp_password
 
+      # Velero credentials are handled separately (uses secure notes)
+      # See the "Create Velero credentials" task below
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:
@@ -188,6 +191,7 @@
         - databases
         - apps
         - authelia
+        - velero
       register: ns_result
       changed_when: "'created' in ns_result.stdout"
       failed_when: false
@@ -218,6 +222,49 @@
       changed_when: "'configured' in authelia_users_result.stdout or 'created' in authelia_users_result.stdout"
       no_log: true
 
+    - name: Create/Update Velero credentials from Bitwarden
+      ansible.builtin.shell: |
+        export BW_SESSION="{{ BW_SESSION }}"
+        kubectl create secret generic velero-credentials \
+          --namespace=velero \
+          --from-literal=cloud="$(bw get notes 'velero/r2_credentials_file' --session "$BW_SESSION")" \
+          --dry-run=client -o yaml | kubectl apply -f -
+      register: velero_creds_result
+      changed_when: "'configured' in velero_creds_result.stdout or 'created' in velero_creds_result.stdout"
+      no_log: true
+
+    - name: Create/Update Velero BackupStorageLocation from Bitwarden
+      ansible.builtin.shell: |
+        export BW_SESSION="{{ BW_SESSION }}"
+        R2_S3_URL="$(bw get password 'velero/r2_s3_url' --session "$BW_SESSION")"
+        R2_BUCKET="$(bw get password 'velero/r2_bucket' --session "$BW_SESSION")"
+        cat <<EOF | kubectl apply -f -
+        apiVersion: velero.io/v1
+        kind: BackupStorageLocation
+        metadata:
+          name: default
+          namespace: velero
+          labels:
+            app.kubernetes.io/name: velero
+        spec:
+          credential:
+            name: velero-credentials
+            key: cloud
+          provider: aws
+          accessMode: ReadWrite
+          default: true
+          objectStorage:
+            bucket: "${R2_BUCKET}"
+            prefix: velero
+          config:
+            region: "auto"
+            s3ForcePathStyle: "true"
+            s3Url: "${R2_S3_URL}"
+        EOF
+      register: velero_bsl_result
+      changed_when: "'configured' in velero_bsl_result.stdout or 'created' in velero_bsl_result.stdout"
+      no_log: true
+
     - name: Display sync results
       ansible.builtin.debug:
-        msg: "✓ Synced {{ k8s_secrets | length + 1 }} secrets to Kubernetes (including authelia-users)"
+        msg: "✓ Synced {{ k8s_secrets | length + 3 }} secrets/resources to Kubernetes (including authelia-users, velero-credentials, velero BSL)"

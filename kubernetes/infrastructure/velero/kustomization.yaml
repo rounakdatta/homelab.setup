@@ -1,0 +1,11 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Note: Velero CRDs are installed separately in the deploy workflow
+# before applying these manifests
+
+resources:
+  - namespace.yaml
+  - velero-install.yaml
+  - schedule-nightly.yaml

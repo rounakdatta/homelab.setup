@@ -43,6 +43,24 @@ jobs:
           ansible-galaxy collection install -r ansible/requirements.yml
           ansible-playbook ansible/playbook.yml --tags secrets -i localhost,
 
+      - name: Install Velero CRDs
+        run: |
+          # Install Velero CRDs before applying manifests
+          # CRDs need to exist before custom resources can be created
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_backups.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_backupstoragelocations.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_deletebackuprequests.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_downloadrequests.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_podvolumebackups.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_podvolumerestores.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_restores.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_schedules.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_serverstatusrequests.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_volumesnapshotlocations.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_datadownloads.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_datauploads.yaml
+          kubectl apply -f https://raw.githubusercontent.com/vmware-tanzu/velero/v1.17.1/config/crd/v1/bases/velero.io_backuprepositories.yaml
+
       - name: Deploy manifests
         run: |
           kubectl apply -k kubernetes/
