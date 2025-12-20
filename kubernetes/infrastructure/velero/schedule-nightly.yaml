@@ -1,5 +1,5 @@
 ---
-# Nightly full backup at 4 AM UTC
+# Nightly full backup at 4 AM IST (22:30 UTC)
 # Backs up all application namespaces with PVC data using Kopia
 apiVersion: velero.io/v1
 kind: Schedule
@@ -7,8 +7,8 @@ metadata:
   name: nightly-full-backup
   namespace: velero
 spec:
-  # 4 AM UTC daily
-  schedule: "0 4 * * *"
+  # 4 AM IST = 22:30 UTC (previous day)
+  schedule: "30 22 * * *"
   template:
     # Include all application namespaces
     includedNamespaces:
