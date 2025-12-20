@@ -27,7 +27,7 @@ patches:
         value: "2018"
       - op: replace
         path: /spec/template/spec/initContainers/0/env/2/value
-        value: "."
+        value: _site
 
   - target:
       kind: Service
