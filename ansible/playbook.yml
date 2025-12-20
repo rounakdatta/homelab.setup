@@ -6,7 +6,11 @@
 #   Secrets only:   ansible-playbook ansible/playbook.yml --tags secrets
 #   Infra only:     ansible-playbook ansible/playbook.yml --tags infra
 #
-# Prerequisites: Tailscale must be installed and authenticated on the target machine
+# Bootstrap (one-time manual steps on new VM):
+#   1. SSH into new VM via console or temporary key
+#   2. curl -fsSL https://tailscale.com/install.sh | sh
+#   3. sudo tailscale up --ssh   (enables Tailscale SSH for keyless access)
+#   4. Now run: ansible-playbook ansible/playbook.yml --tags infra
 
 - name: Setup homelab infrastructure
   hosts: homelab
@@ -23,8 +27,14 @@
 
     - name: Fail if Tailscale is not running
       ansible.builtin.fail:
-        msg: "Tailscale is not running on this machine. Please install and authenticate Tailscale first: curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up"
+        msg: "Tailscale is not running. Run: curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up --ssh"
       when: tailscale_check.rc != 0
+
+    - name: Ensure Tailscale SSH is enabled
+      ansible.builtin.command: tailscale up --ssh --accept-risk=lose-ssh
+      register: tailscale_ssh
+      changed_when: "'Success' in tailscale_ssh.stdout or tailscale_ssh.rc == 0"
+      failed_when: false
 
     - name: Get Tailscale IP address
       ansible.builtin.command: tailscale ip -4
@@ -102,6 +112,7 @@
           db-name: bookstack/db_name
           db-username: bookstack/db_username
           db-password: bookstack/db_password
+          app-key: bookstack/app_key
 
       # Vikunja credentials (consolidated)
       - name: vikunja-credentials
@@ -132,6 +143,14 @@
           db-name: nextcloud/db_name
           db-username: nextcloud/db_username
           db-password: nextcloud/db_password
+
+      # Authelia credentials
+      - name: authelia-secrets
+        namespace: authelia
+        data:
+          SESSION_SECRET: authelia/session_secret
+          STORAGE_ENCRYPTION_KEY: authelia/storage_encryption_key
+          SMTP_PASSWORD: authelia/smtp_password
 
   pre_tasks:
     - name: Verify required environment variables
@@ -168,6 +187,7 @@
       loop:
         - databases
         - apps
+        - authelia
       environment:
         KUBECONFIG: "/Users/rounak/personal/homelab.setup/.k3s-kubeconfig.yaml"
       register: ns_result
@@ -191,6 +211,19 @@
       changed_when: "'configured' in secret_result.stdout or 'created' in secret_result.stdout"
       no_log: true
 
+    - name: Create/Update Authelia users database from Bitwarden
+      ansible.builtin.shell: |
+        export BW_SESSION="{{ BW_SESSION }}"
+        kubectl create secret generic authelia-users \
+          --namespace=authelia \
+          --from-literal=users_database.yml="$(bw get notes 'authelia/users_database' --session "$BW_SESSION")" \
+          --dry-run=client -o yaml | kubectl apply -f -
+      environment:
+        KUBECONFIG: "/Users/rounak/personal/homelab.setup/.k3s-kubeconfig.yaml"
+      register: authelia_users_result
+      changed_when: "'configured' in authelia_users_result.stdout or 'created' in authelia_users_result.stdout"
+      no_log: true
+
     - name: Display sync results
       ansible.builtin.debug:
-        msg: "✓ Synced {{ k8s_secrets | length }} secrets to Kubernetes"
+        msg: "✓ Synced {{ k8s_secrets | length + 1 }} secrets to Kubernetes (including authelia-users)"

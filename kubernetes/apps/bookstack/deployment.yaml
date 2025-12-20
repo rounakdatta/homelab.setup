@@ -61,7 +61,10 @@ spec:
         - name: APP_URL
           value: "https://bookstack.taptappers.club"
         - name: APP_KEY
-          value: "SomeRandomStringWith32Characters"
+          valueFrom:
+            secretKeyRef:
+              name: bookstack-credentials
+              key: app-key
 
         volumeMounts:
         - name: uploads

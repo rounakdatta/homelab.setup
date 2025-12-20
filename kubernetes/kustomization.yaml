@@ -17,3 +17,6 @@ resources:
 
   # 4. Deploy applications
   - apps/
+
+  # 5. Deploy authelia (authentication)
+  - authelia/

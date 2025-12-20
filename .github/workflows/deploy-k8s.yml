@@ -1,98 +1,50 @@
 name: Deploy to K8s
 
-# This workflow deploys applications to the K3s cluster
-# It runs on every push to main and simply applies the Kubernetes manifests
-
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'kubernetes/**'
+      - 'ansible/**'
       - '.github/workflows/deploy-k8s.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Fetch repository
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Tailscale
-        uses: tailscale/github-action@v1
+        uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: 1.76.1
 
-      - name: Get machine IP
-        env:
-          MACHINE_NAME: ${{ secrets.MACHINE_NAME }}
+      - name: Fetch kubeconfig via Tailscale SSH
         run: |
-          MACHINE_IP="$(tailscale ip -4 ${MACHINE_NAME})"
-          echo "::add-mask::${MACHINE_IP}"
-          echo "GITHUB_MACHINE_IP=${MACHINE_IP}" >> ${GITHUB_ENV}
-
-      - name: Setup SSH for kubeconfig fetch
-        env:
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan ${{ env.GITHUB_MACHINE_IP }} >> ~/.ssh/known_hosts
-          printf "%s" "${SSH_KEY}" > ~/.ssh/key
-          chmod 600 ~/.ssh/key
-
-      - name: Fetch kubeconfig
-        env:
-          SSH_USER: ${{ secrets.SSH_USER }}
-        run: |
+          # Tailscale SSH - no keys needed!
           mkdir -p ~/.kube
-          scp -i ~/.ssh/key ${SSH_USER}@${{ env.GITHUB_MACHINE_IP }}:/etc/rancher/k3s/k3s.yaml ~/.kube/config
-
-          # Replace server IP with Tailscale IP
-          sed -i "s|https://127.0.0.1:6443|https://${{ env.GITHUB_MACHINE_IP }}:6443|g" ~/.kube/config
-
-          # Verify connection
+          tailscale ssh root@${{ secrets.MACHINE_NAME }} "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
+          sed -i "s|https://127.0.0.1:6443|https://${{ secrets.MACHINE_NAME }}:6443|g" ~/.kube/config
           kubectl cluster-info
 
-      - name: Install Ansible
-        run: |
-          pip install ansible
-
-      - name: Install Ansible collections
-        run: |
-          ansible-galaxy collection install -r ansible/requirements.yml
-
-      - name: Sync secrets from Bitwarden to K8s
+      - name: Sync secrets from Bitwarden
         env:
           BW_CLIENTID: ${{ secrets.BW_CLIENTID }}
           BW_CLIENTSECRET: ${{ secrets.BW_CLIENTSECRET }}
           BW_PASSWORD: ${{ secrets.BW_PASSWORD }}
-          KUBECONFIG: ~/.kube/config
         run: |
-          # Run only the secrets play from main playbook
+          npm install -g @bitwarden/cli
+          pip install ansible
+          ansible-galaxy collection install -r ansible/requirements.yml
           ansible-playbook ansible/playbook.yml --tags secrets
 
-      - name: Deploy Kubernetes manifests
+      - name: Deploy manifests
         run: |
-          # Apply all manifests using kustomize
           kubectl apply -k kubernetes/
-
-          echo "Deployment complete!"
-
-      - name: Show deployment status
-        run: |
-          echo "=== Namespaces ==="
-          kubectl get namespaces
-
           echo ""
-          echo "=== Pods in all namespaces ==="
-          kubectl get pods -A
-
-          echo ""
-          echo "=== Services ==="
-          kubectl get services -A
-
-          echo ""
-          echo "=== Secrets ==="
-          kubectl get secrets -A
+          echo "=== Deployment Status ==="
+          kubectl get pods -A | grep -v kube-system

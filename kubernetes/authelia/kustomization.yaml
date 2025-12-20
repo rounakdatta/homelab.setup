@@ -7,7 +7,9 @@ namespace: authelia
 resources:
   - namespace.yaml
   - configmap.yaml
-  - secrets.yaml
+  # secrets are managed by ansible (synced from Bitwarden)
+  # - authelia-secrets
+  # - authelia-users
   - deployment.yaml
   - service.yaml
   - ingress.yaml
