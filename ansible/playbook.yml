@@ -24,30 +24,36 @@
       register: tailscale_check
       changed_when: false
       failed_when: false
+      tags: [always]
 
     - name: Fail if Tailscale is not running
       ansible.builtin.fail:
         msg: "Tailscale is not running. Run: curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up --ssh"
       when: tailscale_check.rc != 0
+      tags: [always]
 
     - name: Ensure Tailscale SSH is enabled
       ansible.builtin.command: tailscale up --ssh --accept-risk=lose-ssh
       register: tailscale_ssh
       changed_when: "'Success' in tailscale_ssh.stdout or tailscale_ssh.rc == 0"
       failed_when: false
+      tags: [always]
 
     - name: Get Tailscale IP address
       ansible.builtin.command: tailscale ip -4
       register: tailscale_ip
       changed_when: false
+      tags: [always]
 
     - name: Set Tailscale IP as fact
       ansible.builtin.set_fact:
         host_tailscale_ip: "{{ tailscale_ip.stdout }}"
+      tags: [always]
 
     - name: Display Tailscale IP
       ansible.builtin.debug:
         msg: "Using Tailscale IP: {{ host_tailscale_ip }}"
+      tags: [always]
 
   roles:
     # Install and configure K3s with Tailscale binding
