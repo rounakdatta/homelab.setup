@@ -25,6 +25,7 @@ jobs:
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           version: 1.76.1
+          args: --advertise-tags=tag:homelab
 
       - name: Configure Ansible for Tailscale SSH
         run: |
