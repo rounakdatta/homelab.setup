@@ -20,3 +20,6 @@ resources:
 
   # 5. Deploy authelia (authentication)
   - authelia/
+
+  # 6. Deploy static sites (Hugo)
+  - apps/hugo-sites/

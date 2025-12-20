@@ -1,0 +1,57 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+# Prefix all resources with site name
+namePrefix: rounak2025-
+
+# Disable hash suffix so configmap name is predictable
+generatorOptions:
+  disableNameSuffixHash: true
+
+# Site-specific configuration
+configMapGenerator:
+  - name: hugo-config
+    literals:
+      - HUGO_REPO=https://github.com/rounakdatta/rounakdatta.github.io
+      - HUGO_BRANCH=2025
+
+# Patch hostname in ingress and fix configmap references
+patches:
+  # Update ingress hostname
+  - target:
+      kind: Ingress
+      name: hugo-site
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: rounak2025.taptappers.club
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: rounak2025.taptappers.club
+      - op: replace
+        path: /spec/tls/0/secretName
+        value: rounak2025-tls
+  # Update cronjob to restart the correct deployment
+  - target:
+      kind: CronJob
+      name: hugo-site-refresh
+    patch: |-
+      - op: replace
+        path: /spec/jobTemplate/spec/template/spec/containers/0/command/2
+        value: |
+          kubectl rollout restart deployment/rounak2025-hugo-site -n sites
+  # Fix configmap reference in deployment (add prefix)
+  - target:
+      kind: Deployment
+      name: hugo-site
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/0/valueFrom/configMapKeyRef/name
+        value: rounak2025-hugo-config
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/1/valueFrom/configMapKeyRef/name
+        value: rounak2025-hugo-config

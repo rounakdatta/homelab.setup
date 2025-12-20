@@ -1,0 +1,31 @@
+---
+# ServiceAccount for CronJob to restart deployments
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hugo-deployer
+  namespace: sites
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: deployment-restarter
+  namespace: sites
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: hugo-deployer-binding
+  namespace: sites
+subjects:
+  - kind: ServiceAccount
+    name: hugo-deployer
+    namespace: sites
+roleRef:
+  kind: Role
+  name: deployment-restarter
+  apiGroup: rbac.authorization.k8s.io
