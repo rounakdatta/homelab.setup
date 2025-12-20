@@ -33,23 +33,32 @@ jobs:
           cat > /tmp/tailscale-ssh-wrapper << 'WRAPPER'
           #!/bin/bash
           # Wrapper to make tailscale ssh work with Ansible
-          # Ansible calls: ssh [options] user@host command
+          # Ansible calls: ssh [options] -l user host command
           # We need: tailscale ssh user@host command
 
-          # Parse arguments, skipping SSH options that tailscale ssh doesn't understand
+          # Parse arguments, capturing user from -l option
           host=""
+          user=""
           cmd=""
           skip_next=false
+          capture_user=false
 
           for arg in "$@"; do
             if $skip_next; then
               skip_next=false
               continue
             fi
+            if $capture_user; then
+              user="$arg"
+              capture_user=false
+              continue
+            fi
 
             case "$arg" in
-              -o|-i|-F|-p|-l|-L|-R|-D|-W|-S|-E|-J|-B) skip_next=true ;;
-              -o*|-i*|-F*|-p*|-l*) ;; # Skip combined options
+              -l) capture_user=true ;;  # Capture the next arg as user
+              -l*) user="${arg#-l}" ;;  # Handle -lroot format
+              -o|-i|-F|-p|-L|-R|-D|-W|-S|-E|-J|-B) skip_next=true ;;
+              -o*|-i*|-F*|-p*) ;; # Skip combined options
               -[CvqTtNfngAKXYG]*) ;; # Skip single-letter options
               -*)  ;; # Skip any other options
               *)
@@ -61,6 +70,11 @@ jobs:
                 ;;
             esac
           done
+
+          # Construct user@host if user was specified separately
+          if [[ -n "$user" && "$host" != *@* ]]; then
+            host="${user}@${host}"
+          fi
 
           if [[ -n "$cmd" ]]; then
             exec tailscale ssh "$host" "$cmd"
