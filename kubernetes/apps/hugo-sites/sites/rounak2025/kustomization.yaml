@@ -5,6 +5,9 @@ kind: Kustomization
 resources:
   - ../../base
 
+# All resources in sites namespace
+namespace: sites
+
 # Prefix all resources with site name
 namePrefix: rounak2025-
 
