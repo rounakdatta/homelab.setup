@@ -1,0 +1,52 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: sites
+namePrefix: rounak2020-
+
+patches:
+  - target:
+      kind: Deployment
+      name: static-site
+    patch: |-
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: rounak2020
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: rounak2020
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/0/value
+        value: https://github.com/rounakdatta/rounakdatta.github.io
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/1/value
+        value: "2020"
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/2/value
+        value: "."
+
+  - target:
+      kind: Service
+      name: static-site
+    patch: |-
+      - op: replace
+        path: /spec/selector/app
+        value: rounak2020
+
+  - target:
+      kind: Ingress
+      name: static-site
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: rounak2020.taptappers.club
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: rounak2020.taptappers.club
+      - op: replace
+        path: /spec/tls/0/secretName
+        value: rounak2020-tls
