@@ -188,8 +188,6 @@
         - databases
         - apps
         - authelia
-      environment:
-        KUBECONFIG: "/Users/rounak/personal/homelab.setup/.k3s-kubeconfig.yaml"
       register: ns_result
       changed_when: "'created' in ns_result.stdout"
       failed_when: false
@@ -205,8 +203,6 @@
           {% endfor %}
           --dry-run=client -o yaml | kubectl apply -f -
       loop: "{{ k8s_secrets }}"
-      environment:
-        KUBECONFIG: "/Users/rounak/personal/homelab.setup/.k3s-kubeconfig.yaml"
       register: secret_result
       changed_when: "'configured' in secret_result.stdout or 'created' in secret_result.stdout"
       no_log: true
@@ -218,8 +214,6 @@
           --namespace=authelia \
           --from-literal=users_database.yml="$(bw get notes 'authelia/users_database' --session "$BW_SESSION")" \
           --dry-run=client -o yaml | kubectl apply -f -
-      environment:
-        KUBECONFIG: "/Users/rounak/personal/homelab.setup/.k3s-kubeconfig.yaml"
       register: authelia_users_result
       changed_when: "'configured' in authelia_users_result.stdout or 'created' in authelia_users_result.stdout"
       no_log: true
