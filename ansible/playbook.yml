@@ -172,6 +172,13 @@
         data:
           cloud: velero/r2_credentials_file
 
+      # Keel credentials (image update UI)
+      - name: keel-credentials
+        namespace: kube-system
+        data:
+          username: keel/username
+          password: keel/password
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:
