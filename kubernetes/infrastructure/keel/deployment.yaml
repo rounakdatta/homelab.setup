@@ -111,6 +111,17 @@ spec:
           imagePullPolicy: IfNotPresent
           command: ["/bin/keel"]
           env:
+            # Basic auth required for UI to work (Authelia protects ingress)
+            - name: BASIC_AUTH_USER
+              valueFrom:
+                secretKeyRef:
+                  name: keel-credentials
+                  key: username
+            - name: BASIC_AUTH_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keel-credentials
+                  key: password
             # Polling configuration
             - name: POLL
               value: "1"
