@@ -13,3 +13,6 @@ resources:
 
   # Velero backup system (Cloudflare R2)
   - velero/
+
+  # Keel - image update automation with approval UI
+  - keel/
