@@ -49,6 +49,13 @@ spec:
       labels:
         app: nextcloud
     spec:
+      initContainers:
+      - name: enable-web-updater
+        image: busybox:latest
+        command: ['sh', '-c', 'rm -f /config/upgrade-disable-web.config.php']
+        volumeMounts:
+        - name: config
+          mountPath: /config
       containers:
       - name: nextcloud
         image: nextcloud:latest
