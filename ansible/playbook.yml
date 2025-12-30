@@ -237,9 +237,14 @@
 
     - name: Create/Update Velero BackupStorageLocation from Bitwarden
       ansible.builtin.shell: |
+        set -e
         export BW_SESSION="{{ BW_SESSION }}"
         R2_S3_URL="$(bw get password 'velero/r2_s3_url' --session "$BW_SESSION")"
         R2_BUCKET="$(bw get password 'velero/r2_bucket' --session "$BW_SESSION")"
+        if [[ -z "$R2_S3_URL" || -z "$R2_BUCKET" ]]; then
+          echo "ERROR: Failed to retrieve Velero R2 config from Bitwarden (empty values)"
+          exit 1
+        fi
         cat <<EOF | kubectl apply -f -
         apiVersion: velero.io/v1
         kind: BackupStorageLocation
