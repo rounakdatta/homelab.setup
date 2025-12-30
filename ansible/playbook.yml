@@ -199,36 +199,13 @@
         export BW_CLIENTID="{{ lookup('env', 'BW_CLIENTID') }}"
         export BW_CLIENTSECRET="{{ lookup('env', 'BW_CLIENTSECRET') }}"
         export BW_PASSWORD="{{ lookup('env', 'BW_PASSWORD') }}"
-        echo "DEBUG: BW_CLIENTID set: ${BW_CLIENTID:+yes}" >&2
-        echo "DEBUG: BW_CLIENTSECRET set: ${BW_CLIENTSECRET:+yes}" >&2
-        echo "DEBUG: BW_PASSWORD set: ${BW_PASSWORD:+yes}" >&2
-        echo "DEBUG: Attempting bw login..." >&2
-        LOGIN_OUT=$(bw login --apikey --raw 2>&1)
-        LOGIN_RC=$?
-        echo "DEBUG: bw login exit code: $LOGIN_RC" >&2
-        echo "DEBUG: bw login output: $LOGIN_OUT" >&2
-        if [ $LOGIN_RC -eq 0 ] && [ -n "$LOGIN_OUT" ]; then
-          echo "DEBUG: Login succeeded, syncing vault..." >&2
-          BW_SESSION="$LOGIN_OUT" bw sync >&2
-          echo "$LOGIN_OUT"
-          exit 0
-        fi
-        echo "DEBUG: Attempting bw unlock..." >&2
-        UNLOCK_OUT=$(bw unlock --passwordenv BW_PASSWORD --raw 2>&1)
-        UNLOCK_RC=$?
-        echo "DEBUG: bw unlock exit code: $UNLOCK_RC" >&2
-        echo "DEBUG: bw unlock output: $UNLOCK_OUT" >&2
-        if [ $UNLOCK_RC -eq 0 ] && [ -n "$UNLOCK_OUT" ]; then
-          echo "DEBUG: Unlock succeeded, syncing vault..." >&2
-          BW_SESSION="$UNLOCK_OUT" bw sync >&2
-          echo "$UNLOCK_OUT"
-          exit 0
-        fi
-        echo "ERROR: Both login and unlock failed" >&2
-        exit 1
+        # Logout first to ensure clean state
+        bw logout 2>/dev/null || true
+        # Login with API key
+        bw login --apikey --raw
       register: bw_session
       changed_when: false
-      # no_log: true  # Temporarily disabled for debugging
+      no_log: true
 
     - name: Set Bitwarden session fact
       ansible.builtin.set_fact:
@@ -271,7 +248,6 @@
           echo "ERROR: Failed to retrieve Velero R2 config from Bitwarden (empty values)"
           exit 1
         fi
-        echo "DEBUG: R2 config retrieved successfully"
         cat <<EOF | kubectl apply -f -
         apiVersion: velero.io/v1
         kind: BackupStorageLocation
@@ -297,7 +273,7 @@
         EOF
       register: velero_bsl_result
       changed_when: "'configured' in velero_bsl_result.stdout or 'created' in velero_bsl_result.stdout"
-      # no_log: true  # Temporarily disabled for debugging
+      no_log: true
 
     - name: Display sync results
       ansible.builtin.debug:
