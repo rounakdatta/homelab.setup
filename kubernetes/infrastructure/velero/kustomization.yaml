@@ -6,4 +6,5 @@ resources:
   - namespace.yaml
   - crds.yaml  # Velero CRDs v1.17.1
   - velero-install.yaml
+  - backup-storage-location.yaml
   - schedule-nightly.yaml

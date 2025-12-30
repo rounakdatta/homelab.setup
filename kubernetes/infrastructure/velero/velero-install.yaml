@@ -292,5 +292,3 @@ spec:
           emptyDir: {}
         - name: scratch
           emptyDir: {}
-# BackupStorageLocation is created dynamically by ansible
-# with values from Bitwarden (velero/r2_s3_url, velero/r2_bucket)
