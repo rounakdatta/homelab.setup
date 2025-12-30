@@ -199,11 +199,8 @@
         export BW_CLIENTID="{{ lookup('env', 'BW_CLIENTID') }}"
         export BW_CLIENTSECRET="{{ lookup('env', 'BW_CLIENTSECRET') }}"
         export BW_PASSWORD="{{ lookup('env', 'BW_PASSWORD') }}"
-        # Logout first to ensure clean state
         bw logout 2>/dev/null || true
-        # Login with API key (this doesn't unlock)
         bw login --apikey 2>/dev/null
-        # Unlock with master password to get session
         bw unlock --passwordenv BW_PASSWORD --raw
       register: bw_session
       changed_when: false
