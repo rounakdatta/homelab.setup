@@ -199,10 +199,17 @@
         export BW_CLIENTID="{{ lookup('env', 'BW_CLIENTID') }}"
         export BW_CLIENTSECRET="{{ lookup('env', 'BW_CLIENTSECRET') }}"
         export BW_PASSWORD="{{ lookup('env', 'BW_PASSWORD') }}"
-        bw login --apikey --raw || bw unlock --passwordenv BW_PASSWORD --raw
+        echo "DEBUG: Attempting bw login..." >&2
+        SESSION=$(bw login --apikey --raw 2>&1) || SESSION=$(bw unlock --passwordenv BW_PASSWORD --raw 2>&1)
+        echo "DEBUG: bw output was: $SESSION" >&2
+        if [ -z "$SESSION" ] || echo "$SESSION" | grep -q "error\|failed\|Master password"; then
+          echo "ERROR: Failed to get valid Bitwarden session" >&2
+          exit 1
+        fi
+        echo "$SESSION"
       register: bw_session
       changed_when: false
-      no_log: true
+      # no_log: true  # Temporarily disabled for debugging
 
     - name: Set Bitwarden session fact
       ansible.builtin.set_fact:
