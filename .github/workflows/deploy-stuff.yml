@@ -69,8 +69,8 @@ jobs:
           bw logout 2>/dev/null || true
           export BW_SESSION=$(bw login --apikey --raw)
 
-          R2_S3_URL=$(bw get password 'velero/r2_s3_url' --session "$BW_SESSION")
-          R2_BUCKET=$(bw get password 'velero/r2_bucket' --session "$BW_SESSION")
+          export R2_S3_URL=$(bw get password 'velero/r2_s3_url' --session "$BW_SESSION")
+          export R2_BUCKET=$(bw get password 'velero/r2_bucket' --session "$BW_SESSION")
 
           # Validate values
           if [ -z "$R2_S3_URL" ] || [ -z "$R2_BUCKET" ]; then
@@ -82,29 +82,30 @@ jobs:
 
           # Create BackupStorageLocation
           echo "Creating Velero BackupStorageLocation..."
-          cat > /tmp/velero-bsl.yaml <<YAML
-apiVersion: velero.io/v1
-kind: BackupStorageLocation
-metadata:
-  name: default
-  namespace: velero
-  labels:
-    app.kubernetes.io/name: velero
-spec:
-  credential:
-    name: velero-credentials
-    key: cloud
-  provider: aws
-  accessMode: ReadWrite
-  default: true
-  objectStorage:
-    bucket: "${R2_BUCKET}"
-    prefix: velero
-  config:
-    region: auto
-    s3ForcePathStyle: "true"
-    s3Url: "${R2_S3_URL}"
-YAML
-          kubectl apply -f /tmp/velero-bsl.yaml
+          cat > /tmp/velero-bsl.yaml <<'BSLEOF'
+          apiVersion: velero.io/v1
+          kind: BackupStorageLocation
+          metadata:
+            name: default
+            namespace: velero
+            labels:
+              app.kubernetes.io/name: velero
+          spec:
+            credential:
+              name: velero-credentials
+              key: cloud
+            provider: aws
+            accessMode: ReadWrite
+            default: true
+            objectStorage:
+              bucket: "${R2_BUCKET}"
+              prefix: velero
+            config:
+              region: auto
+              s3ForcePathStyle: "true"
+              s3Url: "${R2_S3_URL}"
+          BSLEOF
+          # Substitute env vars and remove leading whitespace
+          envsubst < /tmp/velero-bsl.yaml | sed 's/^          //' | kubectl apply -f -
           rm /tmp/velero-bsl.yaml
           echo "✓ Velero BackupStorageLocation configured"
