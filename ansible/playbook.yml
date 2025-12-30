@@ -198,6 +198,7 @@
       ansible.builtin.shell: |
         export BW_CLIENTID="{{ lookup('env', 'BW_CLIENTID') }}"
         export BW_CLIENTSECRET="{{ lookup('env', 'BW_CLIENTSECRET') }}"
+        export BW_PASSWORD="{{ lookup('env', 'BW_PASSWORD') }}"
         # Logout first to ensure clean state
         bw logout 2>/dev/null || true
         # Login with API key (this doesn't unlock)
