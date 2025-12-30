@@ -199,14 +199,33 @@
         export BW_CLIENTID="{{ lookup('env', 'BW_CLIENTID') }}"
         export BW_CLIENTSECRET="{{ lookup('env', 'BW_CLIENTSECRET') }}"
         export BW_PASSWORD="{{ lookup('env', 'BW_PASSWORD') }}"
+        echo "DEBUG: BW_CLIENTID set: ${BW_CLIENTID:+yes}" >&2
+        echo "DEBUG: BW_CLIENTSECRET set: ${BW_CLIENTSECRET:+yes}" >&2
+        echo "DEBUG: BW_PASSWORD set: ${BW_PASSWORD:+yes}" >&2
         echo "DEBUG: Attempting bw login..." >&2
-        SESSION=$(bw login --apikey --raw 2>&1) || SESSION=$(bw unlock --passwordenv BW_PASSWORD --raw 2>&1)
-        echo "DEBUG: bw output was: $SESSION" >&2
-        if [ -z "$SESSION" ] || echo "$SESSION" | grep -q "error\|failed\|Master password"; then
-          echo "ERROR: Failed to get valid Bitwarden session" >&2
-          exit 1
+        LOGIN_OUT=$(bw login --apikey --raw 2>&1)
+        LOGIN_RC=$?
+        echo "DEBUG: bw login exit code: $LOGIN_RC" >&2
+        echo "DEBUG: bw login output: $LOGIN_OUT" >&2
+        if [ $LOGIN_RC -eq 0 ] && [ -n "$LOGIN_OUT" ]; then
+          echo "DEBUG: Login succeeded, syncing vault..." >&2
+          BW_SESSION="$LOGIN_OUT" bw sync >&2
+          echo "$LOGIN_OUT"
+          exit 0
         fi
-        echo "$SESSION"
+        echo "DEBUG: Attempting bw unlock..." >&2
+        UNLOCK_OUT=$(bw unlock --passwordenv BW_PASSWORD --raw 2>&1)
+        UNLOCK_RC=$?
+        echo "DEBUG: bw unlock exit code: $UNLOCK_RC" >&2
+        echo "DEBUG: bw unlock output: $UNLOCK_OUT" >&2
+        if [ $UNLOCK_RC -eq 0 ] && [ -n "$UNLOCK_OUT" ]; then
+          echo "DEBUG: Unlock succeeded, syncing vault..." >&2
+          BW_SESSION="$UNLOCK_OUT" bw sync >&2
+          echo "$UNLOCK_OUT"
+          exit 0
+        fi
+        echo "ERROR: Both login and unlock failed" >&2
+        exit 1
       register: bw_session
       changed_when: false
       # no_log: true  # Temporarily disabled for debugging
