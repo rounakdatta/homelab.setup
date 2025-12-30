@@ -271,7 +271,7 @@
         EOF
       register: velero_bsl_result
       changed_when: "'configured' in velero_bsl_result.stdout or 'created' in velero_bsl_result.stdout"
-      no_log: true
+      # no_log: true  # Temporarily disabled for debugging
 
     - name: Display sync results
       ansible.builtin.debug:
