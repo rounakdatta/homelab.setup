@@ -8,3 +8,5 @@ resources:
   - velero-install.yaml
   - backup-storage-location.yaml
   - schedule-nightly.yaml
+  - velero-ui.yaml
+  - velero-ui-ingress.yaml
