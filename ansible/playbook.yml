@@ -199,8 +199,8 @@
         export BW_CLIENTID="{{ lookup('env', 'BW_CLIENTID') }}"
         export BW_CLIENTSECRET="{{ lookup('env', 'BW_CLIENTSECRET') }}"
         export BW_PASSWORD="{{ lookup('env', 'BW_PASSWORD') }}"
-        bw logout 2>/dev/null || true
-        bw login --apikey 2>/dev/null
+        bw logout >/dev/null 2>&1 || true
+        bw login --apikey >/dev/null 2>&1
         bw unlock --passwordenv BW_PASSWORD --raw
       register: bw_session
       changed_when: false
