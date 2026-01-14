@@ -13,3 +13,5 @@ resources:
   - vikunja/
   - webtrees/
   - nextcloud/
+  - ntfy/
+  - motioneye/

@@ -1,0 +1,81 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ntfy-cache-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ntfy-config
+  namespace: apps
+data:
+  server.yml: |
+    base-url: "https://ntfy.taptappers.club"
+    cache-file: "/var/cache/ntfy/cache.db"
+    auth-file: "/var/cache/ntfy/user.db"
+    auth-default-access: "deny-all"
+    behind-proxy: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ntfy
+  namespace: apps
+  labels:
+    app: ntfy
+  annotations:
+    keel.sh/policy: force
+    keel.sh/trigger: poll
+    keel.sh/pollSchedule: "@every 12h"
+    keel.sh/approvals: "1"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: ntfy
+  template:
+    metadata:
+      labels:
+        app: ntfy
+    spec:
+      containers:
+      - name: ntfy
+        image: binwiederhier/ntfy:latest
+        args: ["serve"]
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: TZ
+          value: "Asia/Kolkata"
+        volumeMounts:
+        - name: cache
+          mountPath: /var/cache/ntfy
+        - name: config
+          mountPath: /etc/ntfy
+          readOnly: true
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+      volumes:
+      - name: cache
+        persistentVolumeClaim:
+          claimName: ntfy-cache-pvc
+      - name: config
+        configMap:
+          name: ntfy-config
