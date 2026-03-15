@@ -23,11 +23,31 @@
   register: k3s_agent_install
   changed_when: k3s_agent_install.rc == 0
 
+- name: Ensure k3s-agent waits for tailscale0 interface
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s-agent.service.d/wait-for-tailscale.conf
+    content: |
+      [Service]
+      ExecStartPre=/bin/sh -c 'until ip link show tailscale0 >/dev/null 2>&1; do echo "Waiting for tailscale0..."; sleep 2; done'
+    mode: '0644'
+  register: k3s_agent_override
+
+- name: Reload systemd if override changed
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: k3s_agent_override.changed
+
 - name: Ensure K3s agent service is running
   ansible.builtin.systemd:
     name: k3s-agent
     state: started
     enabled: yes
+
+- name: Restart K3s agent if override was added
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: restarted
+  when: k3s_agent_override.changed
 
 - name: Display K3s agent installation status
   ansible.builtin.debug:
