@@ -1,15 +1,28 @@
 # Ansible inventory template
 #
-# This file uses MACHINE_NAME which should be set in .env
+# This file uses CONTROL_MACHINE_NAME and WORKER_MACHINE_NAME which should be set in .env
 # For local development, use the Makefile which generates inventory dynamically:
 #
-#   make infra    - Run infrastructure setup
+#   make infra    - Run full infrastructure setup (control plane + workers)
 #   make secrets  - Sync secrets from Bitwarden
 #
 # Or manually:
 #   source .env
-#   echo -e "[homelab]\n${MACHINE_NAME} ansible_user=root" > /tmp/inventory
+#   cat > /tmp/inventory << EOF
+#   [control]
+#   ${CONTROL_MACHINE_NAME} ansible_user=root
+#
+#   [worker]
+#   ${WORKER_MACHINE_NAME} ansible_user=root node_labels="{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}"
+#   EOF
 #   ansible-playbook ansible/playbook.yml -i /tmp/inventory --tags infra
 
-[homelab]
-# Set MACHINE_NAME in .env (e.g., MACHINE_NAME=your-tailscale-hostname)
+[control]
+# Control plane node (K3s server)
+
+[worker]
+# Worker nodes (K3s agents) — add node_labels as host vars
+
+[homelab:children]
+control
+worker

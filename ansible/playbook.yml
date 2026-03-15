@@ -2,21 +2,20 @@
 # Homelab infrastructure and secrets management playbook
 #
 # Usage:
-#   Full setup:     ansible-playbook ansible/playbook.yml
-#   Secrets only:   ansible-playbook ansible/playbook.yml --tags secrets
-#   Infra only:     ansible-playbook ansible/playbook.yml --tags infra
+#   Full setup:       ansible-playbook ansible/playbook.yml
+#   Secrets only:     ansible-playbook ansible/playbook.yml --tags secrets
+#   Infra (all):      ansible-playbook ansible/playbook.yml --tags infra
 #
 # Bootstrap (one-time manual steps on new VM):
 #   1. SSH into new VM via console or temporary key
 #   2. curl -fsSL https://tailscale.com/install.sh | sh
 #   3. sudo tailscale up --ssh   (enables Tailscale SSH for keyless access)
-#   4. Now run: ansible-playbook ansible/playbook.yml --tags infra
+#   4. Now run the appropriate playbook tag
 
-- name: Setup homelab infrastructure
-  hosts: homelab
+# Control plane setup (K3s server)
+- name: Setup K3s control plane
+  hosts: control
   become: yes
-  vars_files:
-    - ../config.yml
 
   pre_tasks:
     - name: Verify Tailscale is installed and running
@@ -63,6 +62,68 @@
     # Setup kubectl access and External Secrets Operator
     - role: k8s-setup
       tags: [k8s, infra]
+
+# Worker node setup (K3s agent)
+- name: Setup K3s worker nodes
+  hosts: worker
+  become: yes
+
+  pre_tasks:
+    - name: Verify Tailscale is installed and running
+      ansible.builtin.command: tailscale status
+      register: tailscale_check
+      changed_when: false
+      failed_when: false
+      tags: [always]
+
+    - name: Fail if Tailscale is not running
+      ansible.builtin.fail:
+        msg: "Tailscale is not running. Run: curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up --ssh"
+      when: tailscale_check.rc != 0
+      tags: [always]
+
+    - name: Ensure Tailscale SSH is enabled
+      ansible.builtin.command: tailscale up --ssh --accept-risk=lose-ssh
+      register: tailscale_ssh
+      changed_when: "'Success' in tailscale_ssh.stdout or tailscale_ssh.rc == 0"
+      failed_when: false
+      tags: [always]
+
+    - name: Get Tailscale IP address
+      ansible.builtin.command: tailscale ip -4
+      register: tailscale_ip
+      changed_when: false
+      tags: [always]
+
+    - name: Set Tailscale IP as fact
+      ansible.builtin.set_fact:
+        host_tailscale_ip: "{{ tailscale_ip.stdout }}"
+      tags: [always]
+
+    - name: Display Tailscale IP
+      ansible.builtin.debug:
+        msg: "Using Tailscale IP: {{ host_tailscale_ip }}"
+      tags: [always]
+
+  roles:
+    - role: k3s-agent
+      tags: [k3s-agent, infra]
+      vars:
+        k3s_server_url: "https://{{ hostvars[groups['control'][0]]['host_tailscale_ip'] | default(k3s_server_ip) }}:6443"
+        k3s_node_token: "{{ lookup('env', 'K3S_NODE_TOKEN') }}"
+
+  post_tasks:
+    - name: Label worker node
+      ansible.builtin.command: >
+        k3s kubectl label node {{ inventory_hostname }}
+        {% for key, value in node_labels.items() %}
+        {{ key }}={{ value }}
+        {% endfor %}
+        --overwrite
+      delegate_to: "{{ groups['control'][0] }}"
+      changed_when: true
+      when: node_labels is defined
+      tags: [k3s-agent, infra]
 
 # Secrets management play
 # Runs on localhost to sync Bitwarden secrets to Kubernetes

@@ -1,0 +1,37 @@
+---
+# Install and configure K3s agent (worker node) with Tailscale binding
+# Prerequisites:
+#   - host_tailscale_ip must be set in playbook pre_tasks
+#   - k3s_server_url and k3s_node_token must be provided
+# This role is idempotent and can be run multiple times safely
+
+- name: Check if K3s agent is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Install K3s agent with Tailscale configuration
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | K3S_URL="{{ k3s_server_url }}" \
+      K3S_TOKEN="{{ k3s_node_token }}" \
+      INSTALL_K3S_EXEC="agent \
+      --node-ip={{ host_tailscale_ip }} \
+      --flannel-iface=tailscale0" sh -
+  args:
+    executable: /bin/bash
+  when: not k3s_binary.stat.exists
+  register: k3s_agent_install
+  changed_when: k3s_agent_install.rc == 0
+
+- name: Ensure K3s agent service is running
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: started
+    enabled: yes
+
+- name: Display K3s agent installation status
+  ansible.builtin.debug:
+    msg:
+      - "K3s agent installed successfully"
+      - "Tailscale IP: {{ host_tailscale_ip }}"
+      - "Connected to server: {{ k3s_server_url }}"

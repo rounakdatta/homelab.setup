@@ -124,23 +124,39 @@ jobs:
           pip install ansible
           ansible-galaxy collection install -r ansible/requirements.yml
 
+      - name: Fetch K3s node token from control plane
+        env:
+          CONTROL_MACHINE_NAME: ${{ secrets.CONTROL_MACHINE_NAME }}
+        run: |
+          # Token may not exist yet on first run (control plane not set up);
+          # the agent role will fail gracefully if so
+          K3S_NODE_TOKEN=$(tailscale ssh root@${CONTROL_MACHINE_NAME} "cat /var/lib/rancher/k3s/server/node-token 2>/dev/null" || echo "")
+          echo "::add-mask::${K3S_NODE_TOKEN}"
+          echo "K3S_NODE_TOKEN=${K3S_NODE_TOKEN}" >> $GITHUB_ENV
+
       - name: Run Ansible infrastructure setup
         env:
-          MACHINE_NAME: ${{ secrets.MACHINE_NAME }}
+          CONTROL_MACHINE_NAME: ${{ secrets.CONTROL_MACHINE_NAME }}
+          WORKER_MACHINE_NAME: ${{ secrets.WORKER_MACHINE_NAME }}
+          K3S_NODE_TOKEN: ${{ env.K3S_NODE_TOKEN }}
         run: |
-          # Create temporary inventory with Tailscale hostname
-          echo "[homelab]" > /tmp/inventory
-          echo "${MACHINE_NAME} ansible_user=root" >> /tmp/inventory
+          cat > /tmp/inventory << EOF
+          [control]
+          ${CONTROL_MACHINE_NAME} ansible_user=root
+
+          [worker]
+          ${WORKER_MACHINE_NAME} ansible_user=root node_labels="{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}"
+          EOF
 
           ANSIBLE_CONFIG=~/.ansible.cfg ansible-playbook ansible/playbook.yml -i /tmp/inventory --tags infra -v
 
       - name: Verify infrastructure
         env:
-          MACHINE_NAME: ${{ secrets.MACHINE_NAME }}
+          CONTROL_MACHINE_NAME: ${{ secrets.CONTROL_MACHINE_NAME }}
         run: |
           mkdir -p ~/.kube
-          tailscale ssh root@${MACHINE_NAME} "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
-          sed -i "s|https://127.0.0.1:6443|https://${MACHINE_NAME}:6443|g" ~/.kube/config
+          tailscale ssh root@${CONTROL_MACHINE_NAME} "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
+          sed -i "s|https://127.0.0.1:6443|https://${CONTROL_MACHINE_NAME}:6443|g" ~/.kube/config
 
-          kubectl get nodes
+          kubectl get nodes --show-labels
           kubectl get pods -A

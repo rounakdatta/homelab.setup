@@ -49,6 +49,9 @@ spec:
       labels:
         app: ntfy
     spec:
+      nodeSelector:
+        homelab.setup/region: india
+        homelab.setup/city: rishra
       containers:
       - name: ntfy
         image: binwiederhier/ntfy:latest
