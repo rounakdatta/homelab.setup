@@ -49,6 +49,9 @@ spec:
       labels:
         app: motioneye
     spec:
+      nodeSelector:
+        homelab.setup/region: india
+        homelab.setup/city: rishra
       containers:
       - name: motioneye
         image: ccrisan/motioneye:master-amd64
