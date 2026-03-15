@@ -131,6 +131,7 @@ jobs:
           # Token may not exist yet on first run (control plane not set up);
           # the agent role will fail gracefully if so
           K3S_NODE_TOKEN=$(tailscale ssh root@${CONTROL_MACHINE_NAME} "cat /var/lib/rancher/k3s/server/node-token 2>/dev/null" || echo "")
+          echo "::add-mask::${K3S_NODE_TOKEN}"
           echo "K3S_NODE_TOKEN=${K3S_NODE_TOKEN}" >> $GITHUB_ENV
 
       - name: Run Ansible infrastructure setup
