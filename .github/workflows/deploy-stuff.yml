@@ -28,8 +28,8 @@ jobs:
         run: |
           # Tailscale SSH - no keys needed!
           mkdir -p ~/.kube
-          tailscale ssh root@${{ secrets.MACHINE_NAME }} "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
-          sed -i "s|https://127.0.0.1:6443|https://${{ secrets.MACHINE_NAME }}:6443|g" ~/.kube/config
+          tailscale ssh root@${{ secrets.CONTROL_MACHINE_NAME }} "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
+          sed -i "s|https://127.0.0.1:6443|https://${{ secrets.CONTROL_MACHINE_NAME }}:6443|g" ~/.kube/config
           kubectl cluster-info
 
       - name: Install Bitwarden CLI
