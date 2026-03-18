@@ -60,13 +60,15 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        command: ["/bin/sh", "-c"]
         args:
-        - "-port"
-        - "8080"
-        - "-db"
-        - "/data/synt.db"
-        - "-meilisearch"
-        - "http://localhost:7700"
+        - |
+          echo "Waiting for Meilisearch..."
+          while ! wget -qO- http://127.0.0.1:7700/health >/dev/null 2>&1; do
+            sleep 1
+          done
+          echo "Meilisearch is ready"
+          exec synt -port 8080 -db /data/synt.db -meilisearch http://127.0.0.1:7700
 
         volumeMounts:
         - name: synt-data
