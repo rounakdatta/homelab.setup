@@ -1,0 +1,122 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: synt-data-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  storageClassName: local-path
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: synt-meilisearch-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: local-path
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: synt
+  namespace: apps
+  labels:
+    app: synt
+  annotations:
+    keel.sh/policy: force
+    keel.sh/trigger: poll
+    keel.sh/pollSchedule: "@every 12h"
+    keel.sh/approvals: "1"
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: synt
+  template:
+    metadata:
+      labels:
+        app: synt
+    spec:
+      containers:
+      - name: synt
+        image: ghcr.io/rounakdatta/synt:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        args:
+        - "-port"
+        - "8080"
+        - "-db"
+        - "/data/synt.db"
+        - "-meilisearch"
+        - "http://localhost:7700"
+
+        volumeMounts:
+        - name: synt-data
+          mountPath: /data
+
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 30
+
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8080
+          initialDelaySeconds: 2
+          periodSeconds: 10
+
+      - name: meilisearch
+        image: getmeili/meilisearch:latest
+        ports:
+        - containerPort: 7700
+        env:
+        - name: MEILI_DB_PATH
+          value: "/meili_data/data.ms"
+        - name: MEILI_NO_ANALYTICS
+          value: "true"
+
+        volumeMounts:
+        - name: meilisearch-data
+          mountPath: /meili_data
+
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+      volumes:
+      - name: synt-data
+        persistentVolumeClaim:
+          claimName: synt-data-pvc
+      - name: meilisearch-data
+        persistentVolumeClaim:
+          claimName: synt-meilisearch-pvc
