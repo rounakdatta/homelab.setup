@@ -47,6 +47,11 @@ jobs:
 
       - name: Deploy manifests
         run: |
+          # First apply may fail for Velero CRs if CRDs haven't propagated yet
+          kubectl apply -k kubernetes/ || true
+          # Wait for any CRDs to be established
+          kubectl wait --for=condition=Established crd --all --timeout=30s 2>/dev/null || true
+          # Second apply catches resources that depend on CRDs
           kubectl apply -k kubernetes/
           echo ""
           echo "=== Deployment Status ==="
