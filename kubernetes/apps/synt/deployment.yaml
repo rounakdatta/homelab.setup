@@ -51,9 +51,6 @@ spec:
       labels:
         app: synt
     spec:
-      nodeSelector:
-        homelab.setup/region: india
-        homelab.setup/city: rishra
       containers:
       - name: synt
         image: ghcr.io/rounakdatta/synt:latest
