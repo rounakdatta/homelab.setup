@@ -78,6 +78,9 @@ spec:
       containers:
       - name: audiobookshelf
         image: advplyr/audiobookshelf:latest
+        env:
+        - name: ROUTER_BASE_PATH
+          value: "/"
         ports:
         - containerPort: 80
           name: http
