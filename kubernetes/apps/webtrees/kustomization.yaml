@@ -16,24 +16,42 @@ resources:
   - ingress.yaml
 
 # Chart's values.schema.json rejects object env values, and chart hardcodes
-# DB_USER/DB_PASS/DB_NAME defaults. We patch those entries post-render to
-# pull from the existing webtrees-credentials Secret.
+# both DB_* defaults and WT_* admin defaults. We patch the env array
+# post-render to:
+#   1. Remove WT_USER/WT_PASS/WT_NAME/WT_EMAIL — chart's defaults trigger
+#      the docker-entrypoint setup_wizard which races Apache startup and
+#      crashloops the container. The previous hand-rolled deployment never
+#      set these, so removing them restores prior behavior.
+#   2. Replace DB_NAME/DB_PASS/DB_USER literals with secretKeyRef entries
+#      pointing at the existing webtrees-credentials Secret.
 #
 # Indices are stable as long as we pin chart 2.2.23: bjw-s common iterates
-# env map alphabetically, giving DB_NAME=2, DB_PASS=3, DB_USER=7.
+# env map alphabetically, giving:
+#   0=BASE_URL, 1=DB_HOST, 2=DB_NAME, 3=DB_PASS, 4=DB_PORT, 5=DB_PREFIX,
+#   6=DB_TYPE, 7=DB_USER, 8=LANG, 9=PRETTY_URLS, 10=TZ,
+#   11=WT_EMAIL, 12=WT_NAME, 13=WT_PASS, 14=WT_USER
+# Remove ops are highest-first so prior removals don't shift later indices.
 patches:
   - target:
       kind: Deployment
       name: webtrees
     patch: |-
+      - op: remove
+        path: /spec/template/spec/containers/0/env/14
+      - op: remove
+        path: /spec/template/spec/containers/0/env/13
+      - op: remove
+        path: /spec/template/spec/containers/0/env/12
+      - op: remove
+        path: /spec/template/spec/containers/0/env/11
       - op: replace
-        path: /spec/template/spec/containers/0/env/2
+        path: /spec/template/spec/containers/0/env/7
         value:
-          name: DB_NAME
+          name: DB_USER
           valueFrom:
             secretKeyRef:
               name: webtrees-credentials
-              key: db-name
+              key: db-username
       - op: replace
         path: /spec/template/spec/containers/0/env/3
         value:
@@ -43,10 +61,10 @@ patches:
               name: webtrees-credentials
               key: db-password
       - op: replace
-        path: /spec/template/spec/containers/0/env/7
+        path: /spec/template/spec/containers/0/env/2
         value:
-          name: DB_USER
+          name: DB_NAME
           valueFrom:
             secretKeyRef:
               name: webtrees-credentials
-              key: db-username
+              key: db-name
