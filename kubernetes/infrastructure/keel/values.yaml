@@ -1,0 +1,54 @@
+# Values for the upstream keel-hq/keel Helm chart (chart 1.0.5, app v0.19.1).
+# Pinned to match the running image; bumping is a deliberate one-line change later.
+#
+# Chart docs: https://github.com/keel-hq/keel/tree/master/chart/keel
+
+image:
+  repository: keelhq/keel
+  tag: "0.19.1"
+
+# Polling configuration — preserves the @every 12h cadence we had before.
+# (Note: the chart uses POLL_DEFAULTSCHEDULE; the previous hand-rolled
+# Deployment used POLL_SCHEDULE which Keel doesn't actually read.
+# Per-deployment annotations `keel.sh/pollSchedule` continue to work either way.)
+polling:
+  enabled: true
+  defaultSchedule: "@every 12h"
+
+notificationLevel: info
+
+# Don't have the chart create its own Secret; envFrom the existing
+# keel-credentials Secret (synced from Bitwarden via Ansible).
+# The Secret's keys must match the env var names Keel reads —
+# BASIC_AUTH_USER and BASIC_AUTH_PASSWORD (handled in ansible/playbook.yml).
+secret:
+  create: false
+  name: keel-credentials
+
+# Don't render BASIC_AUTH_USER as a literal env value via chart;
+# the Secret-via-envFrom above provides it.
+basicauth:
+  enabled: false
+
+# ClusterIP Service so our existing ingress.yaml (with Authelia middleware)
+# can route to it on port 9300.
+service:
+  enabled: true
+  type: ClusterIP
+  externalPort: 9300
+
+# Don't render an ingress from the chart; we keep our standalone ingress.yaml
+# with Authelia forward-auth on sigkill.taptappers.club.
+ingress:
+  enabled: false
+
+persistence:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi

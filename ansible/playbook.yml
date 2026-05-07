@@ -234,11 +234,13 @@
           cloud: velero/r2_credentials_file
 
       # Keel credentials (image update UI)
+      # Keys must match the env var names Keel reads, since the chart's
+      # Deployment uses envFrom against this Secret.
       - name: keel-credentials
         namespace: kube-system
         data:
-          username: keel/username
-          password: keel/password
+          BASIC_AUTH_USER: keel/username
+          BASIC_AUTH_PASSWORD: keel/password
 
   pre_tasks:
     - name: Verify required environment variables
