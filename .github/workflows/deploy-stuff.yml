@@ -45,14 +45,21 @@ jobs:
           ansible-galaxy collection install -r ansible/requirements.yml
           ansible-playbook ansible/playbook.yml --tags secrets -i localhost,
 
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.1
+
       - name: Deploy manifests
         run: |
+          # `kubectl apply -k` doesn't accept --enable-helm, so we render via
+          # `kubectl kustomize --enable-helm` and pipe to `kubectl apply -f -`.
           # First apply may fail for Velero CRs if CRDs haven't propagated yet
-          kubectl apply -k kubernetes/ || true
+          kubectl kustomize --enable-helm kubernetes/ | kubectl apply -f - || true
           # Wait for any CRDs to be established
           kubectl wait --for=condition=Established crd --all --timeout=30s 2>/dev/null || true
           # Second apply catches resources that depend on CRDs
-          kubectl apply -k kubernetes/
+          kubectl kustomize --enable-helm kubernetes/ | kubectl apply -f -
           echo ""
           echo "=== Deployment Status ==="
           kubectl get pods -A | grep -v kube-system

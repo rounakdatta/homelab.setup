@@ -1,0 +1,36 @@
+# Values for the upstream Velero Helm chart (vmware-tanzu/velero v11.2.0).
+# Only deltas from chart defaults are listed here.
+#
+# Chart docs: https://github.com/vmware-tanzu/helm-charts/tree/main/charts/velero
+
+# Don't run the chart's upgrade-CRDs job — CRDs are vendored separately as crds.yaml
+upgradeCRDs: false
+
+# Plugin for Cloudflare R2 (S3-compatible)
+initContainers:
+  - name: velero-plugin-for-aws
+    image: velero/velero-plugin-for-aws:v1.10.1
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+      - mountPath: /target
+        name: plugins
+
+configuration:
+  repositoryMaintenanceJob:
+    repositoryConfigData:
+      global:
+        keepLatestMaintenanceJobs: 3
+
+# Don't generate default BSL/VSL via chart — BSL lives in backup-storage-location.yaml
+# (it references the per-location credential from the Bitwarden-synced velero-credentials secret),
+# and we don't use volume snapshots (Kopia file-system backups instead)
+backupsEnabled: false
+snapshotsEnabled: false
+
+# Run the node-agent daemonset for filesystem backups
+deployNodeAgent: true
+
+# velero-credentials is referenced per-BSL, not mounted globally on the deployment;
+# the secret itself is synced from Bitwarden by the ansible secrets play
+credentials:
+  useSecret: false
