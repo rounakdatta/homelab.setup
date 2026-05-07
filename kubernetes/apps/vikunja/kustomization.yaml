@@ -4,7 +4,13 @@ kind: Kustomization
 
 namespace: apps
 
+helmCharts:
+  - name: vikunja
+    repo: oci://ghcr.io/go-vikunja/helm-chart
+    version: v2.0.2
+    releaseName: vikunja
+    namespace: apps
+    valuesFile: values.yaml
+
 resources:
-  - deployment.yaml
-  - service.yaml
   - ingress.yaml

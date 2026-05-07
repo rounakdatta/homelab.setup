@@ -1,0 +1,79 @@
+vikunja:
+  image:
+    repository: vikunja/vikunja
+    tag: latest
+    pullPolicy: Always
+  persistence:
+    data:
+      enabled: true
+      existingClaim: vikunja-files-pvc
+      mountPath: /app/vikunja/files
+    # We use external MySQL (mysql.databases.svc), not chart-managed SQLite
+    database:
+      enabled: false
+  # We keep our standalone ingress.yaml (with Authelia/cert-manager annotations)
+  ingress:
+    main:
+      enabled: false
+  configMaps:
+    # Minimal config.yml — env vars below carry actual configuration
+    config:
+      enabled: true
+      data:
+        config.yml: |
+          service:
+            publicurl: https://vikunja.taptappers.club
+  env:
+    VIKUNJA_DATABASE_TYPE: mysql
+    VIKUNJA_DATABASE_HOST: mysql.databases.svc.cluster.local
+    VIKUNJA_DATABASE_USER:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: db-username
+    VIKUNJA_DATABASE_PASSWORD:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: db-password
+    VIKUNJA_DATABASE_DATABASE:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: db-name
+    VIKUNJA_SERVICE_JWTSECRET:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: jwt-secret
+    VIKUNJA_SERVICE_PUBLICURL: https://vikunja.taptappers.club
+    VIKUNJA_SERVICE_FRONTENDURL: https://vikunja.taptappers.club
+    VIKUNJA_SERVICE_ENABLEREGISTRATION: "false"
+    VIKUNJA_SERVICE_ENABLEEMAILREMINDERS: "true"
+    VIKUNJA_MAILER_ENABLED: "true"
+    VIKUNJA_MAILER_FORCESSL: "true"
+    VIKUNJA_MAILER_HOST:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: mailer-host
+    VIKUNJA_MAILER_PORT:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: mailer-port
+    VIKUNJA_MAILER_USERNAME:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: mailer-username
+    VIKUNJA_MAILER_PASSWORD:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: mailer-password
+    VIKUNJA_MAILER_FROMEMAIL:
+      valueFrom:
+        secretKeyRef:
+          name: vikunja-credentials
+          key: mailer-sender
