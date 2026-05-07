@@ -1,0 +1,48 @@
+# Values for the rm3l/ntfy Helm chart 0.1.1.
+# Chart appVersion (v2.11.0) lags upstream; we override to image.tag=latest
+# to match what we were running.
+
+image:
+  repository: binwiederhier/ntfy
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# Reuse the existing PVC (cache.db + user.db live here).
+cache:
+  enabled: true
+  existingClaim: ntfy-cache-pvc
+
+# server.yml — chart writes a ConfigMap from this map. Mirrors the
+# previous standalone `ntfy-config` ConfigMap exactly.
+config:
+  sample:
+    base-url: "https://ntfy.taptappers.club"
+    cache-file: "/var/cache/ntfy/cache.db"
+    auth-file: "/var/cache/ntfy/user.db"
+    auth-default-access: "deny-all"
+    behind-proxy: true
+
+# Pin to the rishra worker (matches the previous nodeSelector;
+# pod stays Pending until that worker is joined to the cluster)
+nodeSelector:
+  homelab.setup/region: india
+  homelab.setup/city: rishra
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false   # we keep our standalone ingress.yaml
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 128Mi
+
+# Velero handles backup; chart-internal backup not needed.
+backup:
+  enabled: false

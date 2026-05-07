@@ -4,7 +4,15 @@ kind: Kustomization
 
 namespace: apps
 
+helmCharts:
+  - name: ntfy
+    repo: https://helm-charts.rm3l.org
+    version: 0.1.1
+    releaseName: ntfy
+    namespace: apps
+    valuesFile: values.yaml
+    # Don't render the chart's `tests/` (helm hook test pod that wgets the service)
+    skipTests: true
+
 resources:
-  - deployment.yaml
-  - service.yaml
   - ingress.yaml
