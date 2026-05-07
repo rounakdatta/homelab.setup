@@ -1,0 +1,37 @@
+image:
+  repository: ghcr.io/nathanvaughn/webtrees
+  tag: latest
+  pullPolicy: Always
+
+env:
+  TZ: Asia/Kolkata
+  PRETTY_URLS: "TRUE"
+  LANG: en-US
+  BASE_URL: https://webtrees.taptappers.club
+  DB_TYPE: mysql
+  DB_HOST: mysql.databases.svc.cluster.local
+  DB_PORT: "3306"
+  DB_PREFIX: wt_
+  # DB_USER, DB_PASS, DB_NAME come from a kustomize patch (chart's schema
+  # disallows object env values, so we can't use secretKeyRef here directly).
+
+persistence:
+  config:
+    enabled: true
+    existingClaim: webtrees-data-pvc
+    mountPath: /var/www/webtrees/data
+  media:
+    enabled: true
+    existingClaim: webtrees-media-pvc
+    mountPath: /var/www/webtrees/media
+
+mariadb:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi

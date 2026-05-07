@@ -4,7 +4,49 @@ kind: Kustomization
 
 namespace: apps
 
+helmCharts:
+  - name: webtrees
+    repo: https://djjudas21.github.io/charts
+    version: 2.2.23
+    releaseName: webtrees
+    namespace: apps
+    valuesFile: values.yaml
+
 resources:
-  - deployment.yaml
-  - service.yaml
   - ingress.yaml
+
+# Chart's values.schema.json rejects object env values, and chart hardcodes
+# DB_USER/DB_PASS/DB_NAME defaults. We patch those entries post-render to
+# pull from the existing webtrees-credentials Secret.
+#
+# Indices are stable as long as we pin chart 2.2.23: bjw-s common iterates
+# env map alphabetically, giving DB_NAME=2, DB_PASS=3, DB_USER=7.
+patches:
+  - target:
+      kind: Deployment
+      name: webtrees
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/env/2
+        value:
+          name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: webtrees-credentials
+              key: db-name
+      - op: replace
+        path: /spec/template/spec/containers/0/env/3
+        value:
+          name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: webtrees-credentials
+              key: db-password
+      - op: replace
+        path: /spec/template/spec/containers/0/env/7
+        value:
+          name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: webtrees-credentials
+              key: db-username

@@ -52,14 +52,22 @@ jobs:
 
       - name: Deploy manifests
         run: |
-          # `kubectl apply -k` doesn't accept --enable-helm, so we render via
-          # `kubectl kustomize --enable-helm` and pipe to `kubectl apply -f -`.
-          # First apply may fail for Velero CRs if CRDs haven't propagated yet
-          kubectl kustomize --enable-helm kubernetes/ | kubectl apply -f - || true
+          # Render once (helm fetches the chart over network)
+          kubectl kustomize --enable-helm kubernetes/ > /tmp/manifest.yaml
+
+          # Pre-apply selector migration: spec.selector is immutable, so any
+          # workload whose selectorLabels change between deploys (typical when
+          # switching from hand-rolled to chart-rendered) needs the old object
+          # deleted first. Script is idempotent — no-op once selectors match.
+          pip install --quiet pyyaml
+          python3 .github/scripts/migrate-selectors.py /tmp/manifest.yaml
+
+          # First apply may fail for Velero/cert-manager CRs if CRDs haven't propagated yet
+          kubectl apply -f /tmp/manifest.yaml || true
           # Wait for any CRDs to be established
           kubectl wait --for=condition=Established crd --all --timeout=30s 2>/dev/null || true
           # Second apply catches resources that depend on CRDs
-          kubectl kustomize --enable-helm kubernetes/ | kubectl apply -f -
+          kubectl apply -f /tmp/manifest.yaml
           echo ""
           echo "=== Deployment Status ==="
           kubectl get pods -A | grep -v kube-system
