@@ -4,7 +4,13 @@ kind: Kustomization
 
 namespace: apps
 
+helmCharts:
+  - name: firefly-iii
+    repo: https://firefly-iii.github.io/kubernetes
+    version: 1.9.13
+    releaseName: firefly
+    namespace: apps
+    valuesFile: values.yaml
+
 resources:
-  - deployment.yaml
-  - service.yaml
   - ingress.yaml

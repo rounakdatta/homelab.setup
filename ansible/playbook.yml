@@ -149,13 +149,15 @@
           root-password: postgres/root_password
 
       # Firefly III credentials (consolidated)
+      # Keys must match the env var names firefly reads, since the chart's
+      # Deployment uses envFrom against this Secret.
       - name: firefly-credentials
         namespace: apps
         data:
-          app-key: firefly/app_key
-          db-name: firefly/db_name
-          db-username: firefly/db_username
-          db-password: firefly/db_password
+          APP_KEY: firefly/app_key
+          DB_DATABASE: firefly/db_name
+          DB_USERNAME: firefly/db_username
+          DB_PASSWORD: firefly/db_password
 
       # Memoet credentials (consolidated)
       - name: memoet-credentials
