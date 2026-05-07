@@ -4,7 +4,13 @@ kind: Kustomization
 
 namespace: apps
 
+helmCharts:
+  - name: bookstack
+    repo: https://charts.gabe565.com
+    version: 0.20.0
+    releaseName: bookstack
+    namespace: apps
+    valuesFile: values.yaml
+
 resources:
-  - deployment.yaml
-  - service.yaml
   - ingress.yaml

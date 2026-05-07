@@ -1,0 +1,56 @@
+image:
+  repository: rounakdatta/docker-bookstack
+  tag: latest
+  pullPolicy: Always
+
+env:
+  DB_HOST: mysql.databases.svc.cluster.local
+  APP_URL: https://bookstack.taptappers.club
+  DB_USERNAME:
+    valueFrom:
+      secretKeyRef:
+        name: bookstack-credentials
+        key: db-username
+  DB_PASSWORD:
+    valueFrom:
+      secretKeyRef:
+        name: bookstack-credentials
+        key: db-password
+  DB_DATABASE:
+    valueFrom:
+      secretKeyRef:
+        name: bookstack-credentials
+        key: db-name
+  APP_KEY:
+    valueFrom:
+      secretKeyRef:
+        name: bookstack-credentials
+        key: app-key
+
+mariadb:
+  enabled: false
+
+service:
+  main:
+    ports:
+      http:
+        port: 8080
+
+persistence:
+  uploads:
+    enabled: true
+    existingClaim: bookstack-uploads-pvc
+    mountPath: /var/www/bookstack/public/uploads
+
+# rounakdatta/docker-bookstack runs as www-data (UID 33), not the linuxserver
+# 911 default. Leave fsGroup unset to avoid chgrp on the upload PVC.
+podSecurityContext:
+  fsGroup: ~
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi
