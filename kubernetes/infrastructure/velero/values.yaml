@@ -3,7 +3,9 @@
 #
 # Chart docs: https://github.com/vmware-tanzu/helm-charts/tree/main/charts/velero
 
-# Don't run the chart's upgrade-CRDs job — CRDs are vendored separately as crds.yaml
+# CRDs are rendered into the kustomize output via `includeCRDs: true` in
+# kustomization.yaml. The chart's in-cluster upgrade-CRDs Job is therefore
+# unnecessary (and would be duplicative).
 upgradeCRDs: false
 
 # Plugin for Cloudflare R2 (S3-compatible)

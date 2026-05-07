@@ -2,7 +2,9 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Velero install is rendered from the upstream Helm chart at deploy time.
+# Velero install + CRDs are rendered from the upstream Helm chart at deploy time.
+# `includeCRDs: true` pulls in the chart's bundled CRDs so version bumps stay
+# fully hands-off — chart and CRDs always move together.
 # Requires `kubectl kustomize --enable-helm` (or standalone kustomize with --enable-helm).
 helmCharts:
   - name: velero
@@ -11,10 +13,10 @@ helmCharts:
     releaseName: velero
     namespace: velero
     valuesFile: values.yaml
+    includeCRDs: true
 
 resources:
   - namespace.yaml
-  - crds.yaml  # Velero CRDs v1.17.1 (vendored; chart's upgrade-CRDs job is disabled)
   - backup-storage-location.yaml
   - schedule-nightly.yaml
   - velero-ui.yaml
