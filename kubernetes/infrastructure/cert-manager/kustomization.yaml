@@ -2,5 +2,18 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# cert-manager install + CRDs are rendered from the upstream Helm chart at deploy time.
+# `crds.enabled: true` (in values.yaml) bundles CRDs so version bumps stay hands-off.
+# Requires `kubectl kustomize --enable-helm` (see .github/workflows/deploy-stuff.yml).
+helmCharts:
+  - name: cert-manager
+    repo: https://charts.jetstack.io
+    version: v1.15.1
+    releaseName: cert-manager
+    namespace: cert-manager
+    valuesFile: values.yaml
+    includeCRDs: true
+
 resources:
+  - namespace.yaml
   - cluster-issuer.yaml

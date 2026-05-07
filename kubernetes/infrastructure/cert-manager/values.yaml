@@ -1,0 +1,15 @@
+# Values for the upstream cert-manager Helm chart (jetstack/cert-manager v1.15.1).
+# Only deltas from chart defaults are listed here.
+#
+# Chart docs: https://github.com/cert-manager/cert-manager/tree/master/deploy/charts/cert-manager
+
+# Render CRDs into the kustomize output so version bumps stay hands-off — chart
+# and CRDs always move together.
+crds:
+  enabled: true
+
+# Skip the post-install API check Job. The release manifest at
+# github.com/cert-manager/cert-manager/releases/download/v1.15.1/cert-manager.yaml
+# also disables this; the Job is a one-shot that can fail confusingly on re-deploys.
+startupapicheck:
+  enabled: false
