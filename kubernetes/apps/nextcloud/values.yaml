@@ -129,6 +129,24 @@ nextcloud:
           mountPath: /var/www/html/config
           subPath: config
 
+# Chart's default 10s initialDelaySeconds is too short for nextcloud's
+# first-boot entrypoint (it rsyncs the install from /usr/src/nextcloud
+# into the new main PVC's html/ subPath, which can take 30–60s on first
+# boot). Match what the prior hand-rolled Deployment used (60/30) so the
+# probes don't kill the pod before Apache finishes starting.
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 3
+
 # We keep our standalone ingress.yaml + middleware.yaml — chart ingress off.
 ingress:
   enabled: false
