@@ -237,6 +237,12 @@
         data:
           cloud: velero/r2_credentials_file
 
+      # velero-ui passphrase for JWT cookie signing (otwld/velero-ui chart 0.14+)
+      - name: velero-ui-credentials
+        namespace: velero
+        data:
+          pass_phrase: velero-ui/pass_phrase
+
       # Keel credentials (image update UI)
       # Keys must match the env var names Keel reads, since the chart's
       # Deployment uses envFrom against this Secret.

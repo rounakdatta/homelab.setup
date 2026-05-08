@@ -1,0 +1,55 @@
+# Values for the otwld/velero-ui Helm chart 0.14.0 (app v0.10.0).
+# Replaces the previous hand-rolled velero-ui.yaml.
+# Chart docs: https://velero-ui.docs.otwld.com/
+
+image:
+  repository: otwld/velero-ui
+  # Empty tag falls back to chart's appVersion (0.10.0). Pinning at the
+  # chart layer is enough — bumping the chart bumps the image together.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+configuration:
+  logLevel: info
+  general:
+    veleroNamespace: velero
+    # JWT-signing passphrase for the v0.10+ web UI session cookies.
+    # Synced from Bitwarden by ansible into the velero-ui-credentials Secret;
+    # the chart references it via existingSecret here, and we plumb it as
+    # AUTH_SECRET_PASSPHRASE via `env:` below since the chart doesn't auto-wire it.
+    secretPassPhrase:
+      useSecret: true
+      existingSecret: velero-ui-credentials
+      key: pass_phrase
+
+# Chart 0.14.0's deployment template doesn't auto-inject AUTH_SECRET_PASSPHRASE
+# from the secret it references; we plumb it manually here.
+env:
+  - name: AUTH_SECRET_PASSPHRASE
+    valueFrom:
+      secretKeyRef:
+        name: velero-ui-credentials
+        key: pass_phrase
+
+# Cluster-admin permissions match what the prior hand-rolled velero-ui.yaml had.
+# Could be scoped tighter later — chart's clusterAdministrator: false would
+# let the per-namespace velero-ui-permissions Role do the work.
+rbac:
+  create: true
+  clusterAdministrator: true
+
+service:
+  type: ClusterIP
+  port: 3000
+
+# We keep our standalone velero-ui-ingress.yaml (with tinyauth + cert-manager)
+ingress:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi

@@ -77,6 +77,16 @@ jobs:
           # (--ignore-not-found) so subsequent deploys are no-ops.
           kubectl -n authelia delete ingress authelia --ignore-not-found
 
+          # One-time cleanup: a previous deploy of the otwld/velero-ui chart
+          # rendered velero-ui Deployment+Service without `metadata.namespace`
+          # (chart relies on `helm install --namespace`, which kustomize's
+          # helmCharts.namespace doesn't propagate to metadata). They landed
+          # in `default` ns. The kustomization now sets `namespace: velero`
+          # at root which fixes new renders; this cleans up the strays.
+          # Idempotent: --ignore-not-found.
+          kubectl -n default delete deploy velero-ui --ignore-not-found
+          kubectl -n default delete svc velero-ui --ignore-not-found
+
           # First apply may fail for Velero/cert-manager CRs if CRDs haven't propagated yet
           kubectl apply -f /tmp/manifest.yaml || true
           # Wait for any CRDs to be established
