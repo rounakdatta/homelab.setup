@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 """
-Pre-apply selector migration helper for the deploy-stuff workflow.
+Pre-apply migration helper for the deploy-stuff workflow.
 
-`spec.selector` on Deployment/StatefulSet/DaemonSet is immutable. Whenever a
-workload's selector changes — typically when switching from a hand-rolled
-manifest to a Helm-chart-rendered one — `kubectl apply` errors out with
-`field is immutable`.
+Some Kubernetes fields are immutable after creation. When a resource's
+manifest changes one of these fields — typically when switching from a
+hand-rolled manifest to a Helm-chart-rendered one — `kubectl apply` errors
+out with `field is immutable`. This script reads the rendered kustomize
+output, looks up each watched resource's live state, and deletes any whose
+immutable fields would conflict, letting the subsequent `kubectl apply`
+recreate them cleanly.
 
-This script reads the rendered kustomize output, looks up each workload's
-live selector, and deletes any whose selector would conflict with the new
-one. Idempotent: once selectors match, it's a no-op.
+Watched immutable fields:
+- Deployment / StatefulSet / DaemonSet:   spec.selector.matchLabels
+- ClusterRoleBinding / RoleBinding:       roleRef
+
+Idempotent: once each resource matches the manifest, this is a no-op.
 
 Usage:
     kubectl kustomize --enable-helm kubernetes/ > manifest.yaml
@@ -25,25 +30,88 @@ import sys
 
 import yaml
 
-WATCHED_KINDS = {"Deployment", "StatefulSet", "DaemonSet"}
+WORKLOAD_KINDS = {"Deployment", "StatefulSet", "DaemonSet"}
+ROLEBINDING_KINDS = {"ClusterRoleBinding", "RoleBinding"}
 
 
-def get_live_selector(kind: str, namespace: str, name: str) -> dict | None:
-    proc = subprocess.run(
-        ["kubectl", "-n", namespace, "get", kind.lower(), name, "-o", "json"],
-        capture_output=True,
-        text=True,
-    )
+def kubectl_get(kind: str, name: str, namespace: str | None) -> dict | None:
+    cmd = ["kubectl", "get", kind.lower(), name, "-o", "json"]
+    if namespace:
+        cmd = ["kubectl", "-n", namespace, "get", kind.lower(), name, "-o", "json"]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         return None
-    return json.loads(proc.stdout).get("spec", {}).get("selector", {}).get("matchLabels", {})
+    return json.loads(proc.stdout)
 
 
-def delete(kind: str, namespace: str, name: str) -> None:
-    subprocess.run(
-        ["kubectl", "-n", namespace, "delete", kind.lower(), name, "--wait=true"],
-        check=True,
+def kubectl_delete(kind: str, name: str, namespace: str | None) -> None:
+    cmd = ["kubectl", "delete", kind.lower(), name, "--wait=true"]
+    if namespace:
+        cmd = ["kubectl", "-n", namespace, "delete", kind.lower(), name, "--wait=true"]
+    subprocess.run(cmd, check=True)
+
+
+def check_workload(d: dict) -> tuple[str, str, str] | None:
+    """Return (kind, ns, name) if this workload needs migration, else None."""
+    kind = d["kind"]
+    md = d.get("metadata") or {}
+    name = md.get("name")
+    ns = md.get("namespace")
+    if not name or not ns:
+        return None
+    new_sel = (d.get("spec") or {}).get("selector", {}).get("matchLabels")
+    if not new_sel:
+        return None
+
+    live = kubectl_get(kind, name, ns)
+    if live is None:
+        return None
+    live_sel = live.get("spec", {}).get("selector", {}).get("matchLabels", {})
+    if live_sel == new_sel:
+        return None
+
+    print(
+        f"Migrating {kind}/{ns}/{name}: live selector {live_sel} "
+        f"would conflict with manifest selector {new_sel} (immutable). Deleting.",
+        flush=True,
     )
+    return kind, ns, name
+
+
+def check_rolebinding(d: dict) -> tuple[str, str | None, str] | None:
+    """Return (kind, ns, name) if this binding needs migration, else None.
+
+    ClusterRoleBindings are cluster-scoped (ns=None); RoleBindings are namespaced.
+    """
+    kind = d["kind"]
+    md = d.get("metadata") or {}
+    name = md.get("name")
+    ns = md.get("namespace") if kind == "RoleBinding" else None
+    if not name:
+        return None
+    if kind == "RoleBinding" and not ns:
+        return None
+    new_ref = d.get("roleRef")
+    if not new_ref:
+        return None
+
+    live = kubectl_get(kind, name, ns)
+    if live is None:
+        return None
+    live_ref = live.get("roleRef", {})
+
+    # Compare the immutable subset (apiGroup/kind/name); subjects can change freely.
+    keys = ("apiGroup", "kind", "name")
+    if all(live_ref.get(k) == new_ref.get(k) for k in keys):
+        return None
+
+    where = f"{ns}/{name}" if ns else name
+    print(
+        f"Migrating {kind}/{where}: live roleRef {live_ref} "
+        f"would conflict with manifest roleRef {new_ref} (immutable). Deleting.",
+        flush=True,
+    )
+    return kind, ns, name
 
 
 def main(manifest_path: str) -> None:
@@ -55,33 +123,19 @@ def main(manifest_path: str) -> None:
         if not d:
             continue
         kind = d.get("kind")
-        if kind not in WATCHED_KINDS:
+        target = None
+        if kind in WORKLOAD_KINDS:
+            target = check_workload(d)
+        elif kind in ROLEBINDING_KINDS:
+            target = check_rolebinding(d)
+        if target is None:
             continue
-        md = d.get("metadata") or {}
-        name = md.get("name")
-        ns = md.get("namespace")
-        if not name or not ns:
-            continue
-        new_sel = (d.get("spec") or {}).get("selector", {}).get("matchLabels")
-        if not new_sel:
-            continue
-
-        live_sel = get_live_selector(kind, ns, name)
-        if live_sel is None:
-            continue  # doesn't exist yet — kubectl apply will create it
-        if live_sel == new_sel:
-            continue  # already migrated, no-op
-
-        print(
-            f"Migrating {kind}/{ns}/{name}: live selector {live_sel} "
-            f"would conflict with manifest selector {new_sel} (immutable). Deleting.",
-            flush=True,
-        )
-        delete(kind, ns, name)
+        t_kind, t_ns, t_name = target
+        kubectl_delete(t_kind, t_name, t_ns)
         migrations += 1
 
     if migrations == 0:
-        print("No selector migrations needed.", flush=True)
+        print("No immutable-field migrations needed.", flush=True)
     else:
         print(f"Performed {migrations} migration(s).", flush=True)
 
