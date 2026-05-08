@@ -70,6 +70,13 @@ jobs:
           pip install --quiet pyyaml
           python3 .github/scripts/migrate-selectors.py /tmp/manifest.yaml
 
+          # One-time cutover: tinyauth replaces authelia at auth.taptappers.club.
+          # `kubectl apply` doesn't prune, so the old authelia Ingress would
+          # otherwise still claim the host alongside tinyauth's new one,
+          # leaving Traefik routing undefined. Delete is idempotent
+          # (--ignore-not-found) so subsequent deploys are no-ops.
+          kubectl -n authelia delete ingress authelia --ignore-not-found
+
           # First apply may fail for Velero/cert-manager CRs if CRDs haven't propagated yet
           kubectl apply -f /tmp/manifest.yaml || true
           # Wait for any CRDs to be established
