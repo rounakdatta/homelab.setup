@@ -1,0 +1,28 @@
+---
+# Parallel-test ingress at tinyauth.taptappers.club.
+# Authelia continues to own auth.taptappers.club until cutover.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: tinyauth
+  namespace: tinyauth
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: tinyauth.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: tinyauth
+            port:
+              number: 3000
+  tls:
+  - hosts:
+    - tinyauth.taptappers.club
+    secretName: tinyauth-tls-secret

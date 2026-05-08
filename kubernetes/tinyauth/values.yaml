@@ -1,0 +1,94 @@
+# Values for the tinyauth Helm chart 2.0.8 (app v5.0.7).
+# Chart docs: https://github.com/tinyauthapp/helm/tree/main/charts/tinyauth
+
+image:
+  repository: ghcr.io/tinyauthapp/tinyauth
+  # Pin: v4→v5 was a breaking config change; CVE-2026-32246 (TOTP bypass)
+  # was fixed in 5.0.3. Don't track :latest.
+  tag: v5.0.7
+  pullPolicy: IfNotPresent
+
+# RWO PVC + RollingUpdate would conflict on rollout
+deploymentStrategy:
+  type: Recreate
+
+tinyauth:
+  # PARALLEL-TEST PHASE: separate hostname so authelia stays in charge of
+  # auth.taptappers.club until cutover. Will become https://auth.taptappers.club
+  # once we're ready to retire authelia.
+  appUrl: https://tinyauth.taptappers.club
+
+  database:
+    path: /data/tinyauth.db
+
+  # Don't phone home
+  analytics:
+    enabled: false
+
+  auth:
+    # Cookies served only over HTTPS
+    secureCookie: true
+    # X-Forwarded-Host spoofing mitigation: trust only Traefik's pod CIDR
+    # (K3s default flannel/podCIDR is 10.42.0.0/16)
+    trustedProxies: "10.42.0.0/16"
+    # Default 24h session — matches authelia's previous expiration
+    sessionExpiry: 86400
+    # No local users — Google OAuth only
+    users: ""
+    usersFile: ""
+
+  # OAuth provider configuration is injected via the env: list below
+  # (chart's tinyauth.oauth.providers requires plain-text clientId, which
+  # we'd rather not commit to git). Whitelist also via env from Secret.
+  oauth:
+    providers: []
+
+  ui:
+    title: "taptappers.club"
+
+  log:
+    level: info
+
+# Inject Google OAuth credentials + whitelist directly from the
+# Bitwarden-synced tinyauth-credentials Secret. Uses the same env-var
+# names the binary reads natively.
+env:
+  - name: TINYAUTH_OAUTH_PROVIDERS_GOOGLE_CLIENTID
+    valueFrom:
+      secretKeyRef:
+        name: tinyauth-credentials
+        key: GOOGLE_CLIENT_ID
+  - name: TINYAUTH_OAUTH_PROVIDERS_GOOGLE_CLIENTSECRET
+    valueFrom:
+      secretKeyRef:
+        name: tinyauth-credentials
+        key: GOOGLE_CLIENT_SECRET
+  - name: TINYAUTH_OAUTH_WHITELIST
+    valueFrom:
+      secretKeyRef:
+        name: tinyauth-credentials
+        key: OAUTH_WHITELIST
+
+# SQLite session DB — must persist across pod restarts
+persistence:
+  enabled: true
+  size: 1Gi
+  accessMode: ReadWriteOnce
+  mountPath: /data
+
+service:
+  type: ClusterIP
+  port: 3000
+
+# Chart's ingress.main is fine to leave off; we use our own ingress.yaml
+# (cert-manager + Authelia-style annotations) for consistency with other apps.
+ingress:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi

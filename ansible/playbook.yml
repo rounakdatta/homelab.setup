@@ -221,6 +221,16 @@
           STORAGE_ENCRYPTION_KEY: authelia/storage_encryption_key
           SMTP_PASSWORD: authelia/smtp_password
 
+      # tinyauth credentials (parallel-test phase, will replace authelia)
+      # Keys match the env var names tinyauth reads via valueFrom in
+      # kubernetes/tinyauth/values.yaml — see env: section there.
+      - name: tinyauth-credentials
+        namespace: tinyauth
+        data:
+          GOOGLE_CLIENT_ID: tinyauth/google_client_id
+          GOOGLE_CLIENT_SECRET: tinyauth/google_client_secret
+          OAUTH_WHITELIST: tinyauth/oauth_whitelist
+
       # Authelia users database (YAML file)
       - name: authelia-users
         namespace: authelia
@@ -282,6 +292,7 @@
         - databases
         - apps
         - authelia
+        - tinyauth
         - velero
       register: ns_result
       changed_when: "'created' in ns_result.stdout"
