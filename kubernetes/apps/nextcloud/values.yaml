@@ -15,10 +15,16 @@
 #   has files at root — kustomization.yaml carries a JSON patch that strips
 #   the subPath line so files mount at the volume root.
 
-# Pin to our exact running version. Empty tag would fall back to chart
-# AppVersion (33.0.3) and trigger an irreversible occ upgrade on first boot.
+# Pin to the exact image bits we ran before the cutover. Docker Hub
+# version tags are 3-component (33.0.1-apache); the schema version
+# 33.0.1.2 in our config.php is the in-container build number, not a
+# Docker tag. Combining tag + digest gets us readability AND byte
+# immutability — even if the maintainer rewrites 33.0.1-apache later,
+# kubelet refuses to pull anything but this exact manifest.
+# Empty tag would fall back to chart AppVersion (33.0.3) and trigger
+# `occ upgrade` on first boot.
 image:
-  tag: "33.0.1.2-apache"
+  tag: "33.0.1-apache@sha256:0b14848e05d19aa25e8a189eb9cfef4215489e0cbf5eb999e8784bf03027c226"
   pullPolicy: IfNotPresent
 
 # Service name = nextcloud (matches what our standalone ingress.yaml expects).
