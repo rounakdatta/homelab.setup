@@ -1,0 +1,28 @@
+# Values for the rounakdatta/texas-fold-em chart 0.2.0.
+# Chart source: oci://ghcr.io/rounakdatta/charts/texas-fold-em
+#
+# Texas-fold-em is a long-running Go broker that holds a fold.money refresh
+# token and issues short-lived access tokens to in-cluster consumers via
+# /token. Single-replica by design (single writer to state.json).
+
+image:
+  repository: ghcr.io/rounakdatta/texas-fold-em
+  tag: latest
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+  port: 8080
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  size: 1Gi
+  accessMode: ReadWriteOnce
+
+# Use the texas-fold-em-credentials Secret synced from Bitwarden by ansible.
+# Keys: broker-key, admin-key. The chart skips creating its own Secret when
+# secret.create=false + secret.existingSecret is set.
+secret:
+  create: false
+  existingSecret: texas-fold-em-credentials
