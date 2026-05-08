@@ -7,7 +7,7 @@ namespace: apps
 helmCharts:
   - name: synt
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.2.0
+    version: 0.2.1
     releaseName: synt
     namespace: apps
     valuesFile: values.yaml
