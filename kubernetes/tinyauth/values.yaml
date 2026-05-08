@@ -3,9 +3,11 @@
 
 image:
   repository: ghcr.io/tinyauthapp/tinyauth
-  # Pin: v4→v5 was a breaking config change; CVE-2026-32246 (TOTP bypass)
-  # was fixed in 5.0.3. Don't track :latest.
-  tag: v5.0.7
+  # Tinyauth only publishes `nightly` and `nightly-distroless` to GHCR;
+  # there are no semver tags despite GitHub Releases v5.0.7 etc. existing.
+  # `nightly` tracks the main branch (which IS the v5.0.x release stream).
+  # If we ever need to pin precisely, use a digest reference instead.
+  tag: nightly
   pullPolicy: IfNotPresent
 
 # RWO PVC + RollingUpdate would conflict on rollout
