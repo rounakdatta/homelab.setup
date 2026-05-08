@@ -18,8 +18,8 @@ resources:
   # 4. Deploy applications
   - apps/
 
-  # 5. Deploy authelia (authentication)
-  - authelia/
+  # 5. Deploy tinyauth (replaces authelia; serves auth.taptappers.club)
+  - tinyauth/
 
   # 6. Deploy static sites (Hugo)
   - apps/hugo-sites/

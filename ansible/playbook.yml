@@ -149,13 +149,15 @@
           root-password: postgres/root_password
 
       # Firefly III credentials (consolidated)
+      # Keys must match the env var names firefly reads, since the chart's
+      # Deployment uses envFrom against this Secret.
       - name: firefly-credentials
         namespace: apps
         data:
-          app-key: firefly/app_key
-          db-name: firefly/db_name
-          db-username: firefly/db_username
-          db-password: firefly/db_password
+          APP_KEY: firefly/app_key
+          DB_DATABASE: firefly/db_name
+          DB_USERNAME: firefly/db_username
+          DB_PASSWORD: firefly/db_password
 
       # Memoet credentials (consolidated)
       - name: memoet-credentials
@@ -211,13 +213,15 @@
           db-username: nextcloud/db_username
           db-password: nextcloud/db_password
 
-      # Authelia credentials
-      - name: authelia-secrets
-        namespace: authelia
+      # tinyauth credentials (replaces authelia)
+      # Keys match the env var names tinyauth reads via valueFrom in
+      # kubernetes/tinyauth/values.yaml — see env: section there.
+      - name: tinyauth-credentials
+        namespace: tinyauth
         data:
-          SESSION_SECRET: authelia/session_secret
-          STORAGE_ENCRYPTION_KEY: authelia/storage_encryption_key
-          SMTP_PASSWORD: authelia/smtp_password
+          GOOGLE_CLIENT_ID: tinyauth/google_client_id
+          GOOGLE_CLIENT_SECRET: tinyauth/google_client_secret
+          OAUTH_WHITELIST: tinyauth/oauth_whitelist
 
       # Authelia users database (YAML file)
       - name: authelia-users
@@ -234,11 +238,13 @@
           cloud: velero/r2_credentials_file
 
       # Keel credentials (image update UI)
+      # Keys must match the env var names Keel reads, since the chart's
+      # Deployment uses envFrom against this Secret.
       - name: keel-credentials
         namespace: kube-system
         data:
-          username: keel/username
-          password: keel/password
+          BASIC_AUTH_USER: keel/username
+          BASIC_AUTH_PASSWORD: keel/password
 
   pre_tasks:
     - name: Verify required environment variables
@@ -277,7 +283,7 @@
       loop:
         - databases
         - apps
-        - authelia
+        - tinyauth
         - velero
       register: ns_result
       changed_when: "'created' in ns_result.stdout"

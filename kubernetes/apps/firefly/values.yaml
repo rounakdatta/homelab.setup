@@ -1,0 +1,45 @@
+# Values for the upstream firefly-iii/firefly-iii Helm chart 1.9.13 (app v6.5.9).
+# Keep our existing image tag, PVC, and credentials secret.
+
+# Align chart-rendered resource names with the existing `firefly` Service/Deployment
+# (default fullname would be `firefly-iii`, conflicting with our ingress + PVC).
+fullnameOverride: firefly
+
+image:
+  registry: docker.io
+  repository: fireflyiii/core
+  pullPolicy: Always
+  tag: latest
+
+persistence:
+  enabled: true
+  existingClaim: firefly-upload-pvc
+
+config:
+  # Load APP_KEY/DB_DATABASE/DB_USERNAME/DB_PASSWORD from this Secret
+  # (Bitwarden-synced via Ansible). Keys are uppercase to match env var names
+  # since the chart uses envFrom: secretRef on this Secret.
+  existingSecret: firefly-credentials
+  # Non-secret env vars. Chart ships postgres-defaulted values
+  # (DB_CONNECTION=pgsql, DB_PORT=5432) we must override.
+  env:
+    DB_HOST: mysql.databases.svc.cluster.local
+    DB_CONNECTION: mysql
+    DB_PORT: "3306"
+    APP_URL: https://firefly.taptappers.club
+    TRUSTED_PROXIES: "**"
+    TZ: UTC
+
+service:
+  port: 8080
+
+ingress:
+  enabled: false
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 1Gi

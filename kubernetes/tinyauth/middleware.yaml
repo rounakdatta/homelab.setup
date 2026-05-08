@@ -1,0 +1,55 @@
+---
+# Traefik ForwardAuth middleware for tinyauth.
+# Mirrors the existing authelia-authelia / authelia-authelia-chain pattern
+# but points at tinyauth's /api/auth/traefik endpoint.
+#
+# Apps opt in by adding:
+#   traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
+# (or `tinyauth-tinyauth-chain@kubernetescrd` to layer the security headers).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: tinyauth
+  namespace: tinyauth
+spec:
+  forwardAuth:
+    address: http://tinyauth.tinyauth.svc.cluster.local:3000/api/auth/traefik
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Email
+      - Remote-Name
+      - Remote-Groups
+      - Remote-Sub
+---
+# Optional: security headers middleware (matches the prior authelia-chain pattern)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers
+  namespace: tinyauth
+spec:
+  headers:
+    browserXssFilter: true
+    contentTypeNosniff: true
+    forceSTSHeader: true
+    frameDeny: true
+    stsIncludeSubdomains: true
+    stsPreload: true
+    stsSeconds: 31536000
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+---
+# Chain middleware: forward-auth + security headers in one annotation.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: tinyauth-chain
+  namespace: tinyauth
+spec:
+  chain:
+    middlewares:
+      - name: tinyauth
+        namespace: tinyauth
+      - name: security-headers
+        namespace: tinyauth

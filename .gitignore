@@ -39,3 +39,6 @@ secrets.yaml
 
 # Logs
 *.log
+
+# Kustomize Helm chart inflator cache (created by `kubectl kustomize --enable-helm`)
+kubernetes/**/charts/

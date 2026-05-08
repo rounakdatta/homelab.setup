@@ -1,0 +1,53 @@
+# Values for the rounakdatta/synt chart 0.2.1.
+# Chart source: oci://ghcr.io/rounakdatta/charts/synt
+
+image:
+  repository: ghcr.io/rounakdatta/synt
+  tag: latest
+  pullPolicy: Always
+
+# Reuse the existing 5Gi PVC (synt SQLite DB lives here)
+persistence:
+  enabled: true
+  existingClaim: synt-data-pvc
+
+# Run meilisearch as a sidecar in the same pod (matches the prior hand-rolled
+# layout). The chart auto-injects `-meilisearch http://127.0.0.1:7700` and a
+# wait-for-/health loop into synt's command, so no extra args are needed.
+meilisearch:
+  enabled: true
+  image:
+    repository: getmeili/meilisearch
+    # Pin to v1.41.0 — the on-disk index in synt-meilisearch-pvc was written
+    # by 1.41 and `:latest` (currently 1.43) refuses to read it.
+    # ("Your database version (1.41.0) is incompatible with your current engine version")
+    tag: v1.41.0
+    pullPolicy: IfNotPresent
+  persistence:
+    enabled: true
+    existingClaim: synt-meilisearch-pvc
+  # Match the bumped resources from PR #102 (memory needed for embedding index)
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# We keep our standalone ingress.yaml (with Authelia + cert-manager annotations)
+ingress:
+  enabled: false
+
+# Match the bumped resources from PR #102
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 1Gi

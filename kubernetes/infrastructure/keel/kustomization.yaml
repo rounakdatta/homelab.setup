@@ -2,6 +2,30 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+# Keel install is rendered from the upstream Helm chart at deploy time.
+# Requires `kubectl kustomize --enable-helm` (see .github/workflows/deploy-stuff.yml).
+#
+# Chart 1.0.5 ships app v0.19.1 — pinned to match the previously-running image.
+helmCharts:
+  - name: keel
+    repo: https://charts.keel.sh
+    version: 1.0.5
+    releaseName: keel
+    namespace: kube-system
+    valuesFile: values.yaml
+
 resources:
-  - deployment.yaml
   - ingress.yaml
+
+# Chart 1.0.5 doesn't natively emit the APPROVALS env var; patch it onto the
+# Deployment so image-update bumps continue to require manual approval.
+patches:
+  - target:
+      kind: Deployment
+      name: keel
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: APPROVALS
+          value: "1"

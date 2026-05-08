@@ -1,9 +1,12 @@
 ---
+# tinyauth claims auth.taptappers.club (replacing authelia at the same URL).
+# The old authelia ingress is removed in the same commit so Traefik
+# routes the host unambiguously.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: authelia
-  namespace: authelia
+  name: tinyauth
+  namespace: tinyauth
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
@@ -17,10 +20,10 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: authelia
+            name: tinyauth
             port:
-              number: 9091
+              number: 3000
   tls:
   - hosts:
     - auth.taptappers.club
-    secretName: authelia-tls-secret
+    secretName: tinyauth-tls-secret
