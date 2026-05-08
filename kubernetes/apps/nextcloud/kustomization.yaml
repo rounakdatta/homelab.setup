@@ -4,8 +4,33 @@ kind: Kustomization
 
 namespace: apps
 
+# Render the upstream nextcloud Helm chart at deploy time. See values.yaml
+# for the full migration story (PVC reshape, image pin, externalDatabase).
+helmCharts:
+  - name: nextcloud
+    repo: https://nextcloud.github.io/helm/
+    version: 9.0.6
+    releaseName: nextcloud
+    namespace: apps
+    valuesFile: values.yaml
+
 resources:
-  - deployment.yaml
-  - service.yaml
+  - main-pvc.yaml
+  - migrate-config-job.yaml
   - ingress.yaml
   - middleware.yaml
+
+# The chart's data volumeMount carries a hardcoded `subPath: data`, but our
+# existing nextcloud-data-pvc has files at the root (not under a `data/`
+# subdir). Strip the subPath so the mount lands at the volume root and the
+# pod sees existing files unchanged. Targets the second volumeMount of the
+# nextcloud container (index 2: root, html, [data], config, custom_apps,
+# tmp, themes — the data mount is at index 2 since we have nextcloudData
+# enabled).
+patches:
+  - target:
+      kind: Deployment
+      name: nextcloud
+    patch: |-
+      - op: remove
+        path: /spec/template/spec/containers/0/volumeMounts/2/subPath

@@ -1,0 +1,21 @@
+---
+# Chart-managed nextcloud-main PVC: holds the nextcloud install code
+# (/var/www/html/{...}), config/, custom_apps/, themes/, tmp/, root/.
+# 8Gi covers a stock install (~700MB) with headroom for custom apps and
+# themes. The data PVC (nextcloud-data-pvc, ~100Gi) stays separate.
+#
+# config/config.php is pre-populated by migrate-config-job.yaml from the
+# old nextcloud-config-pvc on first deploy. Other subdirs are auto-created
+# by the chart's nextcloud image entrypoint on first boot.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-main-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 8Gi
