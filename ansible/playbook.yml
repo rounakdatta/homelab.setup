@@ -213,6 +213,15 @@
           db-username: nextcloud/db_username
           db-password: nextcloud/db_password
 
+      # texas-fold-em bearer keys
+      # Keys match what the chart's deployment.yaml references via
+      # secretKeyRef (broker-key, admin-key).
+      - name: texas-fold-em-credentials
+        namespace: apps
+        data:
+          broker-key: texas-fold-em/broker_key
+          admin-key: texas-fold-em/admin_key
+
       # tinyauth credentials (replaces authelia)
       # Keys match the env var names tinyauth reads via valueFrom in
       # kubernetes/tinyauth/values.yaml — see env: section there.
