@@ -1,0 +1,39 @@
+---
+# Tinyauth-protected ingress to texas-fold-em's review UI only.
+#
+# We deliberately scope the ingress to /admin/ui/* paths so the
+# bearer-key-gated JSON endpoints (/admin/firefly/sync, /admin/classify,
+# /admin/push/{uuid}, etc.) stay reachable ONLY via in-cluster Service
+# URL. The UI is sufficient for human review; programmatic admin
+# operations can be invoked via kubectl-port-forward when needed.
+#
+# Auth flow: any request to fold.taptappers.club hits Traefik →
+# tinyauth ForwardAuth → Google OAuth (if not already logged in) →
+# back to Traefik → texas-fold-em pod. Once authed, the texas-fold-em
+# pod itself is in AuthModeBypass (TEXAS_FOLDEM_UI_COOKIE_AUTH=false).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: texas-fold-em-ui
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - fold.taptappers.club
+      secretName: fold-tls-secret
+  rules:
+    - host: fold.taptappers.club
+      http:
+        paths:
+          - path: /admin/ui
+            pathType: Prefix
+            backend:
+              service:
+                name: texas-fold-em
+                port:
+                  number: 8080

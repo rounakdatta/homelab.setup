@@ -1,4 +1,4 @@
-# Values for the rounakdatta/texas-fold-em chart 0.2.0.
+# Values for the rounakdatta/texas-fold-em chart 0.3.0.
 # Chart source: oci://ghcr.io/rounakdatta/charts/texas-fold-em
 #
 # Texas-fold-em is a long-running Go broker that holds a fold.money refresh
@@ -21,8 +21,56 @@ persistence:
   accessMode: ReadWriteOnce
 
 # Use the texas-fold-em-credentials Secret synced from Bitwarden by ansible.
-# Keys: broker-key, admin-key. The chart skips creating its own Secret when
-# secret.create=false + secret.existingSecret is set.
+# Keys (synced by ansible/playbook.yml):
+#   - broker-key       — bearer auth for /token consumers
+#   - admin-key        — bearer auth for /init and /admin/*
+#   - firefly-pat      — long-lived Firefly III PAT (integration)
+#   - gemini-api-key   — Google AI Studio key (integration Tier-3 RAG)
 secret:
   create: false
   existingSecret: texas-fold-em-credentials
+
+# fold→firefly classification subsystem. Wired into the pod via extraEnv
+# (chart 0.3.0 added support for valueFrom secret references). The
+# integration code is gated by TEXAS_FOLDEM_INTEGRATION_ENABLED so a
+# stock deploy without these env vars behaves exactly as the broker did
+# before — they're only consulted when the flag is true.
+extraEnv:
+  - name: TEXAS_FOLDEM_INTEGRATION_ENABLED
+    value: "true"
+  - name: TEXAS_FOLDEM_FIREFLY_BASE
+    value: "http://firefly.apps.svc.cluster.local:8080"
+  - name: TEXAS_FOLDEM_FIREFLY_PAT
+    valueFrom:
+      secretKeyRef:
+        name: texas-fold-em-credentials
+        key: firefly-pat
+  - name: TEXAS_FOLDEM_GEMINI_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: texas-fold-em-credentials
+        key: gemini-api-key
+  - name: TEXAS_FOLDEM_GEMINI_MODEL
+    value: "gemini-3.1-flash-lite"
+  # Periodic sync disabled at first deploy — flip to "1h" after we've
+  # confirmed manual /admin/fold/sync + /admin/classify behave correctly
+  # against real fold + firefly data.
+  - name: TEXAS_FOLDEM_PERIODIC_SYNC_EVERY
+    value: "0"
+  - name: TEXAS_FOLDEM_PERIODIC_SYNC_LIMIT
+    value: "50"
+  # Read-only kill-switch for the firefly write surface. Initial deploy
+  # leaves it OFF so we can preview-only first; flip to "true" if we
+  # ever need to halt all writes without redeploying.
+  - name: TEXAS_FOLDEM_FIREFLY_READONLY
+    value: "false"
+  # UI auth: bypass at the texas-fold-em layer because the cluster
+  # ingress (added separately) puts tinyauth ForwardAuth in front. For
+  # local dev against a port-forward, set to "true" to require the
+  # tfe-admin cookie set by /admin/ui/login.
+  - name: TEXAS_FOLDEM_UI_COOKIE_AUTH
+    value: "false"
+  # Persistent on-disk state for the integration's SQLite. Lives on the
+  # same /data PVC as the broker's state.json but in a separate file.
+  - name: TEXAS_FOLDEM_STAGING_DB_PATH
+    value: "/data/staging.db"
