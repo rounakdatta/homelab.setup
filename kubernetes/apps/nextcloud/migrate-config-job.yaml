@@ -1,0 +1,55 @@
+---
+# One-time migration: copy config.php from the old flat-layout
+# nextcloud-config-pvc (1Gi) into the chart-shaped nextcloud-main-pvc
+# under config/config.php. Idempotent — the copy is gated on the target
+# not already existing, so subsequent applies are no-ops.
+#
+# This Job and the chart-rendered Deployment apply simultaneously. The
+# Deployment's wait-for-config initContainer (set in values.yaml via
+# extraInitContainers) blocks until config.php lands on the new PVC, so
+# ordering is enforced even though K3s' local-path RWO PVCs technically
+# allow same-node co-mount.
+#
+# Once everyone is happy with the migration this Job can be deleted in
+# a follow-up commit alongside the old nextcloud-config-pvc.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nextcloud-config-migrate
+  namespace: apps
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: copy
+          image: busybox:1.36
+          command: ["sh", "-c"]
+          args:
+            - |
+              set -eu
+              if [ -f /new/config/config.php ]; then
+                echo "config.php already migrated, skipping"
+                exit 0
+              fi
+              if [ ! -f /old/config.php ]; then
+                echo "old config.php not found at /old/config.php — bailing"
+                exit 1
+              fi
+              mkdir -p /new/config
+              cp -p /old/config.php /new/config/config.php
+              echo "copied config.php ($(stat -c %s /new/config/config.php) bytes)"
+          volumeMounts:
+            - name: old-config
+              mountPath: /old
+              readOnly: true
+            - name: new-main
+              mountPath: /new
+      volumes:
+        - name: old-config
+          persistentVolumeClaim:
+            claimName: nextcloud-config-pvc
+        - name: new-main
+          persistentVolumeClaim:
+            claimName: nextcloud-main-pvc

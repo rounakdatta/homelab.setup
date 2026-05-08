@@ -1,0 +1,150 @@
+# Values for the upstream nextcloud Helm chart 9.0.6 (appVersion 33.0.3).
+# Chart docs: https://github.com/nextcloud/helm
+#
+# Migration notes:
+# - The chart appVersion (33.0.3) is newer than what we run (33.0.1.2).
+#   Image tag is pinned below to match the running version EXACTLY so
+#   first-boot doesn't trigger `occ upgrade`. Bumps happen as a separate,
+#   deliberate change with a fresh velero backup beforehand.
+# - The chart's main PVC layout uses subPaths (config/, html/, root/, tmp/,
+#   themes/, custom_apps/). We pre-populate config/config.php on a new 8Gi
+#   nextcloud-main-pvc; the chart's image entrypoint populates html/ and the
+#   other subdirs on first boot.
+# - The data PVC (nextcloud-data-pvc) is reused as-is via existingClaim. The
+#   chart's data volume mount has a baked-in `subPath: data`, but our PVC
+#   has files at root — kustomization.yaml carries a JSON patch that strips
+#   the subPath line so files mount at the volume root.
+
+# Pin to our exact running version. Empty tag would fall back to chart
+# AppVersion (33.0.3) and trigger an irreversible occ upgrade on first boot.
+image:
+  tag: "33.0.1.2-apache"
+  pullPolicy: IfNotPresent
+
+# Service name = nextcloud (matches what our standalone ingress.yaml expects).
+fullnameOverride: nextcloud
+
+# Use our existing nextcloud-data-pvc (100Gi local-path, 25GB used).
+persistence:
+  enabled: true
+  existingClaim: nextcloud-main-pvc
+  nextcloudData:
+    enabled: true
+    existingClaim: nextcloud-data-pvc
+
+# Disable bundled subcharts — we use our shared mysql in databases ns.
+internalDatabase:
+  enabled: false
+mariadb:
+  enabled: false
+postgresql:
+  enabled: false
+redis:
+  enabled: false
+nginx:
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  type: mysql
+  host: mysql.databases.svc.cluster.local
+  existingSecret:
+    enabled: true
+    secretName: nextcloud-credentials
+    usernameKey: db-username
+    passwordKey: db-password
+    databaseKey: db-name
+
+# OVERWRITEPROTOCOL=https — Traefik terminates TLS, the pod sees plaintext.
+phpClientHttpsFix:
+  enabled: true
+  protocol: https
+
+nextcloud:
+  host: nextcloud.taptappers.club
+  trustedDomains:
+    - nextcloud.taptappers.club
+
+  # 0 = chart does NOT set NEXTCLOUD_UPDATE env var. With config.php already
+  # present and image pinned, no occ upgrade triggers.
+  update: 0
+
+  # NEXTCLOUD_ADMIN_USER / NEXTCLOUD_ADMIN_PASSWORD are required env vars on
+  # the chart's Deployment but are only consulted when the entrypoint sees
+  # an empty config dir and decides to bootstrap a fresh install. Our
+  # config.php is preserved on the new main PVC, so the bootstrap path
+  # never runs. Letting the chart auto-create its own `nextcloud` Secret
+  # from these literal values keeps Bitwarden out of the loop entirely
+  # (existingSecret.enabled: false). The values are fixed strings rather
+  # than random so the rendered Secret is stable across deploys.
+  username: "not-used-existing-install"
+  password: "not-used-existing-install"
+  existingSecret:
+    enabled: false
+
+  # Don't auto-render any *.config.php into the config dir. Our existing
+  # config.php fully controls behavior; chart-injected configs would be
+  # mounted alongside and load via nextcloud's "load all config files in
+  # /var/www/html/config" mechanism, which can quietly override settings
+  # we want to keep authoritative.
+  configs: {}
+  defaultConfigs: {}
+
+  # Skip the recursive fsGroup walk on the 25Gi data PVC. Files are already
+  # owned by www-data (33:33) so the root-dir check passes immediately.
+  podSecurityContext:
+    fsGroup: 33
+    fsGroupChangePolicy: OnRootMismatch
+
+  # Block the nextcloud container from starting until the migration Job
+  # has dropped config.php into the new main PVC. This guards against the
+  # race where (on local-path RWO co-mount) both pods schedule together
+  # and the chart's entrypoint sees an empty config dir, deciding to
+  # bootstrap a fresh install.
+  extraInitContainers:
+    - name: wait-for-config
+      image: busybox:1.36
+      command: ["sh", "-c"]
+      args:
+        - |
+          i=0
+          until [ -f /var/www/html/config/config.php ]; do
+            i=$((i+1))
+            if [ $i -gt 60 ]; then
+              echo "config.php still missing after 2min, failing"
+              exit 1
+            fi
+            echo "waiting for config.php to be migrated..."
+            sleep 2
+          done
+          echo "config.php present, proceeding"
+      volumeMounts:
+        - name: nextcloud-main
+          mountPath: /var/www/html/config
+          subPath: config
+
+# We keep our standalone ingress.yaml + middleware.yaml — chart ingress off.
+ingress:
+  enabled: false
+
+# ClusterIP on port 80 to match what the existing ingress points to.
+service:
+  type: ClusterIP
+  port: 80
+
+# Match the resources from the prior hand-rolled Deployment.
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "250m"
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+
+# No bundled cronjob — we don't currently run one.
+cronjob:
+  enabled: false
+
+# No metrics exporter — we don't currently run one.
+metrics:
+  enabled: false
