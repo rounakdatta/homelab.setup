@@ -213,14 +213,20 @@
           db-username: nextcloud/db_username
           db-password: nextcloud/db_password
 
-      # texas-fold-em bearer keys
-      # Keys match what the chart's deployment.yaml references via
-      # secretKeyRef (broker-key, admin-key).
+      # texas-fold-em credentials (consolidated)
+      # broker-key: bearer auth for /token consumers
+      # admin-key:  bearer auth for /init and /admin/*
+      # firefly-pat: long-lived PAT for the integration's firefly client
+      #              (sync, FTS5 indexing, push)
+      # gemini-api-key: Google AI Studio key for Tier-3 RAG classifier
+      #                 (gemini-3.1-flash-lite)
       - name: texas-fold-em-credentials
         namespace: apps
         data:
           broker-key: texas-fold-em/broker_key
           admin-key: texas-fold-em/admin_key
+          firefly-pat: firefly/personal_access_token
+          gemini-api-key: gemini/api_key
 
       # tinyauth credentials (replaces authelia)
       # Keys match the env var names tinyauth reads via valueFrom in
