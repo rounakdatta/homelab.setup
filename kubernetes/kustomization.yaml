@@ -18,11 +18,8 @@ resources:
   # 4. Deploy applications
   - apps/
 
-  # 5. Deploy authelia (authentication — current, retiring after tinyauth cutover)
-  - authelia/
-
-  # 6. Deploy tinyauth (parallel-test phase; will replace authelia)
+  # 5. Deploy tinyauth (replaces authelia; serves auth.taptappers.club)
   - tinyauth/
 
-  # 7. Deploy static sites (Hugo)
+  # 6. Deploy static sites (Hugo)
   - apps/hugo-sites/

@@ -17,7 +17,7 @@ metadata:
       X-Content-Type-Options: nosniff
 
     # Authelia authentication
-    traefik.ingress.kubernetes.io/router.middlewares: authelia-authelia@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
 
 spec:
   tls:

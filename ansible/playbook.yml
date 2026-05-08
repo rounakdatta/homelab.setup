@@ -213,15 +213,7 @@
           db-username: nextcloud/db_username
           db-password: nextcloud/db_password
 
-      # Authelia credentials
-      - name: authelia-secrets
-        namespace: authelia
-        data:
-          SESSION_SECRET: authelia/session_secret
-          STORAGE_ENCRYPTION_KEY: authelia/storage_encryption_key
-          SMTP_PASSWORD: authelia/smtp_password
-
-      # tinyauth credentials (parallel-test phase, will replace authelia)
+      # tinyauth credentials (replaces authelia)
       # Keys match the env var names tinyauth reads via valueFrom in
       # kubernetes/tinyauth/values.yaml — see env: section there.
       - name: tinyauth-credentials
@@ -291,7 +283,6 @@
       loop:
         - databases
         - apps
-        - authelia
         - tinyauth
         - velero
       register: ns_result

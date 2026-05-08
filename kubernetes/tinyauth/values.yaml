@@ -13,10 +13,9 @@ deploymentStrategy:
   type: Recreate
 
 tinyauth:
-  # PARALLEL-TEST PHASE: separate hostname so authelia stays in charge of
-  # auth.taptappers.club until cutover. Will become https://auth.taptappers.club
-  # once we're ready to retire authelia.
-  appUrl: https://tinyauth.taptappers.club
+  # tinyauth replaces authelia at this hostname; authelia/ingress.yaml
+  # is removed in the same commit so there's no host conflict in Traefik.
+  appUrl: https://auth.taptappers.club
 
   database:
     path: /data/tinyauth.db

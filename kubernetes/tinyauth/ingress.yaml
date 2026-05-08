@@ -1,6 +1,7 @@
 ---
-# Parallel-test ingress at tinyauth.taptappers.club.
-# Authelia continues to own auth.taptappers.club until cutover.
+# tinyauth claims auth.taptappers.club (replacing authelia at the same URL).
+# The old authelia ingress is removed in the same commit so Traefik
+# routes the host unambiguously.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -12,7 +13,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-  - host: tinyauth.taptappers.club
+  - host: auth.taptappers.club
     http:
       paths:
       - path: /
@@ -24,5 +25,5 @@ spec:
               number: 3000
   tls:
   - hosts:
-    - tinyauth.taptappers.club
+    - auth.taptappers.club
     secretName: tinyauth-tls-secret
