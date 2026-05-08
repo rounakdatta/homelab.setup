@@ -6,26 +6,38 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 
 ## List of self-hosted applications
 
-| App            | Purpose                                        | Project homepage                        |
-|----------------|------------------------------------------------|-----------------------------------------|
-| MySQL          | Database (common dependency for multiple apps) | https://dev.mysql.com/downloads/mysql/  |
-| PostgreSQL     | Database (for apps that prefer Postgres)       | https://www.postgresql.org/             |
-| Redis          | In-memory cache (sessions, queues)             | https://redis.io/                       |
-| Firefly-III    | Personal finance                               | https://www.firefly-iii.org/            |
-| Bookstack      | Documentation & Diary                          | https://www.bookstackapp.com/           |
-| Vikunja        | Todo list                                      | https://vikunja.io/                     |
-| Nextcloud      | Google Drive alternative                       | https://nextcloud.com/                  |
-| Webtrees       | Family tree (genealogy)                        | https://www.webtrees.net/index.php/en/  |
-| Audiobookshelf | Audiobook server (Audible alternative)         | https://www.audiobookshelf.org/         |
-| Snibox         | Snippets organizer                             | https://github.com/MohamedElashri/Snibox|
-| Memoet         | Modern spaced repetition system                | https://github.com/memoetapp/memoet     |
-| Authelia       | Single sign-on & 2FA for all apps              | https://www.authelia.com/               |
+| App            | Purpose                                                    | Project homepage                         |
+|----------------|------------------------------------------------------------|------------------------------------------|
+| MySQL          | Database (common dependency for multiple apps)             | https://dev.mysql.com/downloads/mysql/   |
+| PostgreSQL     | Database (for apps that prefer Postgres)                   | https://www.postgresql.org/              |
+| Redis          | In-memory cache (sessions, queues)                         | https://redis.io/                        |
+| Firefly-III    | Personal finance                                           | https://www.firefly-iii.org/             |
+| Bookstack      | Documentation & Diary                                      | https://www.bookstackapp.com/            |
+| Vikunja        | Todo list                                                  | https://vikunja.io/                      |
+| Nextcloud      | Google Drive alternative                                   | https://nextcloud.com/                   |
+| Webtrees       | Family tree (genealogy)                                    | https://www.webtrees.net/index.php/en/   |
+| Audiobookshelf | Audiobook server (Audible alternative)                     | https://www.audiobookshelf.org/          |
+| Snibox         | Snippets organizer                                         | https://github.com/MohamedElashri/Snibox |
+| Memoet         | Spaced-repetition system                                   | https://github.com/memoetapp/memoet      |
+| ntfy           | Push notifications                                         | https://ntfy.sh/                         |
+| MotionEye      | Camera / motion detection frontend                         | https://github.com/motioneye-project/motioneye |
+| Synt           | LLM chat archiving                                         | https://github.com/rounakdatta/synt      |
+| Hugo sites     | Personal static sites (rounak2018 / rounak2020 / rounak2025) | https://gohugo.io/                       |
+
+### Supporting infrastructure
+
+| Component   | Purpose                                            | Project homepage                          |
+|-------------|----------------------------------------------------|-------------------------------------------|
+| Tinyauth    | Forward-auth SSO via Google OAuth (replaces Authelia) | https://tinyauth.app/                  |
+| cert-manager | Automatic TLS certificates from Let's Encrypt    | https://cert-manager.io/                  |
+| Velero + Velero-UI | Cluster backups (Kopia-backed, S3-compatible storage) | https://velero.io/                  |
+| Keel        | Image update polling + manual approval gate        | https://keel.sh/                          |
 
 ## Architecture
 
-K3s is a lightweight Kubernetes distribution that's perfect for single-node homelabs. Traefik (bundled with K3s) handles all ingress routing with automatic TLS via cert-manager and Let's Encrypt. Authelia sits in front of apps providing single sign-on with two-factor authentication.
+K3s is a lightweight Kubernetes distribution that's perfect for single-node homelabs. Traefik (bundled with K3s) handles all ingress routing with automatic TLS via cert-manager and Let's Encrypt. Tinyauth sits in front of apps as a forward-auth middleware backed by Google OAuth, so any subset of apps can be put behind a single sign-on with one annotation.
 
-All manifests are organized using Kustomize, and secrets are managed through Bitwarden - synced to the cluster via Ansible. The setup is fully declarative - adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
+Most third-party apps are inflated from upstream Helm charts via Kustomize's `helmCharts` block (with values overridden in-tree), so version bumps stay a one-line change. Manifests are organized using Kustomize and secrets are managed through Bitwarden — synced into Kubernetes Secrets by an Ansible play. The setup is fully declarative — adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
 
 ## Philosophy
 
@@ -45,7 +57,7 @@ The whole setup requires just 5 GitHub secrets: `TAILSCALE_AUTHKEY`, `MACHINE_NA
 
 ## Backup mechanism
 
-All the application containers are mapped to a persistent storage location in the mounted HDD. And this giant data directory is being backed up to object storage (Backblaze B2 in my case). Encrypted, incremental backups - thanks to Duplicati.
+Application data lives on local-path PVCs backed by the mounted HDD. Velero (with the Kopia file-system backup plugin) snapshots all PVCs every night and ships the encrypted, deduplicated, incremental chunks to Cloudflare R2 (S3-compatible). Velero-UI gives a web view of backup/restore state.
 
 ## Evolution of the host machine
 
@@ -76,8 +88,8 @@ Yeah I'm a [one-machine](https://thume.ca/2023/01/02/one-machine-twitter/) fan.
 
 ## Future scopes
 
-With the migration to K3s complete, the next focus areas are:
-- Adding more applications back (Immich for photos, Miniflux for RSS)
+- Photos: Immich (replacing the old PhotoPrism setup)
+- RSS reader: Miniflux
 - Metric collection and monitoring (Prometheus + Grafana)
-- Exploring multi-node K3s with Oracle Cloud's free ARM instances
-- Distributed storage solutions (Longhorn, SeaweedFS)
+- Multi-node K3s — currently single control-plane; worker-node bootstrap is wired up but not yet in active use
+- Distributed storage (Longhorn, SeaweedFS) so RWX mounts and PVC migrations stop being a one-machine constraint
