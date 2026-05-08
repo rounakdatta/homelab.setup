@@ -2,10 +2,12 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Velero install + CRDs are rendered from the upstream Helm chart at deploy time.
-# `includeCRDs: true` pulls in the chart's bundled CRDs so version bumps stay
-# fully hands-off — chart and CRDs always move together.
-# Requires `kubectl kustomize --enable-helm` (or standalone kustomize with --enable-helm).
+# Two charts inflated alongside our standalone supporting manifests:
+#   - velero (vmware-tanzu/velero)        the backup engine + node-agent
+#   - velero-ui (otwld/velero-ui)         the web dashboard
+# `includeCRDs: true` on velero pulls in the velero CRDs from the chart's
+# bundled crds/ directory so version bumps stay fully hands-off.
+# Requires `kustomize build --enable-helm` (see .github/workflows/deploy-stuff.yml).
 helmCharts:
   - name: velero
     repo: https://vmware-tanzu.github.io/helm-charts
@@ -14,10 +16,20 @@ helmCharts:
     namespace: velero
     valuesFile: values.yaml
     includeCRDs: true
+  - name: velero-ui
+    repo: https://helm.otwld.com
+    version: 0.14.0
+    releaseName: velero-ui
+    namespace: velero
+    valuesFile: velero-ui-values.yaml
+    # Skip the chart's helm-test pod (would otherwise render as a real Pod
+    # since kustomize doesn't honor helm.sh/hook annotations).
+    skipTests: true
 
 resources:
   - namespace.yaml
   - backup-storage-location.yaml
   - schedule-nightly.yaml
-  - velero-ui.yaml
+  # velero-ui workload is now from the otwld chart above; we keep just our
+  # standalone ingress (cert-manager + tinyauth middleware annotations).
   - velero-ui-ingress.yaml
