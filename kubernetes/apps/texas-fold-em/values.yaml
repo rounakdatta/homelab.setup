@@ -7,14 +7,11 @@
 #
 # Chart 0.4.0 replaced the Gemini-specific Tier-3 client with a generic
 # OpenAI-compatible LLM client, defaulting to DeepSeek.
-
-image:
-  repository: ghcr.io/rounakdatta/texas-fold-em
-  # Pin to a specific tag so changes to the Deployment spec are
-  # explicit (rolling :latest is opaque). Bump in lockstep with the
-  # chart version when shipping new app code.
-  tag: "0.4.1"
-  pullPolicy: IfNotPresent
+#
+# Chart 0.5.0 paginated the review UI (drops the hard 200-row cap) and
+# extended /admin/classify's handler budget to 60m so backlog catch-up
+# finishes in one shot. Chart and image tags now move together — the
+# chart default image is "0.5.0", so we don't override here.
 
 service:
   type: ClusterIP
@@ -65,13 +62,17 @@ extraEnv:
   #   value: "deepseek-v4-pro"
   # - name: TEXAS_FOLDEM_LLM_BASE_URL
   #   value: "https://api.openai.com/v1"
-  # Periodic sync disabled at first deploy — flip to "1h" after we've
-  # confirmed manual /admin/fold/sync + /admin/classify behave correctly
-  # against real fold + firefly data.
+  # Periodic sync enabled at 1h cadence. Each tick fills the gap
+  # between firefly's most recent date and now (since_firefly mode),
+  # then classifies anything still pending. Self-healing across
+  # outages: a missed tick is just caught up on the next one.
   - name: TEXAS_FOLDEM_PERIODIC_SYNC_EVERY
-    value: "0"
+    value: "1h"
+  # Per-cycle hard cap on fold transactions fetched. 2000 covers
+  # over a year of typical activity at observed densities (~150
+  # txns/month), so a multi-day outage self-heals on one tick.
   - name: TEXAS_FOLDEM_PERIODIC_SYNC_LIMIT
-    value: "50"
+    value: "2000"
   # Read-only kill-switch for the firefly write surface. Initial deploy
   # leaves it OFF so we can preview-only first; flip to "true" if we
   # ever need to halt all writes without redeploying.
