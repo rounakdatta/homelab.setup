@@ -10,8 +10,11 @@
 
 image:
   repository: ghcr.io/rounakdatta/texas-fold-em
-  tag: latest
-  pullPolicy: Always
+  # Pin to a specific tag so changes to the Deployment spec are
+  # explicit (rolling :latest is opaque). Bump in lockstep with the
+  # chart version when shipping new app code.
+  tag: "0.4.1"
+  pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
