@@ -218,15 +218,18 @@
       # admin-key:  bearer auth for /init and /admin/*
       # firefly-pat: long-lived PAT for the integration's firefly client
       #              (sync, FTS5 indexing, push)
-      # gemini-api-key: Google AI Studio key for Tier-3 RAG classifier
-      #                 (gemini-3.1-flash-lite)
+      # llm-api-key: OpenAI-compatible API key for the Tier-3 LLM
+      #              classifier. Sourced from deepseek/api_key
+      #              (DeepSeek's OpenAI-compatible endpoint); swap the
+      #              Bitwarden source to openai/api_key or similar to
+      #              repoint at a different provider.
       - name: texas-fold-em-credentials
         namespace: apps
         data:
           broker-key: texas-fold-em/broker_key
           admin-key: texas-fold-em/admin_key
           firefly-pat: firefly/personal_access_token
-          gemini-api-key: gemini/api_key
+          llm-api-key: deepseek/api_key
 
       # tinyauth credentials (replaces authelia)
       # Keys match the env var names tinyauth reads via valueFrom in
