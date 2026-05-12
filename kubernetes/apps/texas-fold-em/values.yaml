@@ -1,9 +1,12 @@
-# Values for the rounakdatta/texas-fold-em chart 0.3.0.
+# Values for the rounakdatta/texas-fold-em chart.
 # Chart source: oci://ghcr.io/rounakdatta/charts/texas-fold-em
 #
 # Texas-fold-em is a long-running Go broker that holds a fold.money refresh
 # token and issues short-lived access tokens to in-cluster consumers via
 # /token. Single-replica by design (single writer to state.json).
+#
+# Chart 0.4.0 replaced the Gemini-specific Tier-3 client with a generic
+# OpenAI-compatible LLM client, defaulting to DeepSeek.
 
 image:
   repository: ghcr.io/rounakdatta/texas-fold-em
@@ -22,10 +25,11 @@ persistence:
 
 # Use the texas-fold-em-credentials Secret synced from Bitwarden by ansible.
 # Keys (synced by ansible/playbook.yml):
-#   - broker-key       — bearer auth for /token consumers
-#   - admin-key        — bearer auth for /init and /admin/*
-#   - firefly-pat      — long-lived Firefly III PAT (integration)
-#   - gemini-api-key   — Google AI Studio key (integration Tier-3 RAG)
+#   - broker-key   — bearer auth for /token consumers
+#   - admin-key    — bearer auth for /init and /admin/*
+#   - firefly-pat  — long-lived Firefly III PAT (integration)
+#   - llm-api-key  — OpenAI-compatible LLM key (integration Tier-3 RAG;
+#                    currently sourced from deepseek/api_key in Bitwarden)
 secret:
   create: false
   existingSecret: texas-fold-em-credentials
@@ -45,13 +49,19 @@ extraEnv:
       secretKeyRef:
         name: texas-fold-em-credentials
         key: firefly-pat
-  - name: TEXAS_FOLDEM_GEMINI_API_KEY
+  - name: TEXAS_FOLDEM_LLM_API_KEY
     valueFrom:
       secretKeyRef:
         name: texas-fold-em-credentials
-        key: gemini-api-key
-  - name: TEXAS_FOLDEM_GEMINI_MODEL
-    value: "gemini-3.1-flash-lite"
+        key: llm-api-key
+  # LLM_MODEL / LLM_BASE_URL default to deepseek-v4-flash on
+  # https://api.deepseek.com/v1 — uncomment to override (e.g. swap to
+  # deepseek-v4-pro for higher accuracy on tricky transactions, or
+  # repoint LLM_BASE_URL at OpenAI / Groq with a matching key).
+  # - name: TEXAS_FOLDEM_LLM_MODEL
+  #   value: "deepseek-v4-pro"
+  # - name: TEXAS_FOLDEM_LLM_BASE_URL
+  #   value: "https://api.openai.com/v1"
   # Periodic sync disabled at first deploy — flip to "1h" after we've
   # confirmed manual /admin/fold/sync + /admin/classify behave correctly
   # against real fold + firefly data.
