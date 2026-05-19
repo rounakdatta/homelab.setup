@@ -14,6 +14,6 @@ resources:
   - webtrees/
   - nextcloud/
   - ntfy/
-  - motioneye/
+  - frigate/
   - synt/
   - texas-fold-em/

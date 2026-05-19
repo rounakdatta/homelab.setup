@@ -87,6 +87,17 @@ jobs:
           kubectl -n default delete deploy velero-ui --ignore-not-found
           kubectl -n default delete svc velero-ui --ignore-not-found
 
+          # Retire motioneye: Frigate takes over home-cam.taptappers.club in
+          # the same commit. `kubectl apply` doesn't prune resources dropped
+          # from the kustomization, so explicitly delete the workload, svc,
+          # ingress, both PVCs, and the cert-manager-issued TLS secret.
+          # Idempotent: --ignore-not-found.
+          kubectl -n apps delete deployment motioneye --ignore-not-found
+          kubectl -n apps delete service motioneye --ignore-not-found
+          kubectl -n apps delete ingress motioneye --ignore-not-found
+          kubectl -n apps delete pvc motioneye-config-pvc motioneye-data-pvc --ignore-not-found
+          kubectl -n apps delete secret motioneye-tls-secret --ignore-not-found
+
           # First apply may fail for Velero/cert-manager CRs if CRDs haven't propagated yet
           kubectl apply -f /tmp/manifest.yaml || true
           # Wait for any CRDs to be established

@@ -20,7 +20,7 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | Snibox         | Snippets organizer                                         | https://github.com/MohamedElashri/Snibox |
 | Memoet         | Spaced-repetition system                                   | https://github.com/memoetapp/memoet      |
 | ntfy           | Push notifications                                         | https://ntfy.sh/                         |
-| MotionEye      | Camera / motion detection frontend                         | https://github.com/motioneye-project/motioneye |
+| Frigate        | NVR with realtime object detection for IP cameras          | https://frigate.video/                   |
 | Synt           | LLM chat archiving                                         | https://github.com/rounakdatta/synt      |
 | texas-fold-em  | fold.money refresh-token broker (in-cluster API)           | https://github.com/rounakdatta/texas-fold-em |
 | Hugo sites     | Personal static sites (rounak2018 / rounak2020 / rounak2025) | https://gohugo.io/                       |
