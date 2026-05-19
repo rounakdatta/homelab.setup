@@ -213,6 +213,17 @@
           db-username: nextcloud/db_username
           db-password: nextcloud/db_password
 
+      # Frigate RTSP credentials. Keys are the env var names Frigate looks
+      # up at runtime when substituting `{FRIGATE_RTSP_USERNAME}` /
+      # `{FRIGATE_RTSP_PASSWORD}` placeholders in cameras[].ffmpeg.inputs[].path.
+      # These must match the username/password configured on the camera
+      # hardware's own admin UI — Frigate is the consumer, not the source.
+      - name: frigate-rtsp-credentials
+        namespace: apps
+        data:
+          FRIGATE_RTSP_USERNAME: frigate/rtsp_username
+          FRIGATE_RTSP_PASSWORD: frigate/rtsp_password
+
       # texas-fold-em credentials (consolidated)
       # broker-key: bearer auth for /token consumers
       # admin-key:  bearer auth for /init and /admin/*

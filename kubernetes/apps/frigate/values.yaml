@@ -84,12 +84,14 @@ resources:
     cpu: 2000m
     memory: 2Gi
 
-# When real cameras need authenticated RTSP, uncomment below and add the
-# matching `frigate-rtsp-credentials` Secret to ansible/playbook.yml.
-# The chart exposes each key in the Secret as an env var; reference them
-# in cameras[].ffmpeg.inputs[].path as `{FRIGATE_RTSP_USERNAME}` etc.
-# envFromSecrets:
-#   - frigate-rtsp-credentials
+# RTSP credentials, synced into the cluster from Bitwarden by
+# ansible/playbook.yml's k8s_secrets section as the `frigate-rtsp-credentials`
+# Secret. Each key in the Secret is exposed as an env var; reference them
+# in cameras[].ffmpeg.inputs[].path as `{FRIGATE_RTSP_USERNAME}` and
+# `{FRIGATE_RTSP_PASSWORD}`. These must match the credentials configured
+# on the camera hardware itself.
+envFromSecrets:
+  - frigate-rtsp-credentials
 
 # Frigate's runtime config. The chart wraps this in a ConfigMap and the
 # init container copies it into the persistent config PVC at
