@@ -131,14 +131,51 @@ config: |
     width: 1280
     height: 720
 
-  # cameras:
-  #   front_door:
-  #     ffmpeg:
-  #       inputs:
-  #         - path: rtsp://{FRIGATE_RTSP_USERNAME}:{FRIGATE_RTSP_PASSWORD}@192.168.1.100:554/stream
-  #           roles:
-  #             - detect
-  #             - record
-  #     detect:
-  #       width: 1280
-  #       height: 720
+  # go2rtc:
+  #   streams:
+  #     pi_cam:
+  #       - rtsp://192.168.29.214:8554/low
+  #   webrtc:
+  #     candidates:
+  #       - 100.78.47.127:8555
+  #       - stun:8555
+  
+  cameras:
+    pi_cam:
+      enabled: true
+      ffmpeg:
+        inputs:
+          - path: rtsp://192.168.29.214:8554/low
+            roles:
+              - detect
+          - path: rtsp://192.168.29.214:8554/high
+            roles:
+              - record
+      detect:
+        enabled: true
+        width: 640
+        height: 360
+        fps: 5
+  
+      review:
+        alerts:
+          cutoff_time: 40
+        detections:
+          cutoff_time: 30
+  
+      record:
+        enabled: true
+        continuous:
+          days: 0
+        alerts:
+          pre_capture: 5
+          post_capture: 5
+          retain:
+            days: 7
+            mode: motion
+        detections:
+          pre_capture: 5
+          post_capture: 5
+          retain:
+            days: 7
+            mode: motion
