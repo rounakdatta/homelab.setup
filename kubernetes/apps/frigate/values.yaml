@@ -78,11 +78,11 @@ service:
 
 resources:
   requests:
-    cpu: 200m
-    memory: 512Mi
-  limits:
-    cpu: 2000m
+    cpu: 1000m
     memory: 2Gi
+  limits:
+    cpu: 4000m
+    memory: 6Gi
 
 # RTSP credentials, synced into the cluster from Bitwarden by
 # ansible/playbook.yml's k8s_secrets section as the `frigate-rtsp-credentials`
