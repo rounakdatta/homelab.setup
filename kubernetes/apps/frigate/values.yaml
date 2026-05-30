@@ -104,27 +104,16 @@ config: |
   mqtt:
     enabled: false
 
-  detectors:
-    cpu1:
-      type: cpu
-      num_threads: 3
+  detectors: {}
 
   record:
     enabled: true
     retain:
       days: 3
       mode: motion
-    alerts:
-      retain:
-        days: 14
-    detections:
-      retain:
-        days: 7
 
   snapshots:
-    enabled: true
-    retain:
-      default: 14
+    enabled: false
 
   detect:
     fps: 5
@@ -139,10 +128,11 @@ config: |
   #     candidates:
   #       - 100.78.47.127:8555
   #       - stun:8555
-  
+
   cameras:
     pi_cam:
       enabled: true
+
       ffmpeg:
         inputs:
           - path: rtsp://192.168.29.214:8554/low
@@ -151,31 +141,20 @@ config: |
           - path: rtsp://192.168.29.214:8554/high
             roles:
               - record
+
       detect:
         enabled: true
         width: 640
         height: 360
         fps: 5
-  
-      review:
-        alerts:
-          cutoff_time: 40
-        detections:
-          cutoff_time: 30
-  
+
+      objects:
+        track: []
+
       record:
         enabled: true
+        retain:
+          days: 3
+          mode: motion
         continuous:
           days: 0
-        alerts:
-          pre_capture: 5
-          post_capture: 5
-          retain:
-            days: 7
-            mode: motion
-        detections:
-          pre_capture: 5
-          post_capture: 5
-          retain:
-            days: 7
-            mode: motion
