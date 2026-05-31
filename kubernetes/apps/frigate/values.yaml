@@ -2,8 +2,8 @@
 # Chart docs: https://github.com/blakeblackshear/blakeshome-charts/tree/master/charts/frigate
 #
 # Chart appVersion lags Frigate itself; we override image.tag to a current
-# Frigate release. Config-schema-wise, the keys used below (mqtt/detectors/
-# record/snapshots/detect/cameras) are stable across 0.14 → 0.17, so the
+# Frigate release. Config-schema-wise, the keys used below (mqtt/record/
+# snapshots/detect/cameras) are stable across 0.14 → 0.17, so the
 # chart at 7.8.0 renders cleanly against 0.17.x.
 
 image:
@@ -36,9 +36,9 @@ tmpfs:
   enabled: true
   sizeLimit: 1Gi
 
-# No hardware acceleration on rishra today (CPU detector below). When a
-# Coral USB stick or iGPU comes along, flip the matching block on and
-# add the device mount + resource request.
+# No hardware acceleration on rishra today. Object detection is disabled
+# below; when a Coral USB stick or iGPU comes along, flip the matching
+# block on and add the device mount + resource request.
 coral:
   enabled: false
 gpu:
@@ -104,29 +104,18 @@ config: |
   mqtt:
     enabled: false
 
-  detectors:
-    cpu1:
-      type: cpu
-      num_threads: 3
-
   record:
     enabled: true
-    retain:
+    continuous:
+      days: 0
+    motion:
       days: 3
-      mode: motion
-    alerts:
-      retain:
-        days: 14
-    detections:
-      retain:
-        days: 7
 
   snapshots:
-    enabled: true
-    retain:
-      default: 14
+    enabled: false
 
   detect:
+    enabled: false
     fps: 5
     width: 1280
     height: 720
@@ -152,30 +141,14 @@ config: |
             roles:
               - record
       detect:
-        enabled: true
+        enabled: false
         width: 640
         height: 360
         fps: 5
-  
-      review:
-        alerts:
-          cutoff_time: 40
-        detections:
-          cutoff_time: 30
   
       record:
         enabled: true
         continuous:
           days: 0
-        alerts:
-          pre_capture: 5
-          post_capture: 5
-          retain:
-            days: 7
-            mode: motion
-        detections:
-          pre_capture: 5
-          post_capture: 5
-          retain:
-            days: 7
-            mode: motion
+        motion:
+          days: 3
