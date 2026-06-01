@@ -123,7 +123,7 @@ config: |
   # go2rtc:
   #   streams:
   #     pi_cam:
-  #       - rtsp://192.168.29.214:8554/low
+  #       - rtsp://192.168.29.168:8554/low
   #   webrtc:
   #     candidates:
   #       - 100.78.47.127:8555
@@ -134,10 +134,10 @@ config: |
       enabled: true
       ffmpeg:
         inputs:
-          - path: rtsp://192.168.29.214:8554/low
+          - path: rtsp://192.168.29.168:8554/low
             roles:
               - detect
-          - path: rtsp://192.168.29.214:8554/high
+          - path: rtsp://192.168.29.168:8554/high
             roles:
               - record
       detect:
