@@ -15,5 +15,6 @@ resources:
   - nextcloud/
   - ntfy/
   - frigate/
+  - home-assistant/
   - synt/
   - texas-fold-em/
