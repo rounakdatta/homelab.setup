@@ -52,17 +52,23 @@ spec:
                 use_x_forwarded_for: true
                 trusted_proxies:
                   - 10.42.0.0/16
-                  - 192.168.29.0/24
+                  - 100.64.0.0/10
               EOF
-              elif grep -q '^      - 10\.0\.0\.0/8$' /config/configuration.yaml; then
+              elif grep -Eq '^[[:space:]]+- 10\.0\.0\.0/8$' /config/configuration.yaml; then
                 awk '
-                  $0 == "      - 10.0.0.0/8" {
-                    print "      - 10.42.0.0/16"
-                    print "      - 192.168.29.0/24"
+                  $0 ~ /^[[:space:]]+- 10\.0\.0\.0\/8$/ {
+                    indent = $0
+                    sub(/-.*/, "", indent)
+                    print indent "- 10.42.0.0/16"
+                    print indent "- 100.64.0.0/10"
                     next
                   }
                   { print }
                 ' /config/configuration.yaml > /config/configuration.yaml.tmp
+                mv /config/configuration.yaml.tmp /config/configuration.yaml
+              elif grep -Eq '^[[:space:]]+- 192\.168\.29\.0/24$' /config/configuration.yaml; then
+                sed 's#192\.168\.29\.0/24#100.64.0.0/10#' \
+                  /config/configuration.yaml > /config/configuration.yaml.tmp
                 mv /config/configuration.yaml.tmp /config/configuration.yaml
               fi
           volumeMounts:
