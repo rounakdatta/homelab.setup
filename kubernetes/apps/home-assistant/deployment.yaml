@@ -53,6 +53,12 @@ spec:
                 trusted_proxies:
                   - 10.42.0.0/16
                   - 100.64.0.0/10
+
+              notify:
+                - platform: group
+                  name: "Doorbell Devices"
+                  services:
+                    - action: mobile_app_souptiks_iphone
               EOF
               elif grep -Eq '^[[:space:]]+- 10\.0\.0\.0/8$' /config/configuration.yaml; then
                 awk '
@@ -70,6 +76,18 @@ spec:
                 sed 's#192\.168\.29\.0/24#100.64.0.0/10#' \
                   /config/configuration.yaml > /config/configuration.yaml.tmp
                 mv /config/configuration.yaml.tmp /config/configuration.yaml
+              fi
+
+              if ! grep -q '^[[:space:]]*name: "Doorbell Devices"$' \
+                /config/configuration.yaml; then
+                cat >> /config/configuration.yaml <<'EOF'
+
+              notify:
+                - platform: group
+                  name: "Doorbell Devices"
+                  services:
+                    - action: mobile_app_souptiks_iphone
+              EOF
               fi
           volumeMounts:
             - name: config
