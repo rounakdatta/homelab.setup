@@ -59,6 +59,7 @@ spec:
                   name: "Doorbell Devices"
                   services:
                     - action: mobile_app_souptiks_iphone
+                    - action: mobile_app_gautam_s_phone
               EOF
               elif grep -Eq '^[[:space:]]+- 10\.0\.0\.0/8$' /config/configuration.yaml; then
                 awk '
@@ -87,7 +88,23 @@ spec:
                   name: "Doorbell Devices"
                   services:
                     - action: mobile_app_souptiks_iphone
+                    - action: mobile_app_gautam_s_phone
               EOF
+              fi
+
+              if ! grep -q '^[[:space:]]*- action: mobile_app_gautam_s_phone$' \
+                /config/configuration.yaml; then
+                awk '
+                  {
+                    print
+                    if ($0 ~ /^[[:space:]]*- action: mobile_app_souptiks_iphone$/) {
+                      indent = $0
+                      sub(/-.*/, "", indent)
+                      print indent "- action: mobile_app_gautam_s_phone"
+                    }
+                  }
+                ' /config/configuration.yaml > /config/configuration.yaml.tmp
+                mv /config/configuration.yaml.tmp /config/configuration.yaml
               fi
           volumeMounts:
             - name: config
