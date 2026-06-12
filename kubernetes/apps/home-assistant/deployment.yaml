@@ -51,8 +51,19 @@ spec:
               http:
                 use_x_forwarded_for: true
                 trusted_proxies:
-                  - 10.0.0.0/8
+                  - 10.42.0.0/16
+                  - 192.168.29.0/24
               EOF
+              elif grep -q '^      - 10\.0\.0\.0/8$' /config/configuration.yaml; then
+                awk '
+                  $0 == "      - 10.0.0.0/8" {
+                    print "      - 10.42.0.0/16"
+                    print "      - 192.168.29.0/24"
+                    next
+                  }
+                  { print }
+                ' /config/configuration.yaml > /config/configuration.yaml.tmp
+                mv /config/configuration.yaml.tmp /config/configuration.yaml
               fi
           volumeMounts:
             - name: config
