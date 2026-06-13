@@ -1,0 +1,136 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: home-assistant-config-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: home-assistant
+  namespace: apps
+  labels:
+    app: home-assistant
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: home-assistant
+  template:
+    metadata:
+      labels:
+        app: home-assistant
+    spec:
+      # Home Assistant uses multicast discovery for devices on the local LAN.
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        homelab.setup/region: india
+        homelab.setup/city: rishra
+      initContainers:
+        - name: initialize-config
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              if [ ! -f /config/configuration.yaml ]; then
+                cat > /config/configuration.yaml <<'EOF'
+              default_config:
+
+              http:
+                use_x_forwarded_for: true
+                trusted_proxies:
+                  - 10.42.0.0/16
+                  - 100.64.0.0/10
+
+              notify:
+                - platform: group
+                  name: "Doorbell Devices"
+                  services:
+                    - action: mobile_app_souptiks_iphone
+                    - action: mobile_app_gautam_s_phone
+              EOF
+              elif grep -Eq '^[[:space:]]+- 10\.0\.0\.0/8$' /config/configuration.yaml; then
+                awk '
+                  $0 ~ /^[[:space:]]+- 10\.0\.0\.0\/8$/ {
+                    indent = $0
+                    sub(/-.*/, "", indent)
+                    print indent "- 10.42.0.0/16"
+                    print indent "- 100.64.0.0/10"
+                    next
+                  }
+                  { print }
+                ' /config/configuration.yaml > /config/configuration.yaml.tmp
+                mv /config/configuration.yaml.tmp /config/configuration.yaml
+              elif grep -Eq '^[[:space:]]+- 192\.168\.29\.0/24$' /config/configuration.yaml; then
+                sed 's#192\.168\.29\.0/24#100.64.0.0/10#' \
+                  /config/configuration.yaml > /config/configuration.yaml.tmp
+                mv /config/configuration.yaml.tmp /config/configuration.yaml
+              fi
+
+              if ! grep -q '^[[:space:]]*name: "Doorbell Devices"$' \
+                /config/configuration.yaml; then
+                cat >> /config/configuration.yaml <<'EOF'
+
+              notify:
+                - platform: group
+                  name: "Doorbell Devices"
+                  services:
+                    - action: mobile_app_souptiks_iphone
+                    - action: mobile_app_gautam_s_phone
+              EOF
+              fi
+
+              if ! grep -q '^[[:space:]]*- action: mobile_app_gautam_s_phone$' \
+                /config/configuration.yaml; then
+                awk '
+                  {
+                    print
+                    if ($0 ~ /^[[:space:]]*- action: mobile_app_souptiks_iphone$/) {
+                      indent = $0
+                      sub(/-.*/, "", indent)
+                      print indent "- action: mobile_app_gautam_s_phone"
+                    }
+                  }
+                ' /config/configuration.yaml > /config/configuration.yaml.tmp
+                mv /config/configuration.yaml.tmp /config/configuration.yaml
+              fi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+      containers:
+        - name: home-assistant
+          image: ghcr.io/home-assistant/home-assistant:stable
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: TZ
+              value: Asia/Kolkata
+          ports:
+            - name: http
+              containerPort: 8123
+              protocol: TCP
+          volumeMounts:
+            - name: config
+              mountPath: /config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+      volumes:
+        - name: config
+          persistentVolumeClaim:
+            claimName: home-assistant-config-pvc

@@ -1,0 +1,154 @@
+# Values for the upstream blakeshome-charts/frigate chart (7.8.0).
+# Chart docs: https://github.com/blakeblackshear/blakeshome-charts/tree/master/charts/frigate
+#
+# Chart appVersion lags Frigate itself; we override image.tag to a current
+# Frigate release. Config-schema-wise, the keys used below (mqtt/record/
+# snapshots/detect/cameras) are stable across 0.14 → 0.17, so the
+# chart at 7.8.0 renders cleanly against 0.17.x.
+
+image:
+  repository: ghcr.io/blakeblackshear/frigate
+  # Frigate 0.17.1 (released 2026-03-22). CPU-only AMD64 variant — for
+  # accelerator builds switch to a -tensorrt / -rocm / -h8l suffix later.
+  tag: "0.17.1"
+  pullPolicy: IfNotPresent
+
+# Schedule on the rishra worker (India), where the cameras live on the LAN.
+# The label is applied by ansible/playbook.yml's worker post_task.
+nodeSelector:
+  homelab.setup/region: india
+  homelab.setup/city: rishra
+
+env:
+  TZ: Asia/Kolkata
+
+# Recreate is required: media PVC is RWO; a rolling update would deadlock on
+# the PV mount during pod replacement.
+strategyType: Recreate
+
+# Frigate's decoder writes raw frames to /dev/shm (one decoded frame per
+# camera). 1Gi covers a handful of cams at 1080p; bump if adding more.
+shmSize: 1Gi
+
+# /tmp gets snapshot/clip churn before files are moved to /media; tmpfs
+# avoids SSD wear and keeps writes fast.
+tmpfs:
+  enabled: true
+  sizeLimit: 1Gi
+
+# No hardware acceleration on rishra today. Object detection is disabled
+# below; when a Coral USB stick or iGPU comes along, flip the matching
+# block on and add the device mount + resource request.
+coral:
+  enabled: false
+gpu:
+  nvidia:
+    enabled: false
+
+persistence:
+  config:
+    enabled: true
+    storageClass: local-path
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    # Keep the PVC across `helm uninstall` so config edits aren't lost on
+    # chart-level churn. Velero still owns the durable backup.
+    skipuninstall: true
+    # Mount config.yml writable inside the pod so the in-app config editor
+    # round-trips. Edits made in-app are blown away when the pod restarts
+    # (which is what we want — this values.yaml is the source of truth).
+    ephemeralWritableConfigYaml: true
+  media:
+    enabled: true
+    storageClass: local-path
+    accessMode: ReadWriteOnce
+    # Matches the previous motioneye media volume. local-path PVs are
+    # node-pinned, so this 50Gi lives on the rishra worker.
+    size: 50Gi
+    skipuninstall: true
+
+# We ship a standalone ingress.yaml (cert-manager + tinyauth middleware) to
+# match the convention used by every other app in this repo.
+ingress:
+  enabled: false
+
+service:
+  type: ClusterIP
+  port: 5000
+
+resources:
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+  limits:
+    cpu: 4000m
+    memory: 6Gi
+
+# RTSP credentials, synced into the cluster from Bitwarden by
+# ansible/playbook.yml's k8s_secrets section as the `frigate-rtsp-credentials`
+# Secret. Each key in the Secret is exposed as an env var; reference them
+# in cameras[].ffmpeg.inputs[].path as `{FRIGATE_RTSP_USERNAME}` and
+# `{FRIGATE_RTSP_PASSWORD}`. These must match the credentials configured
+# on the camera hardware itself.
+envFromSecrets:
+  - frigate-rtsp-credentials
+
+# Frigate's runtime config. The chart wraps this in a ConfigMap and the
+# init container copies it into the persistent config PVC at
+# /config/config.yml (writable via ephemeralWritableConfigYaml above).
+#
+# NOTE: Frigate refuses to start without at least one camera defined.
+# After the first deploy, fill in `cameras:` with real RTSP URLs and
+# re-deploy — the pod will CrashLoopBackOff until then.
+config: |
+  mqtt:
+    enabled: false
+
+  record:
+    enabled: true
+    continuous:
+      days: 0
+    motion:
+      days: 3
+
+  snapshots:
+    enabled: false
+
+  detect:
+    enabled: false
+    fps: 5
+    width: 1280
+    height: 720
+
+  # go2rtc:
+  #   streams:
+  #     pi_cam:
+  #       - rtsp://192.168.29.93:8554/low
+  #   webrtc:
+  #     candidates:
+  #       - 100.78.47.127:8555
+  #       - stun:8555
+  
+  cameras:
+    pi_cam:
+      enabled: true
+      ffmpeg:
+        inputs:
+          - path: rtsp://192.168.29.93:8554/low
+            roles:
+              - detect
+          - path: rtsp://192.168.29.93:8554/high
+            roles:
+              - record
+      detect:
+        enabled: false
+        width: 640
+        height: 360
+        fps: 5
+  
+      record:
+        enabled: true
+        continuous:
+          days: 0
+        motion:
+          days: 3

@@ -1,0 +1,35 @@
+---
+# Frigate takes over home-cam.taptappers.club from the retired motioneye.
+# The motioneye ingress is removed in the same commit; deploy-stuff.yml
+# also explicitly deletes the leftover motioneye workload + PVCs since
+# `kubectl apply` doesn't prune resources dropped from the kustomization.
+#
+# Sits behind tinyauth ForwardAuth (Google OAuth), unlike motioneye which
+# was public. Camera footage is sensitive — the public exposure on
+# motioneye was an oversight the cutover fixes.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frigate
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: home-cam.taptappers.club
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frigate
+                port:
+                  number: 5000
+  tls:
+    - hosts:
+        - home-cam.taptappers.club
+      secretName: frigate-tls-secret

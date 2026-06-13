@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apps
+
+# Upstream chart maintained by Frigate's author (blakeblackshear). The chart's
+# own appVersion is 0.14.1 (latest published is 7.8.0, March 2025), but the
+# chart templates only consume image.tag as a default — we pin a much newer
+# Frigate via values.yaml (image.tag). Requires `kustomize build --enable-helm`.
+helmCharts:
+  - name: frigate
+    repo: https://blakeblackshear.github.io/blakeshome-charts
+    version: 7.8.0
+    releaseName: frigate
+    namespace: apps
+    valuesFile: values.yaml
+
+resources:
+  - ingress.yaml
