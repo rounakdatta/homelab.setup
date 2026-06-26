@@ -46,8 +46,9 @@ tinyauth:
 
   ui:
     title: "taptappers.club"
-    # External URL — frontend renders this as a CSS background-image
-    backgroundImage: "https://i.ibb.co/bR3DF055/auth-background.jpg"
+    # External URL (ImgBB) — frontend renders this as a CSS background-image.
+    # Optimized: 1920px webp @ q82, EXIF-stripped (~0.5 MB, down from a 1.7 MB phone photo).
+    backgroundImage: "https://i.ibb.co/Vp00tQ0J/auth-background.webp"
 
   log:
     level: info
