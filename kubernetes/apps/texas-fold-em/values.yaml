@@ -88,3 +88,8 @@ extraEnv:
   # same /data PVC as the broker's state.json but in a separate file.
   - name: TEXAS_FOLDEM_STAGING_DB_PATH
     value: "/data/staging.db"
+  # Public firefly URL — used only by the review UI to deep-link pushed
+  # rows to their firefly transaction (0.8.2+). Distinct from FIREFLY_BASE
+  # (the in-cluster API URL, which a browser can't reach).
+  - name: TEXAS_FOLDEM_FIREFLY_PUBLIC_URL
+    value: "https://firefly.taptappers.club"
