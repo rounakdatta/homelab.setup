@@ -1,0 +1,23 @@
+---
+# Traefik headers Middleware to fix the Rails CSRF Origin check behind TLS termination.
+#
+# Traefik terminates TLS at the websecure entrypoint and forwards to the snibox pod
+# over plain HTTP, rewriting the request's Origin header scheme to http://. Rails 5.2
+# CSRF protection (forgery_protection_origin_check, enabled by default) compares the
+# Origin header against request.base_url (which is https, derived from Traefik's
+# X-Forwarded-Proto: https) and rejects the http/https mismatch with HTTP 422
+# ActionController::InvalidAuthenticityToken on login ("The change you wanted was
+# rejected").
+#
+# Forcing Origin back to the canonical https URL makes the origin check pass. The
+# token-based half of CSRF protection (authenticity_token) stays fully active, and
+# snibox is single-host so pinning the Origin is safe.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: snibox-origin-fix
+  namespace: apps
+spec:
+  headers:
+    customRequestHeaders:
+      Origin: "https://snibox.taptappers.club"
