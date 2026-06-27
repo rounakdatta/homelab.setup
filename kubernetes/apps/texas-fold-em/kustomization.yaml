@@ -7,7 +7,7 @@ namespace: apps
 helmCharts:
   - name: texas-fold-em
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.8.3
+    version: 0.9.0
     releaseName: texas-fold-em
     namespace: apps
     valuesFile: values.yaml
