@@ -20,6 +20,17 @@ spec:
     excludedResources:
       - events
       - events.events.k8s.io
+      # cert-manager's request/order/challenge objects are regenerable runtime
+      # children of Certificates. Backing them up means a DR restore re-seeds
+      # stale CertificateRequests that collide with cert-manager's own next
+      # revision name (<cert>-N), deadlocking renewals on "already exists" until
+      # the certs silently expire. This bit us on 2026-06: 2026-03-30 leftovers
+      # (restored during the March DR) blocked renewals for 8 apps. The *-tls
+      # Secrets and Certificates ARE still backed up, so a restore reuses the
+      # existing cert material (no re-issuance / Let's Encrypt rate-limit risk).
+      - certificaterequests.cert-manager.io
+      - orders.acme.cert-manager.io
+      - challenges.acme.cert-manager.io
     # Use file-level backup for all PVCs (via Kopia)
     defaultVolumesToFsBackup: true
     # 30-day retention
