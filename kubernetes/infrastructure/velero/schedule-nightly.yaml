@@ -33,8 +33,14 @@ spec:
       - challenges.acme.cert-manager.io
     # Use file-level backup for all PVCs (via Kopia)
     defaultVolumesToFsBackup: true
-    # 30-day retention
-    ttl: 720h
+    # 90-day retention. Widened from 30d (720h) after the 2026-07-29 outage: the
+    # cluster was down ~23h before anyone noticed, and a 30-day window leaves
+    # little room to reach back past a problem that went unspotted for a while.
+    # A TTL is kept rather than dropped so R2 storage stays bounded -- expiry is
+    # the one deliberate exception to the "never auto-delete data" invariant
+    # enforced in .github/workflows/deploy-stuff.yml, because unbounded backup
+    # growth has a real cost.
+    ttl: 2160h
     # Use the default (R2) storage location
     storageLocation: default
     # Include cluster-scoped resources (ClusterIssuers, etc.)

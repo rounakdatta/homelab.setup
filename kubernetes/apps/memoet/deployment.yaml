@@ -21,6 +21,15 @@ spec:
       labels:
         app: memoet
     spec:
+      # Co-locate with postgres (which runs on the control-plane node, pinned
+      # there by its local-path PVC). memoet is the only app here with no PVC
+      # of its own, so nothing otherwise stops the scheduler putting it on the
+      # rishra worker — that link is ~200ms RTT, and Ecto's pool gives up with
+      # `queue_timeout` mid-migration long before a connection is established.
+      # Selecting on the role label rather than a hostname keeps this correct
+      # across control-plane rebuilds/renames.
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
       containers:
       - name: memoet
         image: rounakdatta/memoet:latest
