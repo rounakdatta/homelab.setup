@@ -1,13 +1,14 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.1.8"
+  tag: "0.1.9"
 
 # Codeman rejects unknown Host headers before any handler runs — it is a
 # DNS-rebinding guard. Tailscale's .ts.net is allowed out of the box; this
 # Traefik hostname is not, and every request returns `403 host not allowed`
 # until it is listed here.
 codeman:
-  version: "1.18.0"
+  # "latest" tracks upstream on restart rather than needing a bump here.
+  version: "latest"
   allowedHosts: "festie.taptappers.club"
 
 persistence:
