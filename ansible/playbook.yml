@@ -281,6 +281,33 @@
           BASIC_AUTH_USER: keel/username
           BASIC_AUTH_PASSWORD: keel/password
 
+      # agentfest / festie — the remote computer running Claude Code.
+      # Codeman's own login, sitting behind tinyauth rather than instead of it.
+      - name: festie-auth
+        namespace: apps
+        data:
+          codeman-password: agentfest/codeman_password
+
+      # SSH identity for the machine. Needed at container start, not just for
+      # convenience: dotfiles' claude-skills module clones agent-smith during
+      # home-manager activation, so without this the environment comes up
+      # incomplete. `notes` because a private key is multi-line.
+      #
+      # This is a deploy key for the container, deliberately distinct from the
+      # laptop's own key — the two should be revocable independently.
+      # The two credentials dotfiles reads from fixed paths. `notes` because
+      # both are multi-line armored blocks.
+      #   personal.pem -> ~/.ssh/keys/personal.pem, which configs/ssh names for
+      #     github.com and gitlab.com, so it is what makes git work at all.
+      #   private.key  -> ~/.secrets/private.key, which configs/gnupg imports
+      #     during activation, which is what lets pass/gopass decrypt.
+      - name: festie-secrets
+        namespace: apps
+        type: notes
+        data:
+          personal.pem: agentfest/ssh_private_key
+          private.key: agentfest/gpg_private_key
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:

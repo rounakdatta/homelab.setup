@@ -1,0 +1,48 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: festie-ingress
+  namespace: apps
+  annotations:
+    # Automatically provision TLS certificate with Let's Encrypt
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Force HTTPS redirect
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+
+    # Security headers
+    traefik.ingress.kubernetes.io/custom-response-headers: |
+      X-Frame-Options: SAMEORIGIN
+      X-Content-Type-Options: nosniff
+
+    # Tinyauth authentication.
+    #
+    # This one matters more here than anywhere else in the cluster: Codeman
+    # launches agents with --dangerously-skip-permissions by default, so
+    # whoever reaches this UI can run anything on the machine, as me, with my
+    # credentials. Codeman's own password is the second lock, not the first.
+    #
+    # If the terminal fails to connect after deploying, suspect this line:
+    # Codeman's terminal is a WebSocket, and forward-auth in front of a WS
+    # upgrade is the usual place these setups break. Removing the middleware
+    # would confirm it — but leave it removed only long enough to diagnose.
+    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
+
+spec:
+  tls:
+  - hosts:
+    - festie.taptappers.club
+    secretName: festie-tls-secret
+
+  rules:
+  - host: festie.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: festie
+            port:
+              number: 3000

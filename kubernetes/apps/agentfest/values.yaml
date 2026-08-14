@@ -1,0 +1,50 @@
+image:
+  repository: ghcr.io/rounakdatta/agentfest
+  tag: "0.1.22"
+
+# Codeman rejects unknown Host headers before any handler runs — it is a
+# DNS-rebinding guard. Tailscale's .ts.net is allowed out of the box; this
+# Traefik hostname is not, and every request returns `403 host not allowed`
+# until it is listed here.
+codeman:
+  # "latest" tracks upstream on restart rather than needing a bump here.
+  version: "latest"
+  allowedHosts: "festie.taptappers.club"
+
+persistence:
+  enabled: true
+  # Advisory only: local-path does not enforce quotas, it just provisions a
+  # directory on the node. The real limit is the node's free disk, so treat
+  # this as documentation of intent and adjust it to whatever is actually
+  # spare. It is also node-local — this PVC pins the pod to whichever node
+  # first schedules it, permanently.
+  size: 100Gi
+
+# Both secrets come from Bitwarden via `make secrets` (ansible/playbook.yml),
+# so the chart creates neither.
+auth:
+  create: false
+  existingSecret: festie-auth
+
+# Not optional in practice: dotfiles' claude-skills module clones agent-smith
+# during home-manager activation, and that clone is not fault tolerant. The
+# entrypoint copies this key into ~/.ssh (it cannot be mounted there directly —
+# ~/.ssh must stay writable for home-manager's ssh config and known_hosts).
+ssh:
+  enabled: true
+  existingSecret: festie-secrets
+
+# Sized for real work — compiles, container builds, language servers. The
+# memory limit is deliberately far above the request: an agent left running
+# overnight should be able to burst without being OOM-killed mid-task.
+resources:
+  requests:
+    cpu: "2"
+    memory: 4Gi
+  limits:
+    memory: 24Gi
+
+# Deliberately unpinned, matching every app except frigate/ntfy: those two
+# carry homelab.setup/city=rishra because they belong to that physical
+# location. This is general compute and belongs on the main node.
+nodeSelector: {}

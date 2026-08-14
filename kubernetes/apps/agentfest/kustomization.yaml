@@ -1,0 +1,18 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apps
+
+# One release is one computer. `festie` is the first; further computers are
+# additional releases of this same chart with their own PVCs and hostnames.
+helmCharts:
+  - name: agentfest
+    repo: oci://ghcr.io/rounakdatta/charts
+    version: 0.1.22
+    releaseName: festie
+    namespace: apps
+    valuesFile: values.yaml
+
+resources:
+  - ingress.yaml
