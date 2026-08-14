@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.1.9"
+  tag: "0.1.11"
 
 # Codeman rejects unknown Host headers before any handler runs — it is a
 # DNS-rebinding guard. Tailscale's .ts.net is allowed out of the box; this
@@ -32,7 +32,7 @@ auth:
 # ~/.ssh must stay writable for home-manager's ssh config and known_hosts).
 ssh:
   enabled: true
-  existingSecret: festie-ssh
+  existingSecret: festie-secrets
 
 # Sized for real work — compiles, container builds, language servers. The
 # memory limit is deliberately far above the request: an agent left running

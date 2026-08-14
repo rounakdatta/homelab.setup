@@ -295,11 +295,18 @@
       #
       # This is a deploy key for the container, deliberately distinct from the
       # laptop's own key — the two should be revocable independently.
-      - name: festie-ssh
+      # The two credentials dotfiles reads from fixed paths. `notes` because
+      # both are multi-line armored blocks.
+      #   personal.pem -> ~/.ssh/keys/personal.pem, which configs/ssh names for
+      #     github.com and gitlab.com, so it is what makes git work at all.
+      #   private.key  -> ~/.secrets/private.key, which configs/gnupg imports
+      #     during activation, which is what lets pass/gopass decrypt.
+      - name: festie-secrets
         namespace: apps
         type: notes
         data:
-          id_ed25519: agentfest/ssh_private_key
+          personal.pem: agentfest/ssh_private_key
+          private.key: agentfest/gpg_private_key
 
   pre_tasks:
     - name: Verify required environment variables
