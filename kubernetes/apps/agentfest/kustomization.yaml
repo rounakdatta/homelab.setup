@@ -9,7 +9,7 @@ namespace: apps
 helmCharts:
   - name: agentfest
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.1.24
+    version: 0.1.25
     releaseName: festie
     namespace: apps
     valuesFile: values.yaml
