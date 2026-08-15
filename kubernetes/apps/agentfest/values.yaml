@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.1.24"
+  tag: "0.1.25"
 
 # Codeman rejects unknown Host headers before any handler runs — it is a
 # DNS-rebinding guard. Tailscale's .ts.net is allowed out of the box; this
@@ -20,9 +20,25 @@ persistence:
   # first schedules it, permanently.
   size: 100Gi
 
-# Both secrets come from Bitwarden via `make secrets` (ansible/playbook.yml),
-# so the chart creates neither.
+# Codeman's own Basic auth is OFF here, so tinyauth (Google OAuth + the email
+# whitelist) is the only thing between the internet and a shell on this box.
+# That is a deliberate reduction, not an oversight — the chart's values.yaml
+# carries the full reasoning. The short version: Codeman only implements HTTP
+# Basic, and its hardcoded brute-force limiter is hostile behind an ingress,
+# because it builds Fastify without trustProxy so every device shares one bucket
+# of ten failures. The 429 it returns carries no WWW-Authenticate header, so the
+# browser stops offering the password dialog and the correct password can no
+# longer be presented at all.
+#
+# Worth re-reading before the next hostname change: festie.taptappers.club
+# resolves to a PUBLIC IP (cert-manager's HTTP-01 solver needs port 80
+# reachable), so "it's on the tailnet" is not a layer here.
+#
+# existingSecret is left pointing at festie-auth on purpose. The secret still
+# syncs from Bitwarden and is simply unused, which makes flipping this back a
+# one-line change rather than a secrets round-trip.
 auth:
+  enabled: false
   create: false
   existingSecret: festie-auth
 
