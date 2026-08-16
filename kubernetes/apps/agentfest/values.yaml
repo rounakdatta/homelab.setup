@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.1.27"
+  tag: "0.1.28"
 
 # Codeman rejects unknown Host headers before any handler runs — it is a
 # DNS-rebinding guard. Tailscale's .ts.net is allowed out of the box; this
