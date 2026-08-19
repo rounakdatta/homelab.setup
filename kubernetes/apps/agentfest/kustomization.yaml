@@ -16,3 +16,4 @@ helmCharts:
 
 resources:
   - ingress.yaml
+  - networkpolicy.yaml

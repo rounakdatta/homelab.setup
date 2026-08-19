@@ -6,9 +6,14 @@ image:
 # DNS-rebinding guard. Tailscale's .ts.net is allowed out of the box; this
 # Traefik hostname is not, and every request returns `403 host not allowed`
 # until it is listed here.
+# Pin the self-updating components to exact versions rather than tracking
+# "latest", so upgrades are deliberate and reproducible. Bump after reviewing
+# the release notes, then restart the pod.
+claudeCode:
+  version: "2.1.233"
+
 codeman:
-  # "latest" tracks upstream on restart rather than needing a bump here.
-  version: "latest"
+  version: "1.19.3"
   allowedHosts: "festie.taptappers.club"
 
 persistence:
