@@ -55,8 +55,9 @@ auth:
 # Keys (see the k8s_secrets list in ansible/playbook.yml):
 #   - google-client-id      — SAME Google OAuth web client tinyauth uses
 #   - google-client-secret  — likewise, from tinyauth/google_client_secret
-#   - allowed-emails        — comma-separated; its own Bitwarden item, not
-#                             tinyauth's whitelist (see the playbook comment)
+#   - allowed-emails        — reuses tinyauth/oauth_whitelist, so there is one
+#                             list of people to maintain (see the playbook note
+#                             on the plain-addresses-vs-regex caveat)
 #   - session-secret        — HMAC key signing sessions; rotating it signs
 #                             every device out, which is the revocation lever
 secret:

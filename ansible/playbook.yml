@@ -253,11 +253,16 @@
       # URL must be added to that client's authorised redirect URIs in Google
       # Cloud, alongside tinyauth's.
       #
-      # allowed-emails is its OWN Bitwarden item rather than a reuse of
-      # tinyauth/oauth_whitelist, for two reasons: tinyauth's whitelist may hold
-      # regex/glob entries whereas nifty50 compares plain addresses, and the two
-      # lists should be free to diverge — whoever may reach the homelab's apps is
-      # not necessarily whoever may read a personal life canvas.
+      # allowed-emails reuses tinyauth/oauth_whitelist so there is one list of
+      # people to maintain rather than two that drift apart.
+      #
+      # Caveat worth remembering if a sign-in is ever rejected unexpectedly:
+      # nifty50 compares plain, comma-separated addresses case-insensitively. If
+      # the tinyauth whitelist is ever changed to a regex or glob form, nifty50
+      # will not match it and will deny the sign-in. The symptom is explicit —
+      # the pod logs `sign-in denied, email not on allowlist` with the address —
+      # and the fix is to point this key at a dedicated nifty50/allowed_emails
+      # item instead.
       #
       # session-secret signs nifty50's own session tokens (>= 32 bytes).
       # Rotating it signs every device out, which is the revocation mechanism.
@@ -266,7 +271,7 @@
         data:
           google-client-id: tinyauth/google_client_id
           google-client-secret: tinyauth/google_client_secret
-          allowed-emails: nifty50/allowed_emails
+          allowed-emails: tinyauth/oauth_whitelist
           session-secret: nifty50/session_secret
 
       # tinyauth credentials (replaces authelia)
