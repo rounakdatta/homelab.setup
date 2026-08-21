@@ -7,7 +7,7 @@ namespace: apps
 helmCharts:
   - name: nifty50
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.2.0
+    version: 0.3.0
     releaseName: nifty50
     namespace: apps
     valuesFile: values.yaml
