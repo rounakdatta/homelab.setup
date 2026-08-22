@@ -1,0 +1,67 @@
+name: Codeman auto-bump
+
+# Opens (or refreshes) a PR whenever a newer `aicodeman` (Codeman) release is
+# published, so the pinned version tracks upstream through a REVIEWABLE PR
+# instead of an unreviewed "latest". Codeman is not baked into the image -- it
+# installs into the PVC at boot from the version in values.yaml -- so merging
+# the PR needs no image rebuild: deploy-stuff applies the new pin and the pod
+# picks up the new Codeman on its next restart.
+#
+# Deliberately does not auto-merge: Codeman fronts the machine, so a human
+# glance at the release is the whole point of the gate.
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # daily, 06:00 UTC
+  workflow_dispatch: {}   # run on demand
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve current vs latest
+        id: v
+        run: |
+          FILE=kubernetes/apps/agentfest/values.yaml
+          CURRENT=$(sed -n '/^codeman:/,/^[^[:space:]#]/ s/^[[:space:]]*version:[[:space:]]*"\([^"]*\)".*/\1/p' "$FILE" | head -1)
+          LATEST=$(npm view aicodeman version)
+          echo "current=$CURRENT  latest=$LATEST"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          if [ -n "$CURRENT" ] && [ "$CURRENT" != "$LATEST" ] \
+             && [ "$(printf '%s\n%s\n' "$CURRENT" "$LATEST" | sort -V | tail -1)" = "$LATEST" ]; then
+            echo "newer=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "newer=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open / refresh the bump PR
+        if: steps.v.outputs.newer == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CURRENT: ${{ steps.v.outputs.current }}
+          LATEST: ${{ steps.v.outputs.latest }}
+        run: |
+          FILE=kubernetes/apps/agentfest/values.yaml
+          sed -i -E "/^codeman:/,/^[^[:space:]#]/ s/^([[:space:]]*version:[[:space:]]*\")[^\"]+(\")/\1${LATEST}\2/" "$FILE"
+          grep -A2 '^codeman:' "$FILE"
+
+          BR=autobump/codeman
+          git config user.name "codeman-autobump"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C "$BR"
+          git commit -am "codeman: bump ${CURRENT} -> ${LATEST}"
+          git push -f origin "$BR"
+
+          BODY="Automated bump of the pinned \`aicodeman\` (Codeman) version: **${CURRENT} -> ${LATEST}**. Changelog: https://www.npmjs.com/package/aicodeman?activeTab=versions — Merging triggers deploy-stuff; the entrypoint installs the new Codeman into the PVC on the next pod restart (no image rebuild)."
+          if gh pr view "$BR" --json state -q .state 2>/dev/null | grep -q OPEN; then
+            gh pr edit "$BR" --title "codeman: ${CURRENT} -> ${LATEST}" --body "$BODY"
+          else
+            gh pr create --base main --head "$BR" --title "codeman: ${CURRENT} -> ${LATEST}" --body "$BODY" --label automated
+          fi
