@@ -1,0 +1,74 @@
+# Values for the rounakdatta/nifty50 chart 0.3.1.
+# Chart source: oci://ghcr.io/rounakdatta/charts/nifty50
+#
+# nifty50 is a mobile-first canvas holding the ~50 things currently going on in
+# life — a mental dump where each item is a pebble carrying brief context and
+# links out to the detail. Related items cluster by carrying one pebble to
+# another until the group accepts it. One Go binary serves both the canvas UI
+# (server-rendered html/template plus embedded vanilla JS, no bundler) and the
+# JSON API, so there is a single image and a single chart for the whole app.
+#
+# ---------------------------------------------------------------------------
+# THIS IS THE FIRST APP HERE THAT IS NOT BEHIND TINYAUTH.
+#
+# Tinyauth's ForwardAuth works by redirecting a *browser* to Google and setting
+# a cookie. nifty50 also has a native Android client, which cannot participate
+# in that flow — there is no browser to redirect and no cookie jar to share.
+# So nifty50 runs Google OIDC itself: the web canvas does the
+# authorization-code flow with PKCE, the Android client trades a Credential
+# Manager ID token for the same session as a bearer token, and both converge on
+# one verify-then-allowlist path in the app.
+#
+# Consequence: the ingress deliberately omits the tinyauth middleware. Putting
+# it back would lock the Android client out entirely. See ingress.yaml.
+# ---------------------------------------------------------------------------
+
+service:
+  type: ClusterIP
+  port: 8080
+
+# SQLite canvas DB (items + links). Single writer, so the chart pins one replica
+# with a Recreate strategy — RWO plus RollingUpdate would deadlock on rollout.
+persistence:
+  enabled: true
+  storageClass: local-path
+  size: 1Gi
+  accessMode: ReadWriteOnce
+
+# Externally reachable base URL. The app builds its OAuth redirect URI from
+# this, so it must exactly match an authorised redirect URI on the Google OAuth
+# client:  https://nifty50.taptappers.club/auth/callback
+publicUrl: https://nifty50.taptappers.club
+
+auth:
+  mode: google
+  # Read the client ID and the email allowlist from the Secret rather than from
+  # this file. Neither is a password, but this repo is public — and tinyauth
+  # takes the same approach for exactly this reason (see
+  # kubernetes/tinyauth/values.yaml, where the client ID is injected via env
+  # from tinyauth-credentials instead of committed to chart values).
+  fromSecret: true
+  # 30 days. A phone that has to re-run the Google account chooser weekly stops
+  # getting opened.
+  sessionTtl: 720h
+
+# Use the nifty50-credentials Secret synced from Bitwarden by ansible.
+# Keys (see the k8s_secrets list in ansible/playbook.yml):
+#   - google-client-id      — SAME Google OAuth web client tinyauth uses
+#   - google-client-secret  — likewise, from tinyauth/google_client_secret
+#   - allowed-emails        — reuses tinyauth/oauth_whitelist, so there is one
+#                             list of people to maintain (see the playbook note
+#                             on the plain-addresses-vs-regex caveat)
+#   - session-secret        — HMAC key signing sessions; rotating it signs
+#                             every device out, which is the revocation lever
+secret:
+  create: false
+  existingSecret: nifty50-credentials
+
+# We keep our standalone ingress.yaml (cert-manager annotations, and pointedly
+# no forward-auth middleware).
+ingress:
+  enabled: false
+
+# Chart defaults (10m CPU / 32Mi requested, 128Mi limit) are already sized for a
+# single-user Go binary serving a few dozen rows, so nothing is overridden here.

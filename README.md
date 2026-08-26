@@ -23,6 +23,7 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | Frigate        | NVR with realtime object detection for IP cameras          | https://frigate.video/                   |
 | Synt           | LLM chat archiving                                         | https://github.com/rounakdatta/synt      |
 | texas-fold-em  | fold.money refresh-token broker (in-cluster API)           | https://github.com/rounakdatta/texas-fold-em |
+| nifty50        | The top 50 things going on in my life, on one canvas       | https://github.com/rounakdatta/nifty50   |
 | Hugo sites     | Personal static sites (rounak2018 / rounak2020 / rounak2025) | https://gohugo.io/                       |
 
 ### Supporting infrastructure
@@ -36,7 +37,7 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 
 ## Architecture
 
-K3s is a lightweight Kubernetes distribution that's perfect for single-node homelabs. Traefik (bundled with K3s) handles all ingress routing with automatic TLS via cert-manager and Let's Encrypt. Tinyauth sits in front of apps as a forward-auth middleware backed by Google OAuth, so any subset of apps can be put behind a single sign-on with one annotation.
+K3s is a lightweight Kubernetes distribution that's perfect for single-node homelabs. Traefik (bundled with K3s) handles all ingress routing with automatic TLS via cert-manager and Let's Encrypt. Tinyauth sits in front of apps as a forward-auth middleware backed by Google OAuth, so any subset of apps can be put behind a single sign-on with one annotation. The one exception is nifty50, which has a native Android client: forward-auth can only authenticate a browser, so that app performs Google OIDC itself and reuses tinyauth's OAuth client rather than sitting behind it.
 
 Most third-party apps are inflated from upstream Helm charts via Kustomize's `helmCharts` block (with values overridden in-tree), so version bumps stay a one-line change. Manifests are organized using Kustomize and secrets are managed through Bitwarden — synced into Kubernetes Secrets by an Ansible play. The setup is fully declarative — adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
 

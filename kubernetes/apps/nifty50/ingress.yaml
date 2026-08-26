@@ -1,0 +1,63 @@
+---
+# Ingress for nifty50 — the personal life-context canvas.
+#
+# NOTE THE ABSENCE OF THE TINYAUTH MIDDLEWARE. Every other app here opts into
+# `tinyauth-tinyauth@kubernetescrd`, and this one deliberately does not:
+#
+#   - Tinyauth authenticates by redirecting a browser to Google and setting a
+#     cookie. nifty50's Android client has no browser and no shared cookie jar,
+#     so forward-auth would make the mobile app permanently unusable.
+#   - nifty50 therefore performs Google OIDC itself. The web canvas runs the
+#     authorization-code flow with PKCE at /auth/login → /auth/callback; the
+#     Android client posts a Credential Manager ID token to /auth/session and
+#     gets a bearer session back. Both are verified against the same Google
+#     client ID and the same email allowlist inside the app.
+#   - Requests without a valid session are refused by the app itself: a browser
+#     is redirected to /auth/login, an API caller gets a 401. The app is
+#     deny-by-default — only /livez, /auth/* and /static/* are reachable
+#     unauthenticated.
+#
+# So this host is NOT unauthenticated; authentication has moved from the edge
+# into the app. Re-adding the tinyauth middleware here would break Android
+# without making the web side any safer.
+#
+# The security-headers middleware IS still applied — dropping forward-auth is
+# not a reason to drop HSTS and friends.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nifty50-ingress
+  namespace: apps
+  annotations:
+    # Automatically provision TLS certificate with Let's Encrypt
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # HTTPS only. (Note: some older ingresses here carry
+    # `redirect-entry-point: https`, which is Traefik v1 annotation syntax and a
+    # no-op on v2/v3 — restricting the router to the websecure entrypoint, as
+    # texas-fold-em does, is the form that actually takes effect.)
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+
+    # Security headers only — no forward-auth (see the note above).
+    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-security-headers@kubernetescrd
+
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - nifty50.taptappers.club
+      secretName: nifty50-tls-secret
+
+  rules:
+    - host: nifty50.taptappers.club
+      http:
+        paths:
+          # Whole app: the canvas, its assets, the JSON API both clients use,
+          # and the /auth/* sign-in routes.
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nifty50
+                port:
+                  number: 8080

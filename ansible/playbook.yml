@@ -242,6 +242,38 @@
           firefly-pat: firefly/personal_access_token
           llm-api-key: deepseek/api_key
 
+      # nifty50 credentials.
+      #
+      # google-client-id / google-client-secret point at the SAME Google OAuth
+      # web client tinyauth uses. nifty50 can't sit behind tinyauth's
+      # forward-auth (it has a native Android client, which has no browser to
+      # redirect and no cookie to share), so it runs Google OIDC itself — but
+      # there is no reason to register a second OAuth client for the same person
+      # on the same domain. One consequence to remember: the nifty50 callback
+      # URL must be added to that client's authorised redirect URIs in Google
+      # Cloud, alongside tinyauth's.
+      #
+      # allowed-emails reuses tinyauth/oauth_whitelist so there is one list of
+      # people to maintain rather than two that drift apart.
+      #
+      # Caveat worth remembering if a sign-in is ever rejected unexpectedly:
+      # nifty50 compares plain, comma-separated addresses case-insensitively. If
+      # the tinyauth whitelist is ever changed to a regex or glob form, nifty50
+      # will not match it and will deny the sign-in. The symptom is explicit —
+      # the pod logs `sign-in denied, email not on allowlist` with the address —
+      # and the fix is to point this key at a dedicated nifty50/allowed_emails
+      # item instead.
+      #
+      # session-secret signs nifty50's own session tokens (>= 32 bytes).
+      # Rotating it signs every device out, which is the revocation mechanism.
+      - name: nifty50-credentials
+        namespace: apps
+        data:
+          google-client-id: tinyauth/google_client_id
+          google-client-secret: tinyauth/google_client_secret
+          allowed-emails: tinyauth/oauth_whitelist
+          session-secret: nifty50/session_secret
+
       # tinyauth credentials (replaces authelia)
       # Keys match the env var names tinyauth reads via valueFrom in
       # kubernetes/tinyauth/values.yaml — see env: section there.
