@@ -58,6 +58,79 @@ jobs:
         with:
           kustomize-version: "5.4.3"
 
+      # Data-safety invariant: every PV must be reclaimPolicy Retain, so that
+      # deleting a stale PVC/PV object never erases the backing directory under
+      # /var/lib/rancher/k3s/storage.
+      #
+      # k3s ships local-path-provisioner with a `local-path` StorageClass whose
+      # reclaimPolicy is Delete, and PVs inherit it at creation. Recovering from
+      # a control-plane rename requires deleting PV objects (nodeAffinity is
+      # immutable), which with Delete would erase the data instead of relocating
+      # it -- ~52GB, during the 2026-07-29 outage.
+      #
+      # Runs before the apply so the class is already Retain by the time this
+      # deploy provisions any new PVC, and repairs drift on existing PVs: the
+      # class is owned by k3s's Addon controller, which re-applies its bundled
+      # local-storage.yaml (Delete) on every k3s restart. Residual window: a PVC
+      # first bound between a k3s restart and this step can be born Delete; the
+      # next deploy repairs it. New PVCs only appear when an app is added, which
+      # goes through this workflow anyway. Idempotent, and fails closed.
+      - name: Enforce reclaimPolicy Retain on all volumes
+        run: |
+          set -euo pipefail
+
+          # StorageClass, so newly provisioned PVs are born Retain. reclaimPolicy
+          # is immutable ("updates to reclaimPolicy are forbidden"), so the class
+          # has to be recreated rather than patched -- which is also why it is
+          # deliberately not a kustomize resource. Deleting a StorageClass
+          # touches no PVs and no data. Values are read from the live object so a
+          # k3s upgrade changing the provisioner/binding mode is carried over.
+          sc_policy=$(kubectl get sc local-path -o jsonpath='{.reclaimPolicy}' 2>/dev/null || true)
+          if [ -z "$sc_policy" ]; then
+            echo "ERROR: StorageClass 'local-path' not found -- k3s ships it, so" >&2
+            echo "       something is wrong with the cluster. Not proceeding." >&2
+            exit 1
+          fi
+          if [ "$sc_policy" != "Retain" ]; then
+            kubectl get sc local-path -o json \
+              | jq '.reclaimPolicy = "Retain"
+                    | del(.metadata.uid, .metadata.resourceVersion,
+                          .metadata.creationTimestamp, .metadata.managedFields,
+                          .metadata.generation,
+                          .metadata.annotations["objectset.rio.cattle.io/applied"])' \
+              > /tmp/local-path-retain.json
+            kubectl delete sc local-path
+            kubectl create -f /tmp/local-path-retain.json
+            echo "StorageClass local-path recreated with Retain."
+          fi
+
+          # Existing PVs. This is the load-bearing guarantee: a PV marked Retain
+          # keeps its data no matter what happens to the PVC or the class.
+          kubectl get pv \
+            -o custom-columns='N:.metadata.name,P:.spec.persistentVolumeReclaimPolicy' \
+            --no-headers | awk '$2!="Retain"{print $1}' | while read -r pv; do
+              kubectl patch pv "$pv" \
+                -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}' >/dev/null
+              echo "patched -> Retain: $pv"
+            done
+
+          kubectl get pv -o custom-columns='P:.spec.persistentVolumeReclaimPolicy' \
+            --no-headers | sort | uniq -c
+
+          # Fail closed -- this is a safety invariant, not best-effort cleanup.
+          # Counted with awk rather than `grep -qv Retain`: exit statuses for -q
+          # combined with -v are not consistent across grep implementations
+          # (ugrep 7.5 returns 1 even when non-matching lines are selected), and
+          # a guard that silently passes depending on the installed grep is
+          # worse than no guard at all.
+          remaining=$(kubectl get pv \
+            -o custom-columns='P:.spec.persistentVolumeReclaimPolicy' \
+            --no-headers | awk '$1!="Retain"{c++} END{print c+0}')
+          if [ "$remaining" != "0" ]; then
+            echo "ERROR: $remaining PV(s) are not Retain." >&2
+            exit 1
+          fi
+
       - name: Deploy manifests
         run: |
           # Render once (helm fetches the chart over network)
