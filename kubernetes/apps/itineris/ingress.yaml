@@ -15,9 +15,11 @@
 # Mirrors the other public ingresses (audiobookshelf, ntfy): cert-manager TLS
 # on the websecure entrypoint, nothing else.
 #
-# DNS is NOT wildcard on taptappers.club: itineris.taptappers.club needs an A
-# record (Cloudflare, DNS-only like the other hosts) before cert-manager's
-# HTTP-01 challenge can succeed. Until then the pod is healthy and unreachable.
+# DNS is NOT wildcard on taptappers.club. Records live in the rounakdatta/oh-my-dns
+# repo (records.txt, synced to Cloudflare on push): this host is
+# `A itineris 88.214.24.194`, DNS-only like every other homelab host. Without
+# the record cert-manager's HTTP-01 challenge fails and the pod is healthy but
+# unreachable.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
