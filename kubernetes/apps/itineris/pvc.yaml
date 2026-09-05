@@ -1,0 +1,26 @@
+---
+# The journal's volume, declared here rather than by the chart so its name can
+# change when it has to move.
+#
+# local-path is node-local: a claim binds to whichever node its first consumer
+# lands on and stays there for good. The chart's own claim (itineris-data)
+# bound to the rishra worker `jomjom` on 2026-09-05 because nothing pinned the
+# pods, and that node -- a home box on the far end of a Tailscale link -- went
+# unreachable mid-rollout and took the public site down with it. This claim
+# binds on the control-plane node (values.yaml pins both pods there).
+#
+# itineris-data is deliberately left alone (the chart gave it
+# helm.sh/resource-policy: keep): anything on it can be copied here once jomjom
+# is reachable again.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: itineris-data-cp
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 50Gi
