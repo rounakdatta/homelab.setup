@@ -3,8 +3,8 @@
 #
 # itineris is a static travel journal -- map, timeline, photo wall and
 # Instagram-style stories -- served by nginx from an image that IS the site.
-# No state, no database, no secrets: a redeploy is a new image tag, and there
-# is nothing here for Velero to back up.
+# No database, no secrets. State is one PVC -- originals, derivatives and the
+# journal -- which Velero backs up nightly like every other PVC.
 
 image:
   repository: ghcr.io/rounakdatta/itineris
@@ -12,7 +12,24 @@ image:
   # on purpose: it puts the deployed image next to the chart version in
   # kustomization.yaml, so a bump PR touches both lines together -- the same
   # convention agentfest follows.
-  tag: "0.1.0"
+  tag: "0.2.0"
+
+# Photos, derivatives and the journal. local-path is advisory only (no quota
+# enforcement): the real limit is the node's free disk, so treat the size as
+# documentation of intent. Node-local, so this pins both itineris pods to
+# whichever node first schedules them.
+persistence:
+  enabled: true
+  size: 50Gi
+
+# Uploads + tagging at /admin, behind tinyauth via ingress-admin.yaml. The
+# empty allowlist means tinyauth's whitelist is the gate, same as every other
+# app in this cluster.
+admin:
+  enabled: true
+  image:
+    tag: "0.2.0"
+  allowedEmails: ""
 
 # Deliberately unpinned, matching every app except frigate/ntfy: those two
 # carry homelab.setup/city=rishra because they belong to that physical

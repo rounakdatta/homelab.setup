@@ -1,0 +1,43 @@
+---
+# The admin -- uploads and tagging -- behind tinyauth, on the SAME host as the
+# public viewer.
+#
+# Traefik attaches middlewares per router, and each Ingress object is its own
+# router. So this second object (path /admin, tinyauth middleware, admin
+# Service) coexists with ingress.yaml's open / router: the longer path rule
+# wins priority, /admin never reaches nginx, and / never needs a login.
+# texas-fold-em uses the same path-scoped pattern on fold.taptappers.club.
+#
+# The admin is a separate pod, not a path inside the public nginx, so this gated
+# router is the ONLY way to reach upload code -- no path trick against the
+# public pod can get there. The admin process additionally refuses any request
+# lacking the Remote-Email header tinyauth injects.
+#
+# No cert-manager annotation on purpose: ingress.yaml owns the certificate for
+# this host; this object only reuses its secret so the router is TLS. Two
+# issuers for one secret would fight.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: itineris-admin
+  namespace: apps
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: itineris.taptappers.club
+    http:
+      paths:
+      - path: /admin
+        pathType: Prefix
+        backend:
+          service:
+            name: itineris-admin
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - itineris.taptappers.club
+    secretName: itineris-tls-secret

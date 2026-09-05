@@ -8,9 +8,9 @@
 # is expected to be privacy-scrubbed at BUILD time (route starts/ends clipped,
 # home fuzzed, EXIF stripped) rather than hidden at the edge.
 #
-# The upload / admin surface is a separate concern and will get its own
-# ingress behind tinyauth when it exists. Do not "fix" this one by adding the
-# middleware -- that would lock out every person the link was shared with.
+# The upload / admin surface has its own ingress behind tinyauth: see
+# ingress-admin.yaml. Do not "fix" this one by adding the middleware -- that
+# would lock out every person the link was shared with.
 #
 # Mirrors the other public ingresses (audiobookshelf, ntfy): cert-manager TLS
 # on the websecure entrypoint, nothing else.
