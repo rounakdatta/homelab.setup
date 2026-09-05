@@ -87,6 +87,15 @@ jobs:
           kubectl -n default delete deploy velero-ui --ignore-not-found
           kubectl -n default delete svc velero-ui --ignore-not-found
 
+          # One-time (2026-09-05): itineris's pods lived on the rishra worker
+          # `jomjom`, which went unreachable mid-rollout. Their API objects are
+          # stuck Terminating because no kubelet can confirm the termination,
+          # and the admin's Recreate strategy waits for them forever. Remove the
+          # objects; if jomjom comes back, its kubelet finds them gone and stops
+          # the containers. Idempotent: --ignore-not-found.
+          kubectl -n apps delete pod itineris-5996f6554f-xjvd2 itineris-admin-58dd796495-gr6vm \
+            --force --grace-period=0 --ignore-not-found
+
           # First apply may fail for Velero/cert-manager CRs if CRDs haven't propagated yet
           kubectl apply -f /tmp/manifest.yaml || true
           # Wait for any CRDs to be established

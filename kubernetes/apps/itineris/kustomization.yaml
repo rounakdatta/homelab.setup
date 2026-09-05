@@ -18,3 +18,4 @@ helmCharts:
 resources:
   - ingress.yaml
   - ingress-admin.yaml
+  - pvc.yaml

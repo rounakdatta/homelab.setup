@@ -20,7 +20,9 @@ image:
 # whichever node first schedules them.
 persistence:
   enabled: true
-  size: 50Gi
+  # Declared in pvc.yaml (see the story there); the chart's own claim,
+  # itineris-data, is stranded on the rishra worker and kept for recovery.
+  existingClaim: itineris-data-cp
 
 # Uploads + tagging at /admin, behind tinyauth via ingress-admin.yaml. The
 # empty allowlist means tinyauth's whitelist is the gate, same as every other
@@ -31,7 +33,12 @@ admin:
     tag: "0.3.0"
   allowedEmails: ""
 
-# Deliberately unpinned, matching every app except frigate/ntfy: those two
-# carry homelab.setup/city=rishra because they belong to that physical
-# location. This is general serving and belongs on the main node.
-nodeSelector: {}
+# Pinned to the control-plane node, unlike most apps here. Unpinned, the
+# scheduler put itineris on the rishra worker `jomjom` at its very first deploy,
+# the local-path volume then bound there, and every rollout was forced back to
+# a node that is unreachable whenever that house's link is -- which is how the
+# public site went 503 on 2026-09-05. A site meant to be shared belongs on the
+# node that is always there. (frigate/ntfy/home-assistant carry city=rishra on
+# purpose; that is the other side of the same coin.)
+nodeSelector:
+  node-role.kubernetes.io/control-plane: "true"
