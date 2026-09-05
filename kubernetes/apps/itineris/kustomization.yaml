@@ -1,0 +1,19 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apps
+
+# Bumping is two lines that move together: `version` here and `image.tag` in
+# values.yaml (the chart would default the image from its appVersion anyway;
+# the explicit pin keeps the deployed image visible in this repo).
+helmCharts:
+  - name: itineris
+    repo: oci://ghcr.io/rounakdatta/charts
+    version: 0.1.0
+    releaseName: itineris
+    namespace: apps
+    valuesFile: values.yaml
+
+resources:
+  - ingress.yaml

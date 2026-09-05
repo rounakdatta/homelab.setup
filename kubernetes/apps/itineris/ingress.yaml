@@ -1,0 +1,45 @@
+---
+# PUBLIC on purpose -- there is no tinyauth middleware here, and that is the
+# design, not an omission.
+#
+# itineris is the shareable travel journal: the whole point is that a link can
+# go to anyone, so nothing sits in front of the viewer. The trade is that
+# everything the image serves is world-readable, which is why the public build
+# is expected to be privacy-scrubbed at BUILD time (route starts/ends clipped,
+# home fuzzed, EXIF stripped) rather than hidden at the edge.
+#
+# The upload / admin surface is a separate concern and will get its own
+# ingress behind tinyauth when it exists. Do not "fix" this one by adding the
+# middleware -- that would lock out every person the link was shared with.
+#
+# Mirrors the other public ingresses (audiobookshelf, ntfy): cert-manager TLS
+# on the websecure entrypoint, nothing else.
+#
+# DNS is NOT wildcard on taptappers.club: itineris.taptappers.club needs an A
+# record (Cloudflare, DNS-only like the other hosts) before cert-manager's
+# HTTP-01 challenge can succeed. Until then the pod is healthy and unreachable.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: itineris
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: itineris.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: itineris
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - itineris.taptappers.club
+    secretName: itineris-tls-secret
