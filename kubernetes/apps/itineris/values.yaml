@@ -1,0 +1,20 @@
+# Values for the rounakdatta/itineris chart.
+# Chart source: oci://ghcr.io/rounakdatta/charts/itineris
+#
+# itineris is a static travel journal -- map, timeline, photo wall and
+# Instagram-style stories -- served by nginx from an image that IS the site.
+# No state, no database, no secrets: a redeploy is a new image tag, and there
+# is nothing here for Velero to back up.
+
+image:
+  repository: ghcr.io/rounakdatta/itineris
+  # The chart already defaults this to its appVersion, so the pin is redundant
+  # on purpose: it puts the deployed image next to the chart version in
+  # kustomization.yaml, so a bump PR touches both lines together -- the same
+  # convention agentfest follows.
+  tag: "0.1.0"
+
+# Deliberately unpinned, matching every app except frigate/ntfy: those two
+# carry homelab.setup/city=rishra because they belong to that physical
+# location. This is general serving and belongs on the main node.
+nodeSelector: {}
