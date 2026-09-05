@@ -12,7 +12,7 @@ image:
   # on purpose: it puts the deployed image next to the chart version in
   # kustomization.yaml, so a bump PR touches both lines together -- the same
   # convention agentfest follows.
-  tag: "0.4.0"
+  tag: "0.4.1"
 
 # Photos, derivatives and the journal. local-path is advisory only (no quota
 # enforcement): the real limit is the node's free disk, so treat the size as
@@ -30,7 +30,7 @@ persistence:
 admin:
   enabled: true
   image:
-    tag: "0.4.0"
+    tag: "0.4.1"
   allowedEmails: ""
 
 # Pinned to the control-plane node, unlike most apps here. Unpinned, the
