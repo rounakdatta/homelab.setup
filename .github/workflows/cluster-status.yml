@@ -47,6 +47,17 @@ jobs:
             dmesg -T 2>/dev/null | grep -iE 'oom|out of memory|killed process' | tail -12
             echo "== top processes by memory =="
             top -bn1 -o %MEM 2>/dev/null | sed -n '7,18p'
+            echo "== top processes by cpu =="
+            top -bn1 -o %CPU 2>/dev/null | sed -n '7,14p'
+            echo "== cpus ==";                 nproc
+            echo "== where the disk went (GB, depth 1; capped at 2 min each) =="
+            timeout 120 du -xBG -d1 /var/lib/rancher/k3s 2>/dev/null | sort -n | tail -6
+            timeout 120 du -xBG -d1 /var/lib/rancher/k3s/storage 2>/dev/null | sort -n | tail -10
+            timeout 120 du -xBG -d1 /var/lib/rancher/k3s/agent 2>/dev/null | sort -n | tail -4
+            timeout 60 du -xsBG /var/log /var/lib/containerd /home /root /tmp /var/tmp /var/cache 2>/dev/null | sort -n
+            echo "== container images ==";     k3s crictl imagefsinfo 2>/dev/null | tr -d ' \n' | cut -c1-300; echo; k3s crictl images 2>/dev/null | wc -l | sed 's/^/images: /'
+            echo "== containers (name, state) =="
+            k3s crictl ps -a 2>/dev/null | awk 'NR>1 {print $(NF-2), $(NF-1), $NF}' | sort | head -60
           EOS
 
       - name: Fetch kubeconfig via Tailscale SSH
