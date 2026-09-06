@@ -19,6 +19,10 @@ on:
         description: 'Trim the systemd journal to 300M'
         type: boolean
         default: false
+      rollout_restart:
+        description: 'Restart one deployment (namespace/name, e.g. apps/itineris) so it picks up a changed Secret or ConfigMap'
+        type: string
+        default: ''
       tune_leader_election:
         description: 'k3s on slow storage: let controllers survive slow etcd (lease 60s / renew 45s / retry 10s) via a config.yaml.d drop-in, then restart k3s once'
         type: boolean
@@ -95,6 +99,18 @@ jobs:
             echo "restart counter: $before -> $(systemctl show k3s -p NRestarts --value) (a manual restart does not count)"
             journalctl -u k3s --since '-2 min' --no-pager | grep -m1 -oE 'Running kube-controller-manager .*leader-elect-lease-duration=[0-9a-z]+' | sed -E 's/--(client-ca-file|authentication-kubeconfig|authorization-kubeconfig|kubeconfig|service-account-private-key-file|root-ca-file|cluster-signing[a-z-]*)=[^ ]+ ?//g' | cut -c1-300
           EOS
+
+      - name: Rollout restart
+        if: ${{ inputs.rollout_restart != '' }}
+        env:
+          TARGET: ${{ inputs.rollout_restart }}
+        run: |
+          case "$TARGET" in
+            [a-z0-9-]*/[a-z0-9-]*) ;;
+            *) echo "::error::rollout_restart must be namespace/name"; exit 1;;
+          esac
+          ns="${TARGET%%/*}"; name="${TARGET#*/}"
+          tailscale ssh "root@${CONTROL}" "k3s kubectl -n '$ns' rollout restart deployment/'$name' && k3s kubectl -n '$ns' rollout status deployment/'$name' --timeout=240s"
 
       - name: After
         run: |

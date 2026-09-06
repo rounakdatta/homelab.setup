@@ -56,8 +56,12 @@ jobs:
         env:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
-          kubectl create secret generic itineris-google-maps --namespace=apps \
-            --from-literal=apiKey="$GOOGLE_MAPS_API_KEY" --dry-run=client -o yaml | kubectl apply -f -
+          out="$(kubectl create secret generic itineris-google-maps --namespace=apps \
+            --from-literal=apiKey="$GOOGLE_MAPS_API_KEY" --dry-run=client -o yaml | kubectl apply -f -)"
+          echo "$out"
+          # The viewer reads the Secret once, at pod start (init container -> /config.json):
+          # a new or changed key needs the pod to start again.
+          case "$out" in *created*|*configured*) kubectl -n apps rollout restart deployment/itineris && kubectl -n apps rollout status deployment/itineris --timeout=180s || true;; esac
           # this Secret is accounted for now; drop it from the not-synced list
           if [ -s /tmp/secret-sync-failures.txt ]; then grep -v '^itineris-google-maps ' /tmp/secret-sync-failures.txt > /tmp/secret-sync-failures.new || true; mv /tmp/secret-sync-failures.new /tmp/secret-sync-failures.txt; fi
 
