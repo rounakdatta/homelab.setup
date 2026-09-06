@@ -13,7 +13,7 @@ claudeCode:
   version: "2.1.233"
 
 codeman:
-  version: "1.21.0"
+  version: "1.24.7"
   allowedHosts: "festie.taptappers.club"
 
 persistence:
