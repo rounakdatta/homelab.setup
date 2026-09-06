@@ -352,20 +352,62 @@
       failed_when: false
 
   tasks:
+    # Every value is fetched first, into a private temp dir, and a secret is
+    # applied only when ALL of its values arrived non-empty: a failed lookup
+    # must never write an empty value over a working secret. One broken
+    # lookup skips only its own secret -- the deploy of everything else goes
+    # ahead -- and the tasks below (plus the workflow's last step) shout
+    # about what was skipped, naming items and Bitwarden's reason, never values.
     - name: Create/Update K8s secrets from Bitwarden
       ansible.builtin.shell: |
+        set -o pipefail
         export BW_SESSION="{{ BW_SESSION }}"
+        d="$(mktemp -d)"; trap 'rm -rf "$d"' EXIT
+        bad=""
+        {% for key, bw_path in item.data.items() %}
+        if v="$(bw get {{ item.type | default('password') }} '{{ bw_path }}' --session "$BW_SESSION" 2> "$d/.err")" && [ -n "$v" ]; then
+          printf '%s' "$v" > "$d/{{ key }}"
+        else
+          bad="$bad {{ bw_path }} ($(r="$(head -n 1 "$d/.err" | cut -c1-160 | tr -d '\r')"; printf '%s' "${r:-empty value}"))"
+        fi
+        {% endfor %}
+        if [ -n "$bad" ]; then echo "SKIPPED {{ item.name }}:$bad"; exit 3; fi
         kubectl create secret generic {{ item.name }} \
           --namespace={{ item.namespace }} \
-          {% for key, bw_path in item.data.items() %}
-          --from-literal={{ key }}="$(bw get {{ item.type | default('password') }} '{{ bw_path }}' --session "$BW_SESSION")" \
+          {% for key in item.data.keys() %}
+          --from-file={{ key }}="$d/{{ key }}" \
           {% endfor %}
           --dry-run=client -o yaml | kubectl apply -f -
+      args:
+        executable: /bin/bash
       loop: "{{ k8s_secrets }}"
+      loop_control:
+        label: "{{ item.name }}"
       register: secret_result
       changed_when: "'configured' in secret_result.stdout or 'created' in secret_result.stdout"
+      failed_when: false
       no_log: true
+
+    - name: Collect the secrets that were not synced (names and reasons only)
+      ansible.builtin.set_fact:
+        secret_failures: "{{ secret_failures | default([]) + [item.item.name ~ ' — ' ~ ((item.stdout_lines | default([]) | last) if (item.stdout_lines | default([]) | length > 0) else ((item.stderr_lines | default([]) | first) | default('no output'))) | truncate(240)] }}"
+      loop: "{{ secret_result.results }}"
+      loop_control:
+        label: "{{ item.item.name }}"
+      when: (item.rc | default(0)) != 0
+      no_log: true
+
+    - name: Leave the list where the workflow's last step can fail on it
+      ansible.builtin.copy:
+        dest: /tmp/secret-sync-failures.txt
+        content: "{{ secret_failures | default([]) | join('\n') }}"
+        mode: "0644"
 
     - name: Display sync results
       ansible.builtin.debug:
-        msg: "✓ Synced {{ k8s_secrets | length }} secrets to Kubernetes"
+        msg: "✓ Synced {{ (k8s_secrets | length) - (secret_failures | default([]) | length) }} of {{ k8s_secrets | length }} secrets to Kubernetes"
+
+    - name: NOT SYNCED — Bitwarden lookups that failed (existing cluster secrets were left untouched)
+      ansible.builtin.debug:
+        msg: "{{ secret_failures }}"
+      when: secret_failures | default([]) | length > 0

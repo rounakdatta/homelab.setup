@@ -105,3 +105,15 @@ jobs:
           echo ""
           echo "=== Deployment Status ==="
           kubectl get pods -A | grep -v kube-system
+
+      # The secrets play never aborts the deploy over one bad Bitwarden lookup
+      # (the other apps still ship); it records what it skipped, and the run
+      # goes red here so nobody mistakes "deployed" for "all secrets synced".
+      - name: Fail if any secret was not synced from Bitwarden
+        run: |
+          if [ -s /tmp/secret-sync-failures.txt ]; then
+            echo "::error::Secrets NOT synced from Bitwarden (deploy went ahead with the cluster's existing values):"
+            cat /tmp/secret-sync-failures.txt
+            exit 1
+          fi
+          echo "all secrets synced"
