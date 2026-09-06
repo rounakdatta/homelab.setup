@@ -43,6 +43,8 @@ jobs:
             echo "== api port ==";             (ss -ltn 2>/dev/null || netstat -ltn) | grep -c ':6443 ' | sed 's/^/listeners on 6443: /'
             echo "== k3s journal: errors in the last 2h (tail) =="
             journalctl -u k3s --since '-2 hours' --no-pager 2>/dev/null | grep -iE 'panic|fatal|oom|out of memory|failed to|timed out|leader|etcd|sqlite|database|certificate' | tail -40
+            echo "== why k3s exited (last restarts, with the lines just before) =="
+            journalctl -u k3s --since '-3 hours' --no-pager 2>/dev/null | grep -B4 -E 'k3s.service: (Main process exited|Failed with result|Scheduled restart)' | grep -vE 'request stats|took too long' | tail -30
             echo "== kernel OOM / task kills (tail) =="
             dmesg -T 2>/dev/null | grep -iE 'oom|out of memory|killed process' | tail -12
             echo "== top processes by memory =="
