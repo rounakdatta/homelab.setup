@@ -43,6 +43,21 @@ jobs:
             echo "== api port ==";             (ss -ltn 2>/dev/null || netstat -ltn) | grep -c ':6443 ' | sed 's/^/listeners on 6443: /'
             echo "== k3s journal: errors in the last 2h (tail) =="
             journalctl -u k3s --since '-2 hours' --no-pager 2>/dev/null | grep -iE 'panic|fatal|oom|out of memory|failed to|timed out|leader|etcd|sqlite|database|certificate' | tail -40
+            echo "== pressure stall (PSI: % of time tasks waited) =="
+            for r in cpu io memory; do printf '%s: ' "$r"; cat /proc/pressure/$r 2>/dev/null | head -1; done
+            echo "== etcd disk latency (avg ms over the process lifetime) =="
+            curl -s --max-time 5 http://127.0.0.1:2381/metrics 2>/dev/null | awk '/^etcd_disk_wal_fsync_duration_seconds_(sum|count)/ {f[$1]=$2} /^etcd_disk_backend_commit_duration_seconds_(sum|count)/ {c[$1]=$2} END { if (f["etcd_disk_wal_fsync_duration_seconds_count"]>0) printf "wal fsync avg %.1f ms over %d\n", 1000*f["etcd_disk_wal_fsync_duration_seconds_sum"]/f["etcd_disk_wal_fsync_duration_seconds_count"], f["etcd_disk_wal_fsync_duration_seconds_count"]; if (c["etcd_disk_backend_commit_duration_seconds_count"]>0) printf "backend commit avg %.1f ms over %d\n", 1000*c["etcd_disk_backend_commit_duration_seconds_sum"]/c["etcd_disk_backend_commit_duration_seconds_count"], c["etcd_disk_backend_commit_duration_seconds_count"] }'
+            echo "== disk: rotational flag, and who is doing I/O (5 s sample) =="
+            cat /sys/block/vda/queue/rotational 2>/dev/null | sed 's/^/vda rotational: /'
+            if command -v iotop >/dev/null; then iotop -b -o -n 2 -d 5 2>/dev/null | grep -vE '^Total|^Actual|^Current' | head -14; elif command -v pidstat >/dev/null; then pidstat -d 5 1 2>/dev/null | sort -k6 -n -r | head -12; else
+              # no iotop/pidstat: sample /proc/<pid>/io write_bytes over 5 s for the busiest processes
+              for p in /proc/[0-9]*; do r1=$(awk '/^read_bytes/{print $2}' $p/io 2>/dev/null); w1=$(awk '/^write_bytes/{print $2}' $p/io 2>/dev/null); [ -n "$w1" ] && echo "$(basename $p) $r1 $w1"; done > /tmp/io1; sleep 5
+              for p in /proc/[0-9]*; do r2=$(awk '/^read_bytes/{print $2}' $p/io 2>/dev/null); w2=$(awk '/^write_bytes/{print $2}' $p/io 2>/dev/null); [ -n "$w2" ] && echo "$(basename $p) $r2 $w2"; done > /tmp/io2
+              join /tmp/io1 /tmp/io2 | awk '{ d=($4-$2)+($5-$3); if (d>0) printf "%d MB/5s pid %s %s\n", d/1048576, $1, "" }' | sort -n -r | head -10 | while read mb u pid _; do echo "$mb $u pid $pid $(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null | cut -c1-90)"; done
+              rm -f /tmp/io1 /tmp/io2
+            fi
+            echo "== velero: backups in progress? (may fail if the API is down) =="
+            timeout 20 k3s kubectl -n velero get backups --sort-by=.status.startTimestamp -o custom-columns='NAME:.metadata.name,PHASE:.status.phase,START:.status.startTimestamp' 2>/dev/null | tail -4
             echo "== why k3s exited (last restarts, with the lines just before) =="
             journalctl -u k3s --since '-3 hours' --no-pager 2>/dev/null | grep -B4 -E 'k3s.service: (Main process exited|Failed with result|Scheduled restart)' | grep -vE 'request stats|took too long' | tail -30
             echo "== kernel OOM / task kills (tail) =="
