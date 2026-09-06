@@ -26,6 +26,29 @@ jobs:
           version: 1.76.1
           args: --advertise-tags=tag:homelab
 
+      # Node-level view of the control plane, over Tailscale SSH, BEFORE any
+      # kubectl call: when the API server itself is flapping this is the only
+      # step that can still say why (memory, disk, k3s restarts, OOM kills).
+      # Read-only: status, journal and dmesg reads, nothing is changed.
+      - name: Control-plane node doctor
+        env:
+          CONTROL: ${{ secrets.CONTROL_MACHINE_NAME }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS' || echo "(node doctor could not complete)"
+            set +e
+            echo "== uptime / load ==";        uptime
+            echo "== memory (MB) ==";          free -m
+            echo "== disk ==";                 df -h / /var/lib/rancher 2>/dev/null | sed 1q; df -h / /var/lib/rancher 2>/dev/null | tail -n +2 | sort -u
+            echo "== k3s service ==";          systemctl is-active k3s; systemctl show k3s -p NRestarts -p ActiveEnterTimestamp -p ExecMainStartTimestamp
+            echo "== api port ==";             (ss -ltn 2>/dev/null || netstat -ltn) | grep -c ':6443 ' | sed 's/^/listeners on 6443: /'
+            echo "== k3s journal: errors in the last 2h (tail) =="
+            journalctl -u k3s --since '-2 hours' --no-pager 2>/dev/null | grep -iE 'panic|fatal|oom|out of memory|failed to|timed out|leader|etcd|sqlite|database|certificate' | tail -40
+            echo "== kernel OOM / task kills (tail) =="
+            dmesg -T 2>/dev/null | grep -iE 'oom|out of memory|killed process' | tail -12
+            echo "== top processes by memory =="
+            top -bn1 -o %MEM 2>/dev/null | sed -n '7,18p'
+          EOS
+
       - name: Fetch kubeconfig via Tailscale SSH
         env:
           CONTROL: ${{ secrets.CONTROL_MACHINE_NAME }}
@@ -33,9 +56,10 @@ jobs:
           mkdir -p ~/.kube
           tailscale ssh "root@${CONTROL}" "cat /etc/rancher/k3s/k3s.yaml" > ~/.kube/config
           sed -i "s|https://127.0.0.1:6443|https://${CONTROL}:6443|g" ~/.kube/config
-          kubectl cluster-info | head -1
+          kubectl cluster-info | head -1 || echo "(API server not answering)"
 
       - name: Nodes
+        continue-on-error: true
         run: |
           kubectl get nodes -o wide
           echo
@@ -44,6 +68,7 @@ jobs:
           kubectl get nodes -o custom-columns='NODE:.metadata.name,LABELS:.metadata.labels' | sed 's/map\[//; s/\]//; s/ /\n        /g'
 
       - name: Pods that are not Running, with events
+        continue-on-error: true
         env:
           NS: ${{ inputs.namespace }}
         run: |
@@ -56,12 +81,14 @@ jobs:
           done
 
       - name: Volumes and where they live
+        continue-on-error: true
         run: |
           kubectl get pv -o custom-columns='PV:.metadata.name,CLAIM:.spec.claimRef.namespace/.spec.claimRef.name,NODE-AFFINITY:.spec.nodeAffinity.required.nodeSelectorTerms[0].matchExpressions[0].values[0],PHASE:.status.phase,SIZE:.spec.capacity.storage'
           echo
           kubectl get pvc -A
 
       - name: Recent events
+        continue-on-error: true
         run: kubectl get events -A --sort-by=.lastTimestamp | tail -45
       - name: itineris admin (startup + background jobs; filtered, identities hidden)
         run: kubectl -n apps logs deploy/itineris-admin --tail=200 2>/dev/null | grep -E '^itineris admin on|backfill' | sed -E 's/allowlist=.*/allowlist=(hidden)/' || true
