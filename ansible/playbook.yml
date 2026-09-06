@@ -213,6 +213,15 @@
           db-username: nextcloud/db_username
           db-password: nextcloud/db_password
 
+      # itineris: Google Maps JavaScript API key for the viewer. A browser key
+      # (every visitor's browser receives it), protected by its HTTP-referrer
+      # restriction in Google Cloud, not by secrecy -- kept out of git all the
+      # same. Bitwarden item `itineris/google_maps_api_key`, password = the key.
+      - name: itineris-google-maps
+        namespace: apps
+        data:
+          apiKey: itineris/google_maps_api_key
+
       # Frigate RTSP credentials. Keys are the env var names Frigate looks
       # up at runtime when substituting `{FRIGATE_RTSP_USERNAME}` /
       # `{FRIGATE_RTSP_PASSWORD}` placeholders in cameras[].ffmpeg.inputs[].path.
