@@ -10,7 +10,7 @@ namespace: apps
 helmCharts:
   - name: itineris
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.14.0
+    version: 0.15.0
     releaseName: itineris
     namespace: apps
     valuesFile: values.yaml
