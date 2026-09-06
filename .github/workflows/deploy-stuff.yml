@@ -45,6 +45,22 @@ jobs:
           ansible-galaxy collection install -r ansible/requirements.yml
           ansible-playbook ansible/playbook.yml --tags secrets -i localhost,
 
+      # The Google Maps browser key for itineris, from this repository's
+      # encrypted secrets until it lives in Bitwarden (item
+      # itineris/google_maps_api_key -- the play above then makes the same
+      # Secret and this step becomes a no-op rewrite of the same value).
+      # A browser key ships to every visitor anyway; its protection is the
+      # HTTP-referrer restriction in Google Cloud. Never printed.
+      - name: Google Maps key -> Secret (repository secret, interim)
+        if: ${{ env.GOOGLE_MAPS_API_KEY != '' }}
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: |
+          kubectl create secret generic itineris-google-maps --namespace=apps \
+            --from-literal=apiKey="$GOOGLE_MAPS_API_KEY" --dry-run=client -o yaml | kubectl apply -f -
+          # this Secret is accounted for now; drop it from the not-synced list
+          if [ -s /tmp/secret-sync-failures.txt ]; then grep -v '^itineris-google-maps ' /tmp/secret-sync-failures.txt > /tmp/secret-sync-failures.new || true; mv /tmp/secret-sync-failures.new /tmp/secret-sync-failures.txt; fi
+
       - name: Install Helm
         uses: azure/setup-helm@v4
         with:
