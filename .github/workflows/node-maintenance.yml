@@ -1,0 +1,52 @@
+name: Node maintenance (control plane)
+
+# Explicit, auditable housekeeping on the control-plane node over Tailscale
+# SSH. Nothing runs unless its input is switched on. Each action is one that
+# a node under disk pressure needs and that cannot lose data:
+#   prune_images   removes container images no running/stopped container uses
+#                  (they are pulled again on demand)
+#   vacuum_journal trims the systemd journal to 300 MB
+# Reports disk usage before and after.
+
+on:
+  workflow_dispatch:
+    inputs:
+      prune_images:
+        description: 'Remove container images not used by any container (k3s crictl rmi --prune)'
+        type: boolean
+        default: false
+      vacuum_journal:
+        description: 'Trim the systemd journal to 300M'
+        type: boolean
+        default: false
+
+jobs:
+  maintain:
+    runs-on: ubuntu-latest
+    env:
+      CONTROL: ${{ secrets.CONTROL_MACHINE_NAME }}
+    steps:
+      - name: Setup Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          version: 1.76.1
+          args: --advertise-tags=tag:homelab
+
+      - name: Before
+        run: |
+          tailscale ssh "root@${CONTROL}" 'df -h / | tail -1; echo "images: $(k3s crictl images -q 2>/dev/null | wc -l)"; k3s crictl imagefsinfo 2>/dev/null | tr -d " \n" | cut -c1-240; echo'
+
+      - name: Prune unused container images
+        if: ${{ inputs.prune_images }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'k3s crictl rmi --prune 2>&1 | tail -n 3; echo "images left: $(k3s crictl images -q 2>/dev/null | wc -l)"'
+
+      - name: Vacuum the systemd journal
+        if: ${{ inputs.vacuum_journal }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'journalctl --vacuum-size=300M 2>&1 | tail -n 2'
+
+      - name: After
+        run: |
+          tailscale ssh "root@${CONTROL}" 'df -h / | tail -1; echo "k3s restarts so far: $(systemctl show k3s -p NRestarts --value)"'
