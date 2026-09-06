@@ -12,7 +12,7 @@ image:
   # on purpose: it puts the deployed image next to the chart version in
   # kustomization.yaml, so a bump PR touches both lines together -- the same
   # convention agentfest follows.
-  tag: "0.6.0"
+  tag: "0.7.0"
 
 # Photos, derivatives and the journal. local-path is advisory only (no quota
 # enforcement): the real limit is the node's free disk, so treat the size as
@@ -30,7 +30,7 @@ persistence:
 admin:
   enabled: true
   image:
-    tag: "0.6.0"
+    tag: "0.7.0"
   allowedEmails: ""
 
 # Pinned to the control-plane node, unlike most apps here. Unpinned, the
@@ -42,3 +42,10 @@ admin:
 # purpose; that is the other side of the same coin.)
 nodeSelector:
   node-role.kubernetes.io/control-plane: "true"
+
+# Google Maps as the map. The browser key comes from the Secret the Bitwarden
+# sync creates (see ansible/playbook.yml, item itineris/google_maps_api_key),
+# never from this file: this repo is public. Until the Secret exists the site
+# draws MapLibre; the next deploy after it lands switches to Google Maps.
+googleMaps:
+  existingSecret: itineris-google-maps
