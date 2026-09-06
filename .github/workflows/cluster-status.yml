@@ -53,7 +53,7 @@ jobs:
               # no iotop/pidstat: sample /proc/<pid>/io write_bytes over 5 s for the busiest processes
               for p in /proc/[0-9]*; do r1=$(awk '/^read_bytes/{print $2}' $p/io 2>/dev/null); w1=$(awk '/^write_bytes/{print $2}' $p/io 2>/dev/null); [ -n "$w1" ] && echo "$(basename $p) $r1 $w1"; done > /tmp/io1; sleep 5
               for p in /proc/[0-9]*; do r2=$(awk '/^read_bytes/{print $2}' $p/io 2>/dev/null); w2=$(awk '/^write_bytes/{print $2}' $p/io 2>/dev/null); [ -n "$w2" ] && echo "$(basename $p) $r2 $w2"; done > /tmp/io2
-              join /tmp/io1 /tmp/io2 | awk '{ d=($4-$2)+($5-$3); if (d>0) printf "%d MB/5s pid %s %s\n", d/1048576, $1, "" }' | sort -n -r | head -10 | while read mb u pid _; do echo "$mb $u pid $pid $(tr '\0' ' ' < /proc/$pid/cmdline 2>/dev/null | cut -c1-90)"; done
+              join /tmp/io1 /tmp/io2 | awk '{ d=($4-$2)+($5-$3); if (d>0) printf "%d %s\n", d/1048576, $1 }' | sort -n -r | head -10 | while read mb pid; do echo "${mb} MB/5s  pid ${pid}  $(tr '\0' ' ' < /proc/${pid}/cmdline 2>/dev/null | cut -c1-90)"; done
               rm -f /tmp/io1 /tmp/io2
             fi
             echo "== velero: backups in progress? (may fail if the API is down) =="

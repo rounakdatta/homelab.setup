@@ -19,6 +19,10 @@ on:
         description: 'Trim the systemd journal to 300M'
         type: boolean
         default: false
+      tune_leader_election:
+        description: 'k3s on slow storage: let controllers survive slow etcd (lease 60s / renew 45s / retry 10s) via a config.yaml.d drop-in, then restart k3s once'
+        type: boolean
+        default: false
 
 jobs:
   maintain:
@@ -46,6 +50,51 @@ jobs:
         if: ${{ inputs.vacuum_journal }}
         run: |
           tailscale ssh "root@${CONTROL}" 'journalctl --vacuum-size=300M 2>&1 | tail -n 2'
+
+      # The controllers embedded in k3s renew a 15 s lease every 10 s; when etcd
+      # takes seconds per request they lose it and k3s exits ("leaderelection
+      # lost"), and the restart makes the disk even busier. Longer leases are
+      # the documented mitigation for k3s on slow disks. Written as a drop-in
+      # (config.yaml.d, k3s >= 1.24) only when config.yaml does not already set
+      # these keys, so nothing of the existing configuration is replaced;
+      # `rm /etc/rancher/k3s/config.yaml.d/10-leader-election.yaml` reverts it.
+      - name: Tune leader election for slow storage
+        if: ${{ inputs.tune_leader_election }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS'
+            set -e
+            v="$(k3s --version | head -1)"; echo "$v"
+            minor="$(echo "$v" | sed -E 's/.*v1\.([0-9]+)\..*/\1/')"
+            if [ -z "$minor" ] || [ "$minor" -lt 24 ]; then echo "k3s too old for config.yaml.d; not touching it"; exit 0; fi
+            if [ -f /etc/rancher/k3s/config.yaml ] && grep -qE '^(kube-controller-manager-arg|kube-scheduler-arg|kube-cloud-controller-manager-arg)' /etc/rancher/k3s/config.yaml; then
+              echo "config.yaml already sets controller/scheduler args -- merge by hand instead"; exit 0
+            fi
+            mkdir -p /etc/rancher/k3s/config.yaml.d
+            cat > /etc/rancher/k3s/config.yaml.d/10-leader-election.yaml <<'YAML'
+          # Added 2026-09-06: etcd on this disk fsyncs in ~100 ms; with the default
+          # 15 s lease / 10 s renew deadline the controllers lost leadership and k3s
+          # exited every few minutes. Delete this file to revert.
+          kube-controller-manager-arg:
+            - leader-elect-lease-duration=60s
+            - leader-elect-renew-deadline=45s
+            - leader-elect-retry-period=10s
+          kube-scheduler-arg:
+            - leader-elect-lease-duration=60s
+            - leader-elect-renew-deadline=45s
+            - leader-elect-retry-period=10s
+          kube-cloud-controller-manager-arg:
+            - leader-elect-lease-duration=60s
+            - leader-elect-renew-deadline=45s
+            - leader-elect-retry-period=10s
+          YAML
+            echo "drop-in written; restarting k3s once"
+            before="$(systemctl show k3s -p NRestarts --value)"
+            systemctl restart k3s
+            sleep 25
+            systemctl is-active k3s
+            echo "restart counter: $before -> $(systemctl show k3s -p NRestarts --value) (a manual restart does not count)"
+            journalctl -u k3s --since '-2 min' --no-pager | grep -m1 -oE 'Running kube-controller-manager .*leader-elect-lease-duration=[0-9a-z]+' | sed -E 's/--(client-ca-file|authentication-kubeconfig|authorization-kubeconfig|kubeconfig|service-account-private-key-file|root-ca-file|cluster-signing[a-z-]*)=[^ ]+ ?//g' | cut -c1-300
+          EOS
 
       - name: After
         run: |
