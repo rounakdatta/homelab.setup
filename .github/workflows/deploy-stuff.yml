@@ -55,13 +55,21 @@ jobs:
         if: ${{ env.GOOGLE_MAPS_API_KEY != '' }}
         env:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          # Optional server-only key for Places lookups (ratings), for when the
+          # browser key above is referrer-restricted.
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
         run: |
-          out="$(kubectl create secret generic itineris-google-maps --namespace=apps \
-            --from-literal=apiKey="$GOOGLE_MAPS_API_KEY" --dry-run=client -o yaml | kubectl apply -f -)"
+          args=(--from-literal=apiKey="$GOOGLE_MAPS_API_KEY")
+          [ -n "$GOOGLE_PLACES_API_KEY" ] && args+=(--from-literal=placesApiKey="$GOOGLE_PLACES_API_KEY")
+          out="$(kubectl create secret generic itineris-google-maps --namespace=apps "${args[@]}" --dry-run=client -o yaml | kubectl apply -f -)"
           echo "$out"
-          # The viewer reads the Secret once, at pod start (init container -> /config.json):
-          # a new or changed key needs the pod to start again.
-          case "$out" in *created*|*configured*) kubectl -n apps rollout restart deployment/itineris && kubectl -n apps rollout status deployment/itineris --timeout=180s || true;; esac
+          # Both pods read the Secret at start (viewer: init container -> /config.json;
+          # admin: env for Places lookups): a new or changed key needs them to start again.
+          case "$out" in *created*|*configured*)
+            kubectl -n apps rollout restart deployment/itineris deployment/itineris-admin
+            kubectl -n apps rollout status deployment/itineris --timeout=180s || true
+            kubectl -n apps rollout status deployment/itineris-admin --timeout=180s || true;;
+          esac
           # this Secret is accounted for now; drop it from the not-synced list
           if [ -s /tmp/secret-sync-failures.txt ]; then grep -v '^itineris-google-maps ' /tmp/secret-sync-failures.txt > /tmp/secret-sync-failures.new || true; mv /tmp/secret-sync-failures.new /tmp/secret-sync-failures.txt; fi
 
