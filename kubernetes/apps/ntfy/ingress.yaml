@@ -1,4 +1,14 @@
 ---
+# ntfy answers at notis.taptappers.club (renamed from ntfy.taptappers.club,
+# 2026-09-12). A hard cutover: the old host is gone from this object, so
+# Traefik has no route for it and anything still pointed there gets a 404.
+# Every subscriber and publisher has to be repointed by hand.
+#
+# Deliberately NOT behind the tinyauth ForwardAuth middleware that fronts the
+# other apps here. ntfy's clients -- the phone app, curl publishers, webhooks
+# -- send a token or Basic credentials and cannot follow a Google OAuth
+# browser redirect, so tinyauth would break every one of them. The gate is
+# ntfy's own: auth-default-access=deny-all plus the user.db in values.yaml.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -10,7 +20,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-  - host: ntfy.taptappers.club
+  - host: notis.taptappers.club
     http:
       paths:
       - path: /
@@ -22,5 +32,8 @@ spec:
               number: 80
   tls:
   - hosts:
-    - ntfy.taptappers.club
-    secretName: ntfy-tls-secret
+    - notis.taptappers.club
+    # A new Secret rather than reusing ntfy-tls-secret: that one holds a cert
+    # for the old name only, and a fresh name keeps cert-manager from serving
+    # it while the new order is still being answered.
+    secretName: notis-tls-secret

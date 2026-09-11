@@ -12,11 +12,16 @@ cache:
   enabled: true
   existingClaim: ntfy-cache-pvc
 
-# server.yml — chart writes a ConfigMap from this map. Mirrors the
-# previous standalone `ntfy-config` ConfigMap exactly.
+# server.yml — chart writes a ConfigMap from this map. The chart puts a
+# checksum of it on the pod template, so a change here rolls the pod on its
+# own; base-url does not need a manual restart to take effect.
+#
+# base-url must match the host the ingress serves: ntfy stamps it onto the
+# links it hands out (attachments, the web app's own config), so leaving it
+# on the old name would emit URLs that no longer route anywhere.
 config:
   sample:
-    base-url: "https://ntfy.taptappers.club"
+    base-url: "https://notis.taptappers.club"
     cache-file: "/var/cache/ntfy/cache.db"
     auth-file: "/var/cache/ntfy/user.db"
     auth-default-access: "deny-all"
