@@ -16,3 +16,43 @@ helmCharts:
 
 resources:
   - ingress.yaml
+
+# ntfy creates its users from config at startup (v2.28 "provisioned users"),
+# which is what keeps accounts declarative instead of hand-made with
+# `ntfy user add` inside the pod -- those live only in user.db on a local-path
+# PVC and would not survive it.
+#
+# The credentials cannot go in values.yaml: that renders into a ConfigMap and
+# this repository is public. They are synced from Bitwarden into the
+# ntfy-credentials Secret (ansible/playbook.yml) and injected here as env vars,
+# which ntfy reads for any config key -- NTFY_AUTH_USERS is exactly auth-users.
+#
+# Chart 0.1.1 renders no `env` at all on the container, so this is an `add` of
+# the whole array rather than a `replace` of one entry (contrast webtrees,
+# which patches by index into an env list the chart does render).
+#
+# Kubernetes only expands `$(VAR)` in env values, so the `$2a$` in a bcrypt
+# hash passes through untouched -- the `$$` escaping ntfy's docs mention is a
+# docker-compose concern, not ours.
+#
+# Note these are read once at container start: changing either Bitwarden item
+# needs a `rollout_restart: apps/ntfy` via node-maintenance.yml, since a Secret
+# update alone does not restart the pod.
+patches:
+  - target:
+      kind: Deployment
+      name: ntfy
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env
+        value:
+          - name: NTFY_AUTH_USERS
+            valueFrom:
+              secretKeyRef:
+                name: ntfy-credentials
+                key: auth-users
+          - name: NTFY_AUTH_TOKENS
+            valueFrom:
+              secretKeyRef:
+                name: ntfy-credentials
+                key: auth-tokens

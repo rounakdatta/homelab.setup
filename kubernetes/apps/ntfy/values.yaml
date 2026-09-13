@@ -24,6 +24,14 @@ config:
     base-url: "https://notis.taptappers.club"
     cache-file: "/var/cache/ntfy/cache.db"
     auth-file: "/var/cache/ntfy/user.db"
+    # Nothing may read or publish without credentials. The accounts
+    # themselves arrive as NTFY_AUTH_USERS / NTFY_AUTH_TOKENS, patched in
+    # from the ntfy-credentials Secret by kustomization.yaml -- a bcrypt hash
+    # and a bearer token have no business in a public repo. ntfy writes the
+    # provisioned users into the auth-file below on startup.
+    #
+    # Careful: a user removed from auth-users is DELETED from user.db on the
+    # next restart, so this list is the source of truth, not an addition to it.
     auth-default-access: "deny-all"
     behind-proxy: true
 

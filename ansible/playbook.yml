@@ -251,6 +251,22 @@
           firefly-pat: firefly/personal_access_token
           llm-api-key: deepseek/api_key
 
+      # ntfy credentials. ntfy provisions users declaratively from config
+      # (v2.28 auth-users / auth-tokens), and the chart exposes no env block,
+      # so kubernetes/apps/ntfy/kustomization.yaml patches these two in as
+      # NTFY_AUTH_USERS / NTFY_AUTH_TOKENS. They hold a bcrypt hash and a
+      # bearer token respectively and this repo is public, which is why they
+      # come from Bitwarden rather than values.yaml.
+      #   auth-users:  rounak:$2a$10$...:admin   (hash via `ntfy user hash`)
+      #   auth-tokens: rounak:tk_...:homelab scripts
+      # The matching plaintext login lives in Bitwarden as ntfy/admin_password
+      # and is deliberately NOT synced here -- nothing in the cluster reads it.
+      - name: ntfy-credentials
+        namespace: apps
+        data:
+          auth-users: ntfy/auth_users
+          auth-tokens: ntfy/auth_tokens
+
       # tinyauth credentials (replaces authelia)
       # Keys match the env var names tinyauth reads via valueFrom in
       # kubernetes/tinyauth/values.yaml — see env: section there.
