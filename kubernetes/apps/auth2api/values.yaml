@@ -101,6 +101,21 @@ controllers:
 
             debug: "off"
 
+            # Switches off auth2api's own API-key check on /admin, because
+            # ingress-admin.yaml puts tinyauth (Google SSO) in front of those
+            # routes instead. A browser cannot attach an Authorization header
+            # to a plain navigation, so the shared key is unusable from an
+            # address bar; SSO is both stronger and the only thing that works.
+            #
+            # /v1 is untouched by this -- it stays API-key-gated, which is what
+            # the SDK clients need.
+            #
+            # Requires rounakdatta/auth2api#2. Against an image built before
+            # that merges the key is simply unknown and ignored, so /admin
+            # keeps demanding the API key and the SSO gate sits harmlessly in
+            # front of it -- wrong-but-safe, never open.
+            admin-auth: false
+
             cloaking:
               cli-version: "2.1.88"
               entrypoint: "cli"

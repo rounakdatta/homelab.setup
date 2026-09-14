@@ -27,3 +27,4 @@ helmCharts:
 resources:
   - middleware.yaml
   - ingress.yaml
+  - ingress-admin.yaml
