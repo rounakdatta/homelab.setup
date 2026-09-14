@@ -1,0 +1,68 @@
+---
+# Public ingress for the API surface only.
+#
+# Deliberately NOT behind tinyauth: a ForwardAuth middleware answers an
+# unauthenticated API client with a 302 to Google's consent screen, which no
+# SDK follows -- it would turn every request into an HTML login page. The gate
+# here is auth2api's own `api-keys` list, checked by the requireApiKey
+# middleware on exactly the prefixes routed below.
+#
+# The path list is an allowlist, and the omission is the point: `/admin` is
+# left unrouted so /admin/stats, /admin/accounts and /admin/reload stay
+# reachable only from inside the cluster. They are API-key-guarded too, but the
+# key is a single shared secret and there is no reason for the account
+# inventory and a token-reload trigger to sit on the public internet.
+#
+# Routed, all of them requireApiKey (server.ts):
+#   /v1                  chat/completions, responses, messages, count_tokens, models
+#   /codex               ChatGPT/Codex passthrough
+#   /backend-api/codex   ditto, alternate prefix
+# Plus /health, which takes no key and returns a bare {"status":"ok"} with no
+# account information in it -- useful for checking TLS end to end.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: auth2api
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: apps-auth2api-ratelimit@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - aiapi.taptappers.club
+      secretName: aiapi-tls-secret
+  rules:
+    - host: aiapi.taptappers.club
+      http:
+        paths:
+          - path: /v1
+            pathType: Prefix
+            backend:
+              service:
+                name: auth2api
+                port:
+                  number: 8317
+          - path: /codex
+            pathType: Prefix
+            backend:
+              service:
+                name: auth2api
+                port:
+                  number: 8317
+          - path: /backend-api/codex
+            pathType: Prefix
+            backend:
+              service:
+                name: auth2api
+                port:
+                  number: 8317
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: auth2api
+                port:
+                  number: 8317

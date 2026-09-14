@@ -25,6 +25,7 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | texas-fold-em  | fold.money refresh-token broker (in-cluster API)           | https://github.com/rounakdatta/texas-fold-em |
 | Hugo sites     | Personal static sites (rounak2018 / rounak2020 / rounak2025) | https://gohugo.io/                       |
 | itineris       | Travel journal: map, timeline, photo wall, stories (public); tinyauth-gated /admin for uploads | https://github.com/rounakdatta/itineris |
+| auth2api       | Local AI gateway                                           | https://github.com/AmazingAng/auth2api   |
 
 ### Supporting infrastructure
 
@@ -39,7 +40,7 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 
 K3s is a lightweight Kubernetes distribution that's perfect for single-node homelabs. Traefik (bundled with K3s) handles all ingress routing with automatic TLS via cert-manager and Let's Encrypt. Tinyauth sits in front of apps as a forward-auth middleware backed by Google OAuth, so any subset of apps can be put behind a single sign-on with one annotation.
 
-Most third-party apps are inflated from upstream Helm charts via Kustomize's `helmCharts` block (with values overridden in-tree), so version bumps stay a one-line change. Manifests are organized using Kustomize and secrets are managed through Bitwarden — synced into Kubernetes Secrets by an Ansible play. The setup is fully declarative — adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
+Most third-party apps are inflated from upstream Helm charts via Kustomize's `helmCharts` block (with values overridden in-tree), so version bumps stay a one-line change. Apps with no chart of their own use bjw-s `app-template`, a generic chart that takes any image — `auth2api` is the first. Manifests are organized using Kustomize and secrets are managed through Bitwarden — synced into Kubernetes Secrets by an Ansible play. The setup is fully declarative — adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
 
 ## Philosophy
 

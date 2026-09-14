@@ -1,0 +1,52 @@
+---
+# /admin -- stats, account inventory, token reload -- behind tinyauth, on the
+# SAME host as the API.
+#
+# Traefik attaches middlewares per router and each Ingress object is its own
+# router, so this second object (path /admin, tinyauth middleware) coexists
+# with ingress.yaml's /v1 router: the /admin rule wins for /admin/*, and an API
+# client on /v1 never meets a login page. itineris and texas-fold-em use the
+# same path-scoped split.
+#
+# Why this is the only auth on these routes: the gateway is configured with
+# `admin-auth: false` (values.yaml), which switches off auth2api's own
+# API-key check on /admin. A browser cannot attach an Authorization header to a
+# plain navigation, so a shared secret is unusable here -- Google SSO is both
+# stronger and the only thing that actually works from an address bar.
+#
+# THE CONSEQUENCE, STATED PLAINLY: with admin-auth off, this middleware is the
+# ONLY thing standing in front of the account inventory and /admin/reload. If
+# the tinyauth annotation below is ever dropped, mistyped, or the middleware
+# stops resolving, /admin is open to the internet with no second line of
+# defence. Treat that annotation as load-bearing, and never widen this router's
+# paths.
+#
+# No cert-manager annotation on purpose: ingress.yaml owns the certificate for
+# aiapi.taptappers.club; this object only reuses its secret so the router is
+# TLS. Two issuers racing for one secret would fight.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: auth2api-admin
+  namespace: apps
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    # Load-bearing. See above.
+    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd,apps-auth2api-ratelimit@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: aiapi.taptappers.club
+      http:
+        paths:
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: auth2api
+                port:
+                  number: 8317
+  tls:
+    - hosts:
+        - aiapi.taptappers.club
+      secretName: aiapi-tls-secret
