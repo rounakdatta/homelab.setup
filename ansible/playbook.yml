@@ -343,10 +343,18 @@
       # config.yaml and nothing else -- so this cannot be an envFrom. An init
       # container reads it from here and writes it into the config file the
       # app then loads; see kubernetes/apps/auth2api/values.yaml.
+      #
+      # claude-oauth-token is a different kind of thing from api-key: it is an
+      # upstream credential (an Anthropic OAuth access token), not one we mint.
+      # It seeds auth-dir with a ready-made account so the gateway has
+      # something to proxy without anyone completing the interactive browser
+      # login first -- see the seed-account init container in values.yaml,
+      # which writes it only when auth-dir is still empty.
       - name: auth2api-credentials
         namespace: apps
         data:
           api-key: auth2api/api_key
+          claude-oauth-token: auth2api/claude_oauth_token
 
   pre_tasks:
     - name: Verify required environment variables

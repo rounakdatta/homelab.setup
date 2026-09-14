@@ -130,6 +130,87 @@ controllers:
           limits:
             memory: 64Mi
 
+      # Seed auth-dir with a ready-made Anthropic account, so the gateway can
+      # serve without anyone completing the browser login first.
+      #
+      # WRITE-ONCE, and that is the whole safety story here: it writes only
+      # when auth-dir holds no claude-*.json. A real `--login` (via the login
+      # controller below) produces a strictly better file -- a genuine refresh
+      # token, the true account_uuid -- and once that exists this step never
+      # touches it again. Deleting the seeded file and logging in properly is
+      # always the upgrade path.
+      #
+      # The shape comes from src/auth/token-storage.ts: files are named
+      # claude-<email>.json, loadAllTokens does nothing but JSON.parse (no
+      # field validation), and storageToToken defaults account_uuid to "".
+      # So access_token, email, type and expired are what actually matter.
+      #
+      # refresh_token is a placeholder on purpose. AccountManager only reaches
+      # for it when `expiresAt - now <= leadMs` (4h, manager.ts), so with a
+      # year-long token it is never exercised; when that day comes the account
+      # goes into cooldown and the fix is a real login, not a better dummy.
+      seed-account:
+        image:
+          repository: ghcr.io/rounakdatta/auth2api
+          tag: latest
+          pullPolicy: Always
+        command: ["/bin/sh", "-c"]
+        args:
+          - |
+            set -eu
+            if [ -z "${CLAUDE_OAUTH_TOKEN:-}" ]; then
+              echo "no claude-oauth-token in auth2api-credentials; leaving auth-dir alone"
+              exit 0
+            fi
+            if ls /data/claude-*.json >/dev/null 2>&1; then
+              echo "auth-dir already holds an anthropic account; leaving it alone"
+              exit 0
+            fi
+            mkdir -p /data
+            chmod 700 /data
+            # `expired` drives the refresh decision, nothing else -- set it a
+            # year out to match the token actually issued.
+            EXPIRES="$(node -e 'process.stdout.write(new Date(Date.now()+365*864e5).toISOString())')"
+            NOW="$(node -e 'process.stdout.write(new Date().toISOString())')"
+            umask 077
+            node -e '
+              const fs = require("fs");
+              fs.writeFileSync(process.argv[1], JSON.stringify({
+                access_token:  process.env.CLAUDE_OAUTH_TOKEN,
+                refresh_token: "seeded-no-refresh-token",
+                last_refresh:  process.argv[2],
+                email:         process.argv[3],
+                type:          "anthropic",
+                expired:       process.argv[4],
+                account_uuid:  ""
+              }, null, 2), { mode: 0o600 });
+            ' "/data/claude-${ACCOUNT_EMAIL}.json" "$NOW" "$ACCOUNT_EMAIL" "$EXPIRES"
+            echo "seeded /data/claude-${ACCOUNT_EMAIL}.json (expires ${EXPIRES})"
+        env:
+          # Not marked optional -- app-template's schema does not allow it on a
+          # secretKeyRef. If the key is ever missing the pod stops at
+          # CreateContainerConfigError, which names the missing key plainly;
+          # the deploy syncs Bitwarden before applying manifests, so in the
+          # normal order it is always there first.
+          - name: CLAUDE_OAUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: auth2api-credentials
+                key: claude-oauth-token
+          # Identity label only -- it names the file and is what /admin/accounts
+          # and the stats aggregation show. Auth itself rides entirely on the
+          # access token, so a mismatch here is cosmetic, not breaking. Set it
+          # to the Anthropic account's real address to keep the admin view
+          # honest.
+          - name: ACCOUNT_EMAIL
+            value: "rounak@lyric.tech"
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            memory: 128Mi
+
     containers:
       main:
         image:
