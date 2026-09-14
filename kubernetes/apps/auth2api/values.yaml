@@ -22,6 +22,22 @@
 
 controllers:
   main:
+    # Pin the Deployment name. Without this the chart names a controller after
+    # the release ONLY while it is the sole enabled controller -- common's
+    # valuesToObject appends the identifier once itemCount > 1 (the same rule
+    # that governs configMaps). So flipping `login` on renamed this Deployment
+    # auth2api -> auth2api-main, and flipping it back renamed it again.
+    #
+    # kubectl apply never prunes, so each rename left the previous Deployment
+    # running in the cluster, unreferenced by any manifest and impossible to
+    # remove by deploying. Two orphans accumulated that way; they kept the
+    # Service's endpoints populated (the selector keys on the controller
+    # IDENTIFIER, which forceRename does not touch) while holding enough CPU on
+    # the control-plane node that the real pod could not be scheduled.
+    #
+    # With the name pinned, enabling the login controller is once again the
+    # one-line change its comment claims it is.
+    forceRename: auth2api
     type: deployment
     replicas: 1
     # strategy is left at app-template's default, Recreate, and that default is
@@ -325,6 +341,9 @@ controllers:
   # claim is reachable from both -- they are only ever up at the same time
   # while `main` is crashlooping, which is exactly when this is needed.
   login:
+    # Pinned for the same reason as `main` above -- so this controller's own
+    # name cannot shift underneath a future edit either.
+    forceRename: auth2api-login
     enabled: false
     type: deployment
     replicas: 1
