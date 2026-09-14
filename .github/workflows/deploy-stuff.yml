@@ -124,6 +124,20 @@ jobs:
           kubectl -n apps delete pod itineris-5996f6554f-xjvd2 itineris-admin-58dd796495-gr6vm \
             --force --grace-period=0 --ignore-not-found
 
+          # One-time (2026-09-14): auth2api's Deployment was renamed twice by the
+          # chart itself. bjw-s common names a controller after the release only
+          # while it is the sole enabled controller, so enabling the one-shot
+          # `login` controller renamed auth2api -> auth2api-main, and disabling
+          # it renamed it back. kubectl apply does not prune, so both previous
+          # Deployments stayed live: unreferenced by any manifest, impossible to
+          # remove by deploying, still holding CPU on the control-plane node --
+          # enough that the real pod sat Pending with "Insufficient cpu" while
+          # the orphan kept answering on the Service.
+          #
+          # values.yaml now pins both names with forceRename, so this cannot
+          # recur. Idempotent: --ignore-not-found.
+          kubectl -n apps delete deployment auth2api-main auth2api-login --ignore-not-found
+
           # First apply may fail for Velero/cert-manager CRs if CRDs haven't propagated yet
           kubectl apply -f /tmp/manifest.yaml || true
           # Wait for any CRDs to be established
