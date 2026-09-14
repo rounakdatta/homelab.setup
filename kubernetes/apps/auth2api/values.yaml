@@ -133,19 +133,24 @@ controllers:
     containers:
       main:
         image:
-          # TODO(image): upstream publishes none -- AmazingAng/auth2api has no
-          # CI and no package, its compose file says `build: .`. This expects a
-          # build of that Dockerfile pushed to our own GHCR. Until that exists
-          # the pod will sit in ImagePullBackOff, which is the honest failure.
-          # Pin a real tag here once it is published; `latest` + Always is a
-          # placeholder, not the convention this repo otherwise follows.
+          # Our own build of upstream's Dockerfile -- AmazingAng/auth2api has
+          # no CI and publishes no image, its compose file says `build: .`.
+          #
+          # `latest` rather than a pinned tag is a deliberate exception to what
+          # this repo does elsewhere (see agentfest/values.yaml on why pins are
+          # the norm): this image is still moving. The registry also carries
+          # the commit tag `119b254`, identical in content to `latest` today --
+          # swapping the line below for it is how this gets pinned once the
+          # build settles.
           repository: ghcr.io/rounakdatta/auth2api
           tag: latest
           pullPolicy: Always
 
-        # The image's CMD already carries `--config=/config/config.yaml`, and
-        # NODE_ENV=production is baked in as an ENV, so the compose file's
-        # `environment:` block has nothing left to translate.
+        # No command/args override: the image's ENTRYPOINT + CMD already are
+        # `docker-entrypoint.sh node dist/index.js --config=/config/config.yaml`,
+        # which is exactly the invocation wanted, and NODE_ENV=production is
+        # baked in as an ENV -- so the compose file's `environment:` block has
+        # nothing left to translate either.
 
         ports:
           - name: http
