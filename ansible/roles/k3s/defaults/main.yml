@@ -1,0 +1,40 @@
+---
+# k3s node name for the control plane.
+#
+# WARNING: DO NOT CHANGE THIS VALUE once the cluster holds data.
+#
+# Every local-path PV hard-pins `spec.nodeAffinity` to
+# `kubernetes.io/hostname: <this value>`, and that field is IMMUTABLE. Changing
+# it orphans every PV, makes all stateful pods unschedulable, and takes the whole
+# homelab down with 5xx -- which is exactly what happened on 2026-07-29 when the
+# control-plane host was rebuilt and its hostname changed `rounak` -> `vizerizz`.
+#
+# Pinning `--node-name` decouples the k3s node identity from the OS hostname, so
+# a future rebuild/rename of the host no longer orphans the volumes. That is why
+# this is a fixed literal and deliberately NOT `inventory_hostname` or
+# `ansible_hostname` -- deriving it from the host would reintroduce the bug.
+#
+# If it ever must change, every local-path PV has to be repointed in the same
+# change, because nodeAffinity cannot be patched. For each PV pinned to the old
+# name (kubectl get pv -o json | look at
+# spec.nodeAffinity.required.nodeSelectorTerms[].matchExpressions[].values):
+#
+#   1. kubectl patch pv <pv> -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+#      ^ do this for ALL of them FIRST. With the inherited Delete policy, step 2
+#        erases the data instead of relocating it.
+#   2. Dump the spec, set nodeAffinity to the new hostname, and drop
+#      metadata.{uid,resourceVersion,creationTimestamp,finalizers,managedFields}
+#      and status -- but KEEP claimRef (including uid), capacity, accessModes and
+#      local.path, or the PVC rebinds to a fresh empty volume instead of the data.
+#   3. kubectl delete pv <pv> --wait=false, then clear the finalizer
+#      (kubectl patch pv <pv> -p '{"metadata":{"finalizers":null}}' --type=merge)
+#      since a bound PV holds kubernetes.io/pv-protection and won't delete.
+#   4. kubectl apply the rewritten spec; the PVC rebinds to the same directory.
+#   5. Pods stranded on the old node sit in Terminating forever (its kubelet is
+#      gone): kubectl delete pod <p> -n <ns> --force --grace-period=0
+#
+# Do NOT delete the old Node object: it can share an etcd member name with the
+# live one (annotation etcd.k3s.cattle.io/node-name), and k3s maps Node -> etcd
+# member through that, so deleting it can remove the only live etcd member and
+# destroy the cluster. Check before assuming otherwise.
+k3s_control_node_name: vizerizz
