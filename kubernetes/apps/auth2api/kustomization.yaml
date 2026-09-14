@@ -1,0 +1,25 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apps
+
+# First use of bjw-s app-template in this repo — the generic "any image"
+# chart. Nothing about auth2api is special enough to deserve a chart of its
+# own (contrast agentfest/itineris/synt, which template app-specific config),
+# so the whole deployment is values.yaml against a chart we don't maintain.
+#
+# app-template is the installable wrapper around the bjw-s `common` library
+# that bookstack, vikunja and webtrees already pull in as a subchart — so this
+# is a library the cluster has been running for a while, just used directly.
+helmCharts:
+  - name: app-template
+    repo: https://bjw-s-labs.github.io/helm-charts
+    version: 5.1.0
+    releaseName: auth2api
+    namespace: apps
+    valuesFile: values.yaml
+
+# No standalone resources: the chart renders the Deployment, Service and the
+# PVC, and there is no Ingress on purpose (see the note at the end of
+# values.yaml -- this gateway stays inside the cluster).

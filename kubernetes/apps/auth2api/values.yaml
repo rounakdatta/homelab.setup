@@ -1,0 +1,302 @@
+# Values for bjw-s app-template 5.1.0.
+# Chart source: https://bjw-s-labs.github.io/helm-charts
+#
+# auth2api (AmazingAng/auth2api) turns Claude, ChatGPT/Codex and Cursor OAuth
+# logins into API endpoints that OpenAI- and Claude-shaped clients can use.
+#
+# Upstream ships a compose file, not a chart:
+#
+#   services:
+#     auth2api:
+#       build: .
+#       ports: ["8317:8317"]
+#       volumes:
+#         - ./config.yaml:/config/config.yaml
+#         - auth-data:/data
+#       environment: [NODE_ENV=production]
+#
+# Everything below is that compose file translated. Both its volumes change
+# shape on the way: the bind-mounted config.yaml becomes an emptyDir written
+# at boot by an init container (so the API key can come from Bitwarden instead
+# of sitting in a public repo), and auth-data becomes a real PVC.
+
+controllers:
+  main:
+    type: deployment
+    replicas: 1
+    # strategy is left at app-template's default, Recreate, and that default is
+    # load-bearing: /data is a ReadWriteOnce local-path volume holding the OAuth
+    # token files, and the process rewrites them as it refreshes. A
+    # RollingUpdate would park the new pod in Pending on the old pod's node and
+    # never converge.
+
+    initContainers:
+      # compose's `./config.yaml:/config/config.yaml`, rendered at boot.
+      #
+      # This exists because auth2api has no environment-variable overrides at
+      # all -- src/config.ts reads the YAML and nothing else -- so the key has
+      # to be *in the file*, and the file cannot be committed to a public repo.
+      #
+      # The config lives here rather than in a ConfigMap on purpose. It is one
+      # fewer object and one fewer volume, and it removes a real trap: a
+      # ConfigMap rendered by this chart is named after the release only while
+      # it is the sole ConfigMap (common's valuesToObject appends the
+      # identifier once itemCount > 1), so adding a second one later would
+      # rename this one and break the mount silently. Inlined, the config is
+      # part of the pod spec -- which also means editing a timeout below rolls
+      # the pod by itself, with no checksum annotation needed.
+      #
+      # It must land on a WRITABLE volume: when `api-keys` is empty auth2api
+      # generates one and writes it back over the file it just read. That never
+      # fires while Bitwarden supplies a key, but a read-only mount would turn
+      # the day it does fire into a crash instead of a log line.
+      render-config:
+        image:
+          repository: ghcr.io/rounakdatta/auth2api
+          tag: latest
+          pullPolicy: Always
+        command: ["/bin/sh", "-c"]
+        args:
+          # Upstream's config.example.yaml verbatim, except for the two values
+          # a container changes the meaning of -- see the comments inline.
+          #
+          # The heredoc delimiter is quoted, so the shell writes the body
+          # literally and __API_KEY__ survives to the sed below. The sed uses |
+          # as its delimiter, which the base64 key from
+          # create-bitwarden-secret.yml (A-Za-z0-9+/=) cannot contain.
+          - |
+            set -eu
+            if [ -z "${AUTH2API_API_KEY:-}" ]; then
+              echo "auth2api-credentials gave an empty api-key; refusing to render a keyless config" >&2
+              exit 1
+            fi
+            cat > /config/config.yaml.tmpl <<'CONFIG'
+            # Rendered from kubernetes/apps/auth2api/values.yaml at pod start.
+            # Editing this in the cluster achieves nothing; the next restart
+            # overwrites it.
+
+            # NOT upstream's "": that default makes index.ts bind 127.0.0.1,
+            # which inside a pod means the Service and every probe get
+            # connection refused while the process looks perfectly healthy.
+            host: "0.0.0.0"
+            port: 8317
+
+            # NOT upstream's "~/.auth2api": an absolute path onto the PVC. The
+            # tilde resolves against $HOME on the container's own filesystem,
+            # so every OAuth token would vanish with the pod.
+            auth-dir: "/data"
+
+            api-keys:
+              - "__API_KEY__"
+
+            body-limit: "200mb"
+
+            timeouts:
+              messages-ms: 120000
+              stream-messages-ms: 600000
+              count-tokens-ms: 30000
+
+            stats:
+              enabled: true
+
+            debug: "off"
+
+            cloaking:
+              cli-version: "2.1.88"
+              entrypoint: "cli"
+              codex:
+                originator: "codex_cli_rs"
+                cli-version: "0.125.0"
+              cursor:
+                client-version: "2.3.41"
+                client-type: "ide"
+                agent-base-url: "https://api2.cursor.sh"
+                api-base-url: "https://api2.cursor.sh"
+            CONFIG
+            sed "s|__API_KEY__|${AUTH2API_API_KEY}|" /config/config.yaml.tmpl > /config/config.yaml
+            rm -f /config/config.yaml.tmpl
+            chmod 600 /config/config.yaml
+            echo "rendered /config/config.yaml ($(wc -l < /config/config.yaml) lines)"
+        env:
+          - name: AUTH2API_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: auth2api-credentials
+                key: api-key
+        resources:
+          requests:
+            cpu: 10m
+            memory: 16Mi
+          limits:
+            memory: 64Mi
+
+    containers:
+      main:
+        image:
+          # TODO(image): upstream publishes none -- AmazingAng/auth2api has no
+          # CI and no package, its compose file says `build: .`. This expects a
+          # build of that Dockerfile pushed to our own GHCR. Until that exists
+          # the pod will sit in ImagePullBackOff, which is the honest failure.
+          # Pin a real tag here once it is published; `latest` + Always is a
+          # placeholder, not the convention this repo otherwise follows.
+          repository: ghcr.io/rounakdatta/auth2api
+          tag: latest
+          pullPolicy: Always
+
+        # The image's CMD already carries `--config=/config/config.yaml`, and
+        # NODE_ENV=production is baked in as an ENV, so the compose file's
+        # `environment:` block has nothing left to translate.
+
+        ports:
+          - name: http
+            containerPort: 8317
+            protocol: TCP
+
+        # /health is the one route with no API key in front of it (server.ts
+        # registers it above the requireApiKey middleware), so the kubelet can
+        # probe without holding the Secret.
+        probes:
+          startup:
+            enabled: true
+            type: HTTP
+            path: /health
+            port: 8317
+            spec:
+              initialDelaySeconds: 3
+              periodSeconds: 5
+              timeoutSeconds: 3
+              failureThreshold: 12
+          readiness:
+            enabled: true
+            type: HTTP
+            path: /health
+            port: 8317
+            spec:
+              periodSeconds: 10
+              timeoutSeconds: 3
+              failureThreshold: 3
+          liveness:
+            enabled: true
+            type: HTTP
+            path: /health
+            port: 8317
+            spec:
+              periodSeconds: 30
+              timeoutSeconds: 5
+              failureThreshold: 5
+
+        securityContext:
+          # The image declares no USER, so this runs as root. What is dropped
+          # costs nothing: it binds 8317, never a privileged port, and never
+          # needs to gain privileges.
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+
+        resources:
+          requests:
+            cpu: 50m
+            memory: 128Mi
+          limits:
+            # Node process proxying streamed completions; the 200mb body-limit
+            # in config.yaml is the real floor under this number.
+            memory: 1Gi
+
+  # ---------------------------------------------------------------------------
+  # One-time login pod. DISABLED, and meant to stay that way.
+  #
+  # auth2api exits 1 at boot when auth-dir holds no account ("No accounts
+  # found. Run with --login ..."), so on a fresh volume `main` CrashLoopBackOffs
+  # and there is no running container to exec into -- the volume has to be
+  # seeded before the server will ever stay up. The login itself is interactive
+  # (browser consent, callback URL pasted back), so it cannot be a Job either.
+  #
+  # To authorise a provider, once:
+  #   1. set `enabled: true` here, deploy the branch
+  #   2. kubectl -n apps exec -it deploy/auth2api-login -- \
+  #        node dist/index.js --config=/config/config.yaml --login --manual
+  #      (add --provider=codex or --provider=cursor for the others)
+  #   3. open the URL it prints, approve, paste the callback URL back
+  #   4. set `enabled: false` again and deploy
+  #
+  # It mounts the same volumes as `main` and shares its node pin, so the RWO
+  # claim is reachable from both -- they are only ever up at the same time
+  # while `main` is crashlooping, which is exactly when this is needed.
+  login:
+    enabled: false
+    type: deployment
+    replicas: 1
+    containers:
+      main:
+        image:
+          repository: ghcr.io/rounakdatta/auth2api
+          tag: latest
+          pullPolicy: Always
+        # Hold the container open without starting the server, so there is
+        # something to exec into.
+        command: ["/bin/sh", "-c"]
+        args: ["echo 'login pod: exec in and run --login --manual'; sleep infinity"]
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            memory: 512Mi
+
+defaultPodOptions:
+  # Pin to the control-plane node. The claim below is local-path (node-local),
+  # so the pod and its volume have to agree on a node for good -- and the
+  # rishra worker `jomjom` is a home box across a Tailscale link that has
+  # already taken an app down mid-rollout (see itineris/pvc.yaml). Without
+  # this, whichever node schedules first wins permanently.
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+
+persistence:
+  # compose's `auth-data:/data`. The OAuth token file per account, plus
+  # stats.jsonl. This is the whole reason the deployment is stateful: losing it
+  # means re-authorising every provider through a browser by hand.
+  # globalMounts, not advancedMounts: app-template refuses to render a mount
+  # naming a disabled controller, so a per-controller mount list would make
+  # enabling the login pod below a two-part edit that fails the build if you
+  # only remember the first part. Mounted everywhere, it is one flag.
+  data:
+    type: persistentVolumeClaim
+    accessMode: ReadWriteOnce
+    size: 5Gi
+    storageClass: local-path
+    globalMounts:
+      - path: /data
+
+  # compose's `./config.yaml:/config/config.yaml`, as an emptyDir the init
+  # container writes and the app reads -- and can rewrite, which a ConfigMap
+  # mount would not allow.
+  config:
+    type: emptyDir
+    globalMounts:
+      - path: /config
+
+service:
+  main:
+    controller: main
+    primary: true
+    type: ClusterIP
+    ports:
+      http:
+        port: 8317
+        primary: true
+
+# No ingress. auth2api holds the OAuth sessions of real paid accounts and its
+# only gate is the api-keys list above, so it stays inside the cluster:
+# http://auth2api.apps.svc.cluster.local:8317 for in-cluster callers (festie
+# reaches it directly), `kubectl -n apps port-forward svc/auth2api 8317:8317`
+# for a laptop.
+#
+# Tinyauth is not the missing piece and cannot be bolted on: a ForwardAuth
+# middleware answers an unauthenticated API client with a 302 to Google, which
+# no SDK follows. Exposing this publicly means exposing it on the API key
+# alone -- a deliberate decision, not a default, so it is not made here.
+ingress:
+  main:
+    enabled: false
