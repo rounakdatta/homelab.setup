@@ -20,6 +20,10 @@ helmCharts:
     namespace: apps
     valuesFile: values.yaml
 
-# No standalone resources: the chart renders the Deployment, Service and the
-# PVC, and there is no Ingress on purpose (see the note at the end of
-# values.yaml -- this gateway stays inside the cluster).
+# The chart renders the Deployment, Service and PVC. The Ingress is ours, as
+# everywhere else in this repo -- it carries cert-manager and Traefik
+# annotations the chart's own ingress block does not model, and it deliberately
+# routes only the API prefixes (see ingress.yaml).
+resources:
+  - middleware.yaml
+  - ingress.yaml

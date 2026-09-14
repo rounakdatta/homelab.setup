@@ -373,16 +373,10 @@ service:
         port: 8317
         primary: true
 
-# No ingress. auth2api holds the OAuth sessions of real paid accounts and its
-# only gate is the api-keys list above, so it stays inside the cluster:
-# http://auth2api.apps.svc.cluster.local:8317 for in-cluster callers (festie
-# reaches it directly), `kubectl -n apps port-forward svc/auth2api 8317:8317`
-# for a laptop.
-#
-# Tinyauth is not the missing piece and cannot be bolted on: a ForwardAuth
-# middleware answers an unauthenticated API client with a 302 to Google, which
-# no SDK follows. Exposing this publicly means exposing it on the API key
-# alone -- a deliberate decision, not a default, so it is not made here.
+# The chart's own ingress stays off: ours lives in ingress.yaml, where the
+# cert-manager and Traefik annotations and the API-only path allowlist are
+# easier to read than they would be nested in values. See that file for why
+# tinyauth cannot front this and why /admin is left unrouted.
 ingress:
   main:
     enabled: false

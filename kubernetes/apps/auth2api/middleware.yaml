@@ -1,0 +1,23 @@
+---
+# Rate limit at the edge, because auth2api's own limiter stops being useful the
+# moment it sits behind an ingress.
+#
+# server.ts keeps a per-IP bucket (RATE_LIMIT_MAX = 60 per 60s) keyed on
+# `req.ip`, but the Express app is built without `trust proxy`, so `req.ip` is
+# the socket peer -- which behind Traefik is always the same ingress pod. Every
+# caller on the internet would therefore share one bucket of 60/min, and the
+# limiter would read as "the gateway is broken" rather than "you are being
+# limited".
+#
+# Traefik sees the real client, so the meaningful limit belongs here. 10 req/s
+# sustained with a burst of 30 is far above anything a human driving an LLM
+# client produces, and far below what makes a leaked key cheap to abuse.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: auth2api-ratelimit
+  namespace: apps
+spec:
+  rateLimit:
+    average: 10
+    burst: 30
