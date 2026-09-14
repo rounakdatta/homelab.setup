@@ -229,7 +229,10 @@ controllers:
   # claim is reachable from both -- they are only ever up at the same time
   # while `main` is crashlooping, which is exactly when this is needed.
   login:
-    enabled: false
+    # TEMPORARILY ON to seed the first account -- see the block above. Set
+    # back to false and deploy again once a provider is authorised; leaving it
+    # up idles a pod that holds the same ReadWriteOnce claim as `main`.
+    enabled: true
     type: deployment
     replicas: 1
     containers:
