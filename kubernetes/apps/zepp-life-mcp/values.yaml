@@ -1,7 +1,7 @@
 ---
 image:
   repository: ghcr.io/rounakdatta/zepp-life-mcp
-  tag: "0.4.2"
+  tag: "0.5.2"
 
 zepp:
   mode: cloud_session
@@ -40,7 +40,12 @@ sync:
   enabled: true
   # 03:17 IST. The band uploads on the phone's schedule; syncing more often than
   # it does buys nothing.
-  schedule: "17 3 * * *"
+  # TEMPORARY, ONE SHOT at 01:18 IST: backfills the workout fields 0.5.0
+  # recovers (pace, steps, VO2max, training effect) on records that predate them.
+  # A single slot on purpose -- a */10 schedule previously had a sync job running
+  # almost continuously, which is what collided with server startup. Revert to
+  # "17 3 * * *" once the fields are populated.
+  schedule: "18 1 * * *"
   # Kubernetes reads the schedule in UTC unless this is set, so without it the
   # "03:17 IST" above actually meant 03:17 UTC -- 08:47 IST. That, plus the
   # CronJob being created after 03:17 UTC, is why it had never fired.
@@ -48,14 +53,14 @@ sync:
   # Every type, which includes workout_details (GPS tracks and per-second heart
   # rate). That first run fetches ~800 MB from Zepp and stores ~120 MB; every
   # run after it skips what is already archived and fetches only new workouts.
-  dataTypes: []
+  dataTypes: ["workouts"]
   # Empty on purpose: the service resumes from its stored cursor, and falls back
   # to 2020-01-01 when a cloud source has none yet. Naming a date here would
   # override the cursor and re-fetch the whole history every night.
   # Empty on purpose: the service resumes from its stored cursor, and falls back
   # to 2020-01-01 when a cloud source has none yet. Naming a date here would
   # override the cursor and re-fetch the whole history every night.
-  startDate: ""
+  startDate: "2020-01-01"
   # Same reasoning as the server: a 50m request would not fit either, and this
   # runs once a night.
   resources:
