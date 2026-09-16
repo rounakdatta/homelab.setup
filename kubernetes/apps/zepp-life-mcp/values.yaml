@@ -1,7 +1,7 @@
 ---
 image:
   repository: ghcr.io/rounakdatta/zepp-life-mcp
-  tag: "0.3.1"
+  tag: "0.3.2"
 
 zepp:
   mode: cloud_session
@@ -40,7 +40,15 @@ sync:
   enabled: true
   # 03:17 IST. The band uploads on the phone's schedule; syncing more often than
   # it does buys nothing.
-  schedule: "17 3 * * *"
+  #
+  # TEMPORARY: every 10 minutes, to run the one-time backfill. Revert to
+  # "17 3 * * *" once the archive has data. concurrencyPolicy Forbid means a
+  # long first run cannot be overlapped by the next tick.
+  schedule: "*/10 * * * *"
+  # Kubernetes reads the schedule in UTC unless this is set, so without it the
+  # "03:17 IST" above actually meant 03:17 UTC -- 08:47 IST. That, plus the
+  # CronJob being created after 03:17 UTC, is why it had never fired.
+  timeZone: "Asia/Kolkata"
   # Every type, which includes workout_details (GPS tracks and per-second heart
   # rate). That first run fetches ~800 MB from Zepp and stores ~120 MB; every
   # run after it skips what is already archived and fetches only new workouts.
