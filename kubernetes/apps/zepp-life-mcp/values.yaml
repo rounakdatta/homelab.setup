@@ -40,10 +40,7 @@ sync:
   enabled: true
   # 03:17 IST. The band uploads on the phone's schedule; syncing more often than
   # it does buys nothing.
-  # TEMPORARY: every 10 minutes for the one-time backfill of the columns 0.4.0
-  # adds (timezone offset, algorithm version, deep/light minutes). Revert to
-  # "17 3 * * *" once coverage shows them populated.
-  schedule: "*/10 * * * *"
+  schedule: "17 3 * * *"
   # Kubernetes reads the schedule in UTC unless this is set, so without it the
   # "03:17 IST" above actually meant 03:17 UTC -- 08:47 IST. That, plus the
   # CronJob being created after 03:17 UTC, is why it had never fired.
@@ -51,16 +48,14 @@ sync:
   # Every type, which includes workout_details (GPS tracks and per-second heart
   # rate). That first run fetches ~800 MB from Zepp and stores ~120 MB; every
   # run after it skips what is already archived and fetches only new workouts.
-  # TEMPORARY: workouts only. Daily activity and sleep are already backfilled,
-  # and the heart-rate pass takes long enough to starve everything after it.
-  # Back to [] once the city/geohash columns are populated.
-  dataTypes: ["workouts"]
+  dataTypes: []
   # Empty on purpose: the service resumes from its stored cursor, and falls back
   # to 2020-01-01 when a cloud source has none yet. Naming a date here would
   # override the cursor and re-fetch the whole history every night.
-  # TEMPORARY with the schedule above: the cursor would skip already-synced days,
-  # and those are exactly the rows missing the new columns. Back to "" after.
-  startDate: "2020-01-01"
+  # Empty on purpose: the service resumes from its stored cursor, and falls back
+  # to 2020-01-01 when a cloud source has none yet. Naming a date here would
+  # override the cursor and re-fetch the whole history every night.
+  startDate: ""
   # Same reasoning as the server: a 50m request would not fit either, and this
   # runs once a night.
   resources:
