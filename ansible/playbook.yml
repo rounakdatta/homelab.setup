@@ -134,6 +134,13 @@
   tags: [secrets]
 
   vars:
+    # Where the one-shot vault read lands. Mode 0600 via umask, holds only the
+    # items k8s_secrets names, and is removed by the last task of this play.
+    bw_vault_file: /tmp/bw-referenced-items.json
+
+    # Every distinct Bitwarden item k8s_secrets refers to.
+    bw_wanted_items: "{{ k8s_secrets | map(attribute='data') | map('dict2items') | flatten | map(attribute='value') | unique }}"
+
     # Secret definitions - add new services here
     k8s_secrets:
       # MySQL credentials (consolidated)
@@ -412,6 +419,33 @@
         BW_SESSION: "{{ bw_session.stdout }}"
       no_log: true
 
+    # `bw get` spawns a fresh Node.js CLI per lookup: ~4.2s each, and these
+    # secrets make 54 of them, so the step spent 226s almost entirely on
+    # process boot. The vault is already local after `unlock`, so read it once
+    # and resolve every lookup from that. Reduced to just the items these
+    # secrets reference, so the file is not a full plaintext vault dump, and
+    # removed at the end of the play regardless of outcome.
+    - name: Verify jq is installed
+      ansible.builtin.command: jq --version
+      changed_when: false
+
+    - name: Fetch the referenced vault items once
+      ansible.builtin.shell: |
+        set -o pipefail
+        umask 077
+        bw sync --session "$BW_SESSION" >/dev/null
+        bw list items --session "$BW_SESSION" \
+          | jq -c --argjson want '{{ bw_wanted_items | to_json }}' \
+              '[ .[] | select(.name as $n | $want | index($n)) | {name, notes, password: .login.password} ]' \
+          > "{{ bw_vault_file }}"
+        echo "cached $(jq length "{{ bw_vault_file }}") of {{ bw_wanted_items | length }} referenced items"
+      args:
+        executable: /bin/bash
+      environment:
+        BW_SESSION: "{{ BW_SESSION }}"
+      register: bw_vault
+      changed_when: false
+
     - name: Ensure required namespaces exist
       ansible.builtin.shell: kubectl create namespace {{ item }} --dry-run=client -o yaml | kubectl apply -f -
       loop:
@@ -433,11 +467,22 @@
     - name: Create/Update K8s secrets from Bitwarden
       ansible.builtin.shell: |
         set -o pipefail
-        export BW_SESSION="{{ BW_SESSION }}"
         d="$(mktemp -d)"; trap 'rm -rf "$d"' EXIT
         bad=""
+        # Same contract `bw get` had, including its duplicate-name error: a
+        # name matching two items is ambiguous and must fail loudly, never
+        # silently pick one.
+        bwget() {
+          jq -er --arg n "$2" --arg t "$1" '
+            [ .[] | select(.name == $n) ] as $m
+            | if   ($m | length) == 0 then error("no item named \($n)")
+              elif ($m | length) > 1  then error("\($m | length) items are named \($n); names must be unique")
+              else ($m[0] | if $t == "notes" then .notes else .password end)
+                   // error("empty \($t) on \($n)")
+              end' "{{ bw_vault_file }}"
+        }
         {% for key, bw_path in item.data.items() %}
-        if v="$(bw get {{ item.type | default('password') }} '{{ bw_path }}' --session "$BW_SESSION" 2> "$d/.err")" && [ -n "$v" ]; then
+        if v="$(bwget {{ item.type | default('password') }} '{{ bw_path }}' 2> "$d/.err")" && [ -n "$v" ]; then
           printf '%s' "$v" > "$d/{{ key }}"
         else
           bad="$bad {{ bw_path }} ($(r="$(head -n 1 "$d/.err" | cut -c1-160 | tr -d '\r')"; printf '%s' "${r:-empty value}"))"
@@ -483,3 +528,10 @@
       ansible.builtin.debug:
         msg: "{{ secret_failures }}"
       when: secret_failures | default([]) | length > 0
+
+    # Always, including when a lookup above failed: this file holds real
+    # secret values and must not outlive the play.
+    - name: Remove the cached vault items
+      ansible.builtin.file:
+        path: "{{ bw_vault_file }}"
+        state: absent
