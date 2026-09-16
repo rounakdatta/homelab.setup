@@ -1,7 +1,7 @@
 ---
 image:
   repository: ghcr.io/rounakdatta/zepp-life-mcp
-  tag: "0.4.0"
+  tag: "0.4.1"
 
 zepp:
   mode: cloud_session
@@ -51,7 +51,10 @@ sync:
   # Every type, which includes workout_details (GPS tracks and per-second heart
   # rate). That first run fetches ~800 MB from Zepp and stores ~120 MB; every
   # run after it skips what is already archived and fetches only new workouts.
-  dataTypes: []
+  # TEMPORARY: workouts only. Daily activity and sleep are already backfilled,
+  # and the heart-rate pass takes long enough to starve everything after it.
+  # Back to [] once the city/geohash columns are populated.
+  dataTypes: ["workouts"]
   # Empty on purpose: the service resumes from its stored cursor, and falls back
   # to 2020-01-01 when a cloud source has none yet. Naming a date here would
   # override the cursor and re-fetch the whole history every night.
