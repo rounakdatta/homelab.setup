@@ -222,6 +222,30 @@
         data:
           apiKey: itineris/google_maps_api_key
 
+      # zepp-life-mcp: two unrelated credentials in one Secret.
+      #
+      # `apptoken` is the Zepp session cookie the nightly sync CronJob uses to
+      # reach api-mifit.huami.com. It is a BROWSER SESSION COOKIE and will
+      # expire: when the sync job starts failing, re-grab it from
+      # https://user.huami.com/privacy2/index.html (DevTools -> Application ->
+      # Cookies -> apptoken), update the Bitwarden item and re-run the deploy.
+      # Queries keep being served from the local archive the whole time -- an
+      # expired token breaks syncing, not reading.
+      #
+      # `bearerToken` is what MCP clients must send as `Authorization: Bearer`
+      # to zepp.taptappers.club. It is the only thing standing between the
+      # internet and a complete personal health archive, so it should be long
+      # and random. Rotating it needs a rollout restart: the server reads it
+      # from the environment at startup.
+      #
+      # Bitwarden items `zepp-life-mcp/apptoken` and `zepp-life-mcp/bearer_token`,
+      # password = the value.
+      - name: zepp-life-mcp
+        namespace: apps
+        data:
+          apptoken: zepp-life-mcp/apptoken
+          bearerToken: zepp-life-mcp/bearer_token
+
       # Frigate RTSP credentials. Keys are the env var names Frigate looks
       # up at runtime when substituting `{FRIGATE_RTSP_USERNAME}` /
       # `{FRIGATE_RTSP_PASSWORD}` placeholders in cameras[].ffmpeg.inputs[].path.
