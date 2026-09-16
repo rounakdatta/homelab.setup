@@ -138,12 +138,23 @@ jobs:
           # recur. Idempotent: --ignore-not-found.
           kubectl -n apps delete deployment auth2api-main auth2api-login --ignore-not-found
 
-          # First apply may fail for Velero/cert-manager CRs if CRDs haven't propagated yet
-          kubectl apply -f /tmp/manifest.yaml || true
-          # Wait for any CRDs to be established
-          kubectl wait --for=condition=Established crd --all --timeout=30s 2>/dev/null || true
-          # Second apply catches resources that depend on CRDs
-          kubectl apply -f /tmp/manifest.yaml
+          # This render carries 31 custom resources -- ServiceMonitor,
+          # Middleware, Certificate, Issuer, ClusterIssuer, Schedule,
+          # BackupStorageLocation, VolumeSnapshotLocation -- whose CRDs ship in
+          # the same manifest. On a fresh cluster the first apply therefore
+          # fails for them, and only a second pass after the CRDs establish
+          # gets them in. On an established cluster the first pass already
+          # succeeds, so the second was ~55s of re-applying 203 resources to
+          # no effect. Retry only on failure: identical on a fresh install,
+          # half the work on every deploy after it.
+          #
+          # This is also stricter than the `|| true` it replaces, which
+          # swallowed the first pass's exit code unconditionally.
+          if ! kubectl apply -f /tmp/manifest.yaml; then
+            echo "first apply failed -- waiting for CRDs to establish, then retrying"
+            kubectl wait --for=condition=Established crd --all --timeout=60s 2>/dev/null || true
+            kubectl apply -f /tmp/manifest.yaml
+          fi
           echo ""
           echo "=== Deployment Status ==="
           kubectl get pods -A | grep -v kube-system
