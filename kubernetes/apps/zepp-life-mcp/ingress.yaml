@@ -1,0 +1,49 @@
+---
+# PUBLIC hostname, but NOT unauthenticated -- and deliberately NOT behind
+# tinyauth.
+#
+# tinyauth is a browser forward-auth: it answers an unauthenticated request with
+# a redirect to a login page. An MCP client is not a browser and cannot complete
+# that flow, so putting the middleware here would make the endpoint unusable by
+# the only thing that calls it.
+#
+# Authentication is instead inside the application: every request to /mcp must
+# carry `Authorization: Bearer <token>`, compared in constant time against the
+# `bearerToken` key of the zepp-life-mcp Secret. /healthz is exempt so kubelet
+# probes work without a credential; it returns the literal string "ok" and
+# discloses nothing.
+#
+# This endpoint serves a complete personal health archive. If the bearer token
+# is ever exposed, rotate the Bitwarden item and restart the Deployment -- the
+# token is read at request time from the environment, so a rollout is required.
+#
+# DNS is NOT wildcard on taptappers.club. Records live in the rounakdatta/oh-my-dns
+# repo (records.txt, synced to Cloudflare on push): this host needs
+# `A zepp 88.214.24.194`, DNS-only like every other homelab host. Without the
+# record cert-manager's HTTP-01 challenge fails and the pod is healthy but
+# unreachable.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: zepp-life-mcp
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: zepp.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: zepp-life-mcp
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - zepp.taptappers.club
+    secretName: zepp-life-mcp-tls-secret
