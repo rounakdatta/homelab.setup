@@ -42,3 +42,7 @@ secrets.yaml
 
 # Kustomize Helm chart inflator cache (created by `kubectl kustomize --enable-helm`)
 kubernetes/**/charts/
+
+# agent-smith drops per-machine skill symlinks here (absolute paths into
+# ~/.cache), which are dangling for anyone else who clones this repo.
+.claude/skills/
