@@ -44,6 +44,12 @@ secrets.yaml
 # inflates them into kubernetes/**/charts/ and they are committed, so a deploy
 # renders from the tree instead of fetching 17 charts from upstream on every
 # run. Re-render and commit the result whenever a chart `version:` changes.
+#
+# Nothing above may apply inside a vendored chart. The rules for this repo's
+# own files match upstream chart contents too -- `secrets.yaml` alone dropped
+# six templates, one of which was nextcloud's, so the render silently lost
+# secret/nextcloud. A vendored chart is only useful if it is complete.
+!kubernetes/**/charts/**
 
 # agent-smith drops per-machine skill symlinks here (absolute paths into
 # ~/.cache), which are dangling for anyone else who clones this repo.
