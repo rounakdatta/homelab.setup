@@ -138,6 +138,9 @@
     # items k8s_secrets names, and is removed by the last task of this play.
     bw_vault_file: /tmp/bw-referenced-items.json
 
+    # Every distinct Bitwarden item k8s_secrets refers to.
+    bw_wanted_items: "{{ k8s_secrets | map(attribute='data') | map('dict2items') | flatten | map(attribute='value') | unique }}"
+
     # Secret definitions - add new services here
     k8s_secrets:
       # MySQL credentials (consolidated)
@@ -432,10 +435,10 @@
         umask 077
         bw sync --session "$BW_SESSION" >/dev/null
         bw list items --session "$BW_SESSION" \
-          | jq -c --argjson want '{{ k8s_secrets | map(attribute="data") | map("dict2items") | flatten | map(attribute="value") | unique | to_json }}' \
+          | jq -c --argjson want '{{ bw_wanted_items | to_json }}' \
               '[ .[] | select(.name as $n | $want | index($n)) | {name, notes, password: .login.password} ]' \
           > "{{ bw_vault_file }}"
-        echo "cached $(jq length "{{ bw_vault_file }}") of {{ k8s_secrets | map(attribute='data') | map('dict2items') | flatten | map(attribute='value') | unique | length }} referenced items"
+        echo "cached $(jq length "{{ bw_vault_file }}") of {{ bw_wanted_items | length }} referenced items"
       args:
         executable: /bin/bash
       environment:
