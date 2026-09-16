@@ -14,7 +14,12 @@ namespace: apps
 # is a library the cluster has been running for a while, just used directly.
 helmCharts:
   - name: app-template
-    repo: https://bjw-s-labs.github.io/helm-charts
+    # OCI, not the old GitHub Pages repo. bjw-s retired
+    # https://bjw-s-labs.github.io/helm-charts on 2026-09-16 -- it now answers
+    # 404 for index.yaml, which broke EVERY deploy from this repo, not just
+    # auth2api, because kustomize fails the whole accumulation on one bad chart.
+    # Same chart, same version, same digest; only the transport changed.
+    repo: oci://ghcr.io/bjw-s-labs/helm
     version: 5.1.0
     releaseName: auth2api
     namespace: apps
