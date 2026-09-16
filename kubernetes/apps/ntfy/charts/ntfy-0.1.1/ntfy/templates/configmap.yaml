@@ -1,0 +1,12 @@
+
+{{- if not (and (.Values.config.existingSecretRef.name) (.Values.config.existingConfigMap.name)) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ntfy.fullname" . }}
+  labels:
+    {{- include "ntfy.labels" . | nindent 4 }}
+data:
+  server.yml: |
+{{ toYaml .Values.config.sample | indent 4 }}
+{{- end }}

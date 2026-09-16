@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "firefly-iii.fullname" . }}
+  labels:
+    {{- include "firefly-iii.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  strategy:
+    type: {{ default "RollingUpdate" .Values.deploymentStrategyType }}
+  selector:
+    matchLabels:
+      {{- include "firefly-iii.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "firefly-iii.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: {{ .Chart.Name }}
+        {{- with .Values.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.image }}
+        image: "{{ coalesce $.Values.global.image.registry .registry }}/{{ .repository }}:{{ .tag | default (printf "version-%s" $.Chart.AppVersion) }}"
+        imagePullPolicy: {{ coalesce $.Values.global.image.pullPolicy .pullPolicy }}
+        {{- end }}
+        {{- if or .Values.config.envValueFrom }}
+        env:
+        {{- range $key, $value := .Values.config.envValueFrom }}
+          - name: {{ $key }}
+            valueFrom: {{- $value | toYaml | nindent 16 }}
+        {{- end }}
+        {{- end }}
+        {{- if or (.Values.config.env) (.Values.config.existingSecret) }}
+        envFrom:
+          - secretRef:
+              name: {{ template "firefly-iii.fullname" . }}-app-key
+          {{- if .Values.config.env }}
+          - configMapRef:
+              name: {{ template "firefly-iii.fullname" . }}
+          {{- end }}
+          {{- if .Values.config.existingSecret }}
+          - secretRef:
+              name: {{ .Values.config.existingSecret }}
+          {{- else if .Values.secrets.env }}
+          - secretRef:
+              name: {{ template  "firefly-iii.fullname" . }}
+          {{- end }}
+        {{- end }}
+        {{- if or (.Values.persistence.enabled) (.Values.extraVolumeMounts) }}
+        volumeMounts:
+          {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- if .Values.persistence.enabled }}
+          - name: upload
+            mountPath: "/var/www/html/storage/upload"
+          {{- end }}
+        {{- end }}
+        ports:
+          - name: http
+            containerPort: 8080
+            protocol: TCP
+        livenessProbe:
+          {{- with .Values.livenessProbe }}
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+        readinessProbe:
+          {{- with .Values.readinessProbe }}
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+        startupProbe:
+          {{- with .Values.startupProbe }}
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+
+        {{- with .Values.resources }}
+        resources:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+      {{- if or (.Values.persistence.enabled) (.Values.extraVolumes) }}
+      volumes:
+        {{- with .Values.extraVolumes }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- if (.Values.persistence.enabled) }}
+        - name: upload
+          persistentVolumeClaim:
+            claimName: {{ default (include "firefly-iii.fullname" .)  .Values.persistence.existingClaim }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

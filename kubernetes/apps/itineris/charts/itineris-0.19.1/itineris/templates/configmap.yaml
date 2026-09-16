@@ -1,0 +1,12 @@
+{{- if and .Values.googleMaps.apiKey (not .Values.googleMaps.existingSecret) }}
+# Runtime settings for the viewer, served by nginx as /config.json. Only
+# rendered when there is something to say; without it the site uses defaults.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-config
+  labels:
+    {{- include "itineris.labels" . | nindent 4 }}
+data:
+  config.json: {{ dict "googleMapsApiKey" .Values.googleMaps.apiKey "googleMapsMapId" .Values.googleMaps.mapId | toJson | quote }}
+{{- end }}

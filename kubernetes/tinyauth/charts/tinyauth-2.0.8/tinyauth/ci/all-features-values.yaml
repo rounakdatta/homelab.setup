@@ -1,0 +1,81 @@
+# CI testing values for tinyauth Helm chart
+# Minimal setup designed to run fast and reliably on a kind cluster
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/steveiliop56/tinyauth
+  pullPolicy: IfNotPresent
+  tag: "v5"
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations:
+    example.com/annotation: "ci-test"
+  name: "tinyauth-sa"
+
+podAnnotations:
+  example.com/pod-annotation: "ci-test"
+
+podLabels:
+  environment: "ci"
+
+service:
+  type: ClusterIP
+  port: 80
+
+# Tinyauth Configuration
+tinyauth:
+  appUrl: "https://tinyauth.example.com"
+  disableAnalytics: true
+
+  server:
+    port: 3000
+    address: "0.0.0.0"
+
+  auth:
+    users: "admin:$$2a$$10$$IOskOE6lyhb8YjYBgfGLNO7OQNiXIPV1tqaMM3ySEzAmYGQdvdsQ2"
+
+  ui:
+    title: "Tinyauth CI"
+
+  log:
+    level: "info"
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: tinyauth-ci.example.com
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+livenessProbe:
+  httpGet:
+    path: /api/healthz
+    port: http
+
+readinessProbe:
+  httpGet:
+    path: /api/healthz
+    port: http
+
+autoscaling:
+  enabled: false
+
+persistence:
+  enabled: false
+
+httpRoute:
+  enabled: false
+
+volumes: []
+volumeMounts: []
+nodeSelector: {}
+tolerations: []
+affinity: {}
+env: []

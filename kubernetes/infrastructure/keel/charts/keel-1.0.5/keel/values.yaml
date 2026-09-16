@@ -1,0 +1,252 @@
+# Default values for keel.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: keelhq/keel
+  tag: null
+  pullPolicy: Always
+
+# Image pull secrets
+imagePullSecrets: []
+
+# Enable insecure registries
+insecureRegistry: false
+
+# Polling is enabled by default,
+# you can disable it setting value below to false
+polling:
+  enabled: true
+  defaultSchedule: "@every 1m"
+
+# Extra Containers to run alongside Keel
+# extraContainers:
+#   - name: busybox
+#     image: busybox
+#     imagePullPolicy: IfNotPresent
+#     command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
+
+# Helm provider support
+helmProvider:
+  enabled: true
+  # set to version "v3" for Helm v3
+  version: "v2"
+  tillerNamespace: "kube-system"
+  # optional Tiller address (if portforwarder tunnel doesn't work),
+  # if you are using default configuration, setting it to
+  # 'tiller-deploy:44134' is usually fine
+  tillerAddress: 'tiller-deploy:44134'
+#  helmDriver: ''
+#  helmDriverSqlConnectionString: ''
+
+# Google Container Registry
+# GCP Project ID
+gcr:
+  enabled: false
+  projectId: ""
+  gcpServiceAccount: ""
+  clusterName: ""
+  pubSub:
+    enabled: false
+
+# Notification level (debug, info, success, warn, error, fatal)
+notificationLevel: info
+
+# AWS Elastic Container Registry
+# https://keel.sh/v1/guide/documentation.html#Polling-with-AWS-ECR
+ecr:
+  enabled: false
+  roleArn: ""
+  accessKeyId: ""
+  secretAccessKey: ""
+  region: ""
+
+# Webhook Notification
+# Remote webhook endpoint for notification delivery
+webhook:
+  enabled: false
+  endpoint: ""
+
+# Slack Notification
+# bot name (default keel) must exist!
+slack:
+  enabled: false
+  botName: ""
+  token: ""
+  channel: ""
+  approvalsChannel: ""
+
+# Hipchat notification and approvals
+hipchat:
+  enabled: false
+  token: ""
+  channel: ""
+  approvalsChannel: ""
+  botName: ""
+  userName: ""
+  password: ""
+
+# Mattermost notifications
+mattermost:
+  enabled: false
+  endpoint: ""
+
+# MS Teams notifications
+teams:
+  enabled: false
+  webhookUrl: ""
+
+# Discord notifications
+discord:
+  enabled: false
+  webhookUrl: ""
+
+# Mail notifications
+mail:
+  enabled: false
+  from: ""
+  to: ""
+  smtp:
+    server: ""
+    port: 25
+    user: ""
+    pass: ""
+
+# Basic auth on approvals
+basicauth:
+  enabled: false
+  user: ""
+  password: ""
+
+# Keel service
+# Enable to receive webhooks from Docker registries
+service:
+  enabled: false
+  type: LoadBalancer
+  externalPort: 9300
+  clusterIP: ""
+
+# Webhook Relay service
+# If you don’t want to expose your Keel service, you can use https://webhookrelay.com/
+# which can deliver webhooks to your internal Keel service through Keel sidecar container.
+webhookRelay:
+  enabled: false
+  bucket: ""
+  # webhookrelay.com credentials
+  # Set the key and secret values here to create the keel-webhookrelay secret with this
+  # chart -or- leave key and secret blank and create the keel-webhookrelay secret separately.
+  key: ""
+  secret: ""
+  # webhookrelay docker image
+  image:
+    repository: webhookrelay/webhookrelayd
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# Use a secret file to define passwords and tokens of third parties.
+secret:
+  # Leave blank to use `keel.fullname`
+  name: ""
+  # Set to false to manage your own secret file, with terraform for example.
+  create: true
+
+# Keel self-update
+# uncomment lines below if you want Keel to automaticly
+# self-update to the latest release version
+# keel:
+#   # keel policy (all/major/minor/patch/force)
+#   policy: patch
+#   # trigger type, defaults to events such as pubsub, webhooks
+#   trigger: poll
+#   # polling schedule
+#   pollSchedule: "@every 3m"
+#   # images to track and update
+#   images:
+#     - repository: image.repository
+#       tag: image.tag
+
+# RBAC manifests management
+rbac:
+  enabled: true
+  serviceAccount:
+    # Kubernetes service account name to be used for ClusterRoleBinding and Deployment.
+    # name:
+    # Create a new Kubernetes service account automatically. Set to false if you want to use your own service account.
+    # If rbac.serviceAccount.name is not set, a new name for the service account is generated
+    create: true
+
+# Resources
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# NodeSelector
+nodeSelector: {}
+
+affinity: {}
+
+tolerations: {}
+
+# base64 encoded json of GCP service account
+# more info available here: https://cloud.google.com/kubernetes-engine/docs/tutorials/authenticating-to-cloud-platform
+# e.g. --set googleApplicationCredentials=$(cat <JSON_KEY_FIEL> | base64)
+googleApplicationCredentials: ""
+
+# Enable DEBUG logging
+debug: false
+
+# This is used by the static manifest generator in order to create a static
+# namespace manifest for the namespace that keel is being installed
+# within. It should **not** be used if you are using Helm for deployment.
+createNamespaceResource: false
+
+podAnnotations: {}
+
+serviceAnnotations: {}
+# Useful for making the load balancer internal
+# serviceAnnotations:
+#    cloud.google.com/load-balancer-type: Internal
+
+aws:
+  region: null
+
+podDisruptionBudget:
+  enabled: false
+  maxUnavailable: 1
+  minAvailable: null
+
+# Google Cloud Certificates
+gcloud:
+  managedCertificates:
+    enabled: false
+    domains:
+      - ""
+
+ingress:
+  enabled: false
+  labels: {}
+  annotations: {}
+#    kubernetes.io/ingress.class: nginx
+#    kubernetes.io/tls-acme: "true"
+  hosts: []
+#    - host: chart-example.local
+#      paths:
+#        - /
+  tls: []
+#    - secretName: chart-example-tls
+#      hosts:
+#        - chart-example.local
+
+dockerRegistry:
+  enabled: false
+  name: ""
+  key: ""
+
+persistence:
+  enabled: false
+  storageClass: "-"
+  size: 1Gi

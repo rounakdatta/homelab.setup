@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 6.5.9
+description: Installs Firefly III
+home: https://www.firefly-iii.org/
+icon: https://raw.githubusercontent.com/firefly-iii/firefly-iii/main/.github/assets/img/logo-small.png
+maintainers:
+- email: firefly-iii@mor.re
+  name: morremeyer
+name: firefly-iii
+sources:
+- https://github.com/firefly-iii/firefly-iii/
+type: application
+version: 1.9.13

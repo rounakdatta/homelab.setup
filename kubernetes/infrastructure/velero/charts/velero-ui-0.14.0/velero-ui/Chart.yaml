@@ -1,0 +1,24 @@
+annotations:
+  artifacthub.io/category: monitoring-logging
+  artifacthub.io/changes: |
+    - kind: changed
+      description: upgrade app version to 0.10.0
+apiVersion: v2
+appVersion: 0.10.0
+description: A Helm chart for Velero UI
+home: https://velero-ui.docs.otwld.com/
+icon: https://velero.io/img/Velero.svg
+keywords:
+- backup
+- velero
+- dashboard
+kubeVersion: ^1.16.0-0
+maintainers:
+- email: tech@otwld.com
+  name: OTWLD
+name: velero-ui
+sources:
+- https://github.com/otwld/velero-ui
+- https://github.com/vmware-tanzu/velero
+type: application
+version: 0.14.0

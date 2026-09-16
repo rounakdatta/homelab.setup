@@ -1,0 +1,130 @@
+# tinyauth
+
+![Version: 2.0.8](https://img.shields.io/badge/Version-2.0.8-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v5.0.7](https://img.shields.io/badge/AppVersion-v5.0.7-informational?style=flat-square)
+
+The tiniest authentication and authorization server you have ever seen.
+
+## Values
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| affinity | object | `{}` |  |
+| autoscaling.enabled | bool | `false` |  |
+| autoscaling.maxReplicas | int | `10` |  |
+| autoscaling.minReplicas | int | `1` |  |
+| autoscaling.targetCPUUtilizationPercentage | int | `80` |  |
+| autoscaling.targetMemoryUtilizationPercentage | int | `80` |  |
+| deploymentStrategy.type | string | `"RollingUpdate"` |  |
+| env | list | `[]` |  |
+| fullnameOverride | string | `""` |  |
+| httpRoute.annotations | object | `{}` |  |
+| httpRoute.enabled | bool | `false` |  |
+| httpRoute.hostnames[0] | string | `"chart-example.local"` |  |
+| httpRoute.parentRefs[0].name | string | `"my-gateway"` |  |
+| httpRoute.rules[0].matches[0].path.type | string | `"PathPrefix"` |  |
+| httpRoute.rules[0].matches[0].path.value | string | `"/"` |  |
+| image.pullPolicy | string | `"IfNotPresent"` |  |
+| image.repository | string | `"ghcr.io/steveiliop56/tinyauth"` |  |
+| image.tag | string | `""` |  |
+| imagePullSecrets | list | `[]` |  |
+| ingress.annotations | object | `{}` |  |
+| ingress.className | string | `""` |  |
+| ingress.enabled | bool | `false` |  |
+| ingress.hosts[0].host | string | `"chart-example.local"` |  |
+| ingress.hosts[0].paths[0].path | string | `"/"` |  |
+| ingress.hosts[0].paths[0].pathType | string | `"ImplementationSpecific"` |  |
+| ingress.tls | list | `[]` |  |
+| livenessProbe.httpGet.path | string | `"/api/healthz"` |  |
+| livenessProbe.httpGet.port | string | `"http"` |  |
+| nameOverride | string | `""` |  |
+| nodeSelector | object | `{}` |  |
+| persistence.accessMode | string | `"ReadWriteOnce"` |  |
+| persistence.annotations | object | `{}` |  |
+| persistence.enabled | bool | `false` |  |
+| persistence.mountPath | string | `"/data"` |  |
+| persistence.size | string | `"1Gi"` |  |
+| persistence.storageClass | string | `""` |  |
+| podAnnotations | object | `{}` |  |
+| podLabels | object | `{}` |  |
+| podSecurityContext | object | `{}` |  |
+| readinessProbe.httpGet.path | string | `"/api/healthz"` |  |
+| readinessProbe.httpGet.port | string | `"http"` |  |
+| replicaCount | int | `1` |  |
+| resources | object | `{}` |  |
+| securityContext | object | `{}` |  |
+| service.port | int | `80` |  |
+| service.type | string | `"ClusterIP"` |  |
+| serviceAccount.annotations | object | `{}` |  |
+| serviceAccount.automount | bool | `true` |  |
+| serviceAccount.create | bool | `true` |  |
+| serviceAccount.name | string | `""` |  |
+| tinyauth.analytics.enabled | bool | `true` |  |
+| tinyauth.appUrl | string | `""` |  |
+| tinyauth.auth.ip.allow | string | `""` |  |
+| tinyauth.auth.ip.block | string | `""` |  |
+| tinyauth.auth.loginMaxRetries | int | `3` |  |
+| tinyauth.auth.loginTimeout | int | `300` |  |
+| tinyauth.auth.secureCookie | bool | `false` |  |
+| tinyauth.auth.sessionExpiry | int | `86400` |  |
+| tinyauth.auth.sessionMaxLifetime | int | `0` |  |
+| tinyauth.auth.trustedProxies | string | `""` |  |
+| tinyauth.auth.users | string | `""` |  |
+| tinyauth.auth.usersFile | string | `""` |  |
+| tinyauth.database.path | string | `"/data/tinyauth.db"` |  |
+| tinyauth.ldap.address | string | `""` |  |
+| tinyauth.ldap.authCert | string | `""` |  |
+| tinyauth.ldap.authKey | string | `""` |  |
+| tinyauth.ldap.baseDn | string | `""` |  |
+| tinyauth.ldap.bindDn | string | `""` |  |
+| tinyauth.ldap.bindPassword | string | `""` |  |
+| tinyauth.ldap.bindPasswordSecretRef.key | string | `""` |  |
+| tinyauth.ldap.bindPasswordSecretRef.name | string | `""` |  |
+| tinyauth.ldap.groupCacheTtl | int | `900` |  |
+| tinyauth.ldap.insecure | bool | `false` |  |
+| tinyauth.ldap.searchFilter | string | `"(uid=%s)"` |  |
+| tinyauth.log.json | bool | `false` |  |
+| tinyauth.log.level | string | `"info"` |  |
+| tinyauth.log.streams.app.enabled | bool | `true` |  |
+| tinyauth.log.streams.app.level | string | `""` |  |
+| tinyauth.log.streams.audit.enabled | bool | `false` |  |
+| tinyauth.log.streams.audit.level | string | `""` |  |
+| tinyauth.log.streams.http.enabled | bool | `true` |  |
+| tinyauth.log.streams.http.level | string | `""` |  |
+| tinyauth.oauth.autoRedirect | string | `""` |  |
+| tinyauth.oauth.providers[0].authUrl | string | `""` |  |
+| tinyauth.oauth.providers[0].clientId | string | `""` |  |
+| tinyauth.oauth.providers[0].clientSecret | string | `""` |  |
+| tinyauth.oauth.providers[0].clientSecretFile | string | `""` |  |
+| tinyauth.oauth.providers[0].clientSecretSecretRef.key | string | `""` |  |
+| tinyauth.oauth.providers[0].clientSecretSecretRef.name | string | `""` |  |
+| tinyauth.oauth.providers[0].id | string | `""` |  |
+| tinyauth.oauth.providers[0].insecure | bool | `false` |  |
+| tinyauth.oauth.providers[0].name | string | `""` |  |
+| tinyauth.oauth.providers[0].redirectUrl | string | `""` |  |
+| tinyauth.oauth.providers[0].scopes | string | `""` |  |
+| tinyauth.oauth.providers[0].tokenUrl | string | `""` |  |
+| tinyauth.oauth.providers[0].userInfoUrl | string | `""` |  |
+| tinyauth.oauth.whitelist | string | `""` |  |
+| tinyauth.oidc.clients[0].clientId | string | `""` |  |
+| tinyauth.oidc.clients[0].clientSecret | string | `""` |  |
+| tinyauth.oidc.clients[0].clientSecretFile | string | `""` |  |
+| tinyauth.oidc.clients[0].clientSecretSecretRef.key | string | `""` |  |
+| tinyauth.oidc.clients[0].clientSecretSecretRef.name | string | `""` |  |
+| tinyauth.oidc.clients[0].id | string | `""` |  |
+| tinyauth.oidc.clients[0].name | string | `""` |  |
+| tinyauth.oidc.clients[0].trustedRedirectUris | string | `""` |  |
+| tinyauth.oidc.privateKeyPath | string | `""` |  |
+| tinyauth.oidc.publicKeyPath | string | `""` |  |
+| tinyauth.resources.enabled | bool | `true` |  |
+| tinyauth.resources.path | string | `"/data/resources"` |  |
+| tinyauth.server.address | string | `"0.0.0.0"` |  |
+| tinyauth.server.port | int | `3000` |  |
+| tinyauth.server.socketPath | string | `""` |  |
+| tinyauth.ui.backgroundImage | string | `"/background.jpg"` |  |
+| tinyauth.ui.forgotPasswordMessage | string | `"You can change your password by changing the configuration."` |  |
+| tinyauth.ui.title | string | `"Tinyauth"` |  |
+| tinyauth.ui.warningsEnabled | bool | `true` |  |
+| tolerations | list | `[]` |  |
+| volumeMounts | list | `[]` |  |
+| volumes | list | `[]` |  |
+

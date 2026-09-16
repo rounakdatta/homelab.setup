@@ -1,0 +1,109 @@
+{{- if .Values.backup.enabled -}}
+{{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion -}}
+apiVersion: batch/v1
+{{- else -}}
+apiVersion: batch/v1beta1
+{{- end }}
+kind: CronJob
+metadata:
+  name: {{ include "ntfy.fullname" . }}-backup
+  labels:
+    {{- include "ntfy.backupLabels" . | nindent 4 }}
+spec:
+  schedule: "{{ .Values.backup.schedule }}"
+  concurrencyPolicy: {{ .Values.backup.concurrencyPolicy }}
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: {{ .Values.backup.ttlSecondsAfterFinished }}
+      backoffLimit: {{ .Values.backup.backoffLimit }}
+      parallelism: {{ .Values.backup.parallelism }}
+      activeDeadlineSeconds: {{ .Values.backup.activeDeadlineSeconds }}
+      template:
+        metadata: 
+          annotations:
+            checksum/secret: {{ include (print $.Template.BasePath "/backup.secret.yaml") . | sha256sum }}
+            {{- with .Values.podAnnotations }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+        spec:
+          restartPolicy: {{ .Values.backup.restartPolicy }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          serviceAccountName: {{ include "ntfy.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          volumes:
+          - name: config
+          {{- if .Values.config.existingSecretRef.name }}
+            secret:
+              secretName: {{ .Values.config.existingSecretRef.key }}
+          {{- else if .Values.config.existingConfigMap.name }}
+            configMap:
+              name: {{ .Values.config.existingConfigMap.key }}
+          {{- else }}
+            configMap:
+              name: {{ include "ntfy.fullname" . }}
+          {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- if has "ReadWriteOnce" (((.Values.persistence).volumeClaimSpec).accessModes) }}
+          {{- /*
+          Force-scheduling the job on the node running the AdguardHome pod.
+          # Otherwise, the job may never run if scheduled on a different node.
+          */}}
+          affinity:
+            podAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+              - labelSelector:
+                  matchLabels:
+                    {{- include "ntfy.selectorLabels" . | nindent 20 }}
+                topologyKey: "kubernetes.io/hostname"
+          {{- else }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 10 }}
+          {{- end }}
+
+          containers:
+          - name: backup
+            imagePullPolicy: {{ .Values.backup.imagePullPolicy }}
+            volumeMounts:
+            - name: config
+              mountPath: /etc/ntfy
+            resources:
+              {{- toYaml .Values.resources | nindent 14 }}
+            {{- if .Values.backup.aws.enabled }}
+            image: amazon/aws-cli:2.4.9
+            args:
+            - s3
+            - cp
+            - "/etc/ntfy"
+            - "$(S3_DESTINATION)"
+            - "--recursive"
+            env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ntfy.fullname" . }}-backup
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ntfy.fullname" . }}-backup
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: S3_DESTINATION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ntfy.fullname" . }}-backup
+                  key: S3_DESTINATION
+            {{- end }}
+{{- end }}

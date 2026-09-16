@@ -1,0 +1,291 @@
+# Default values for frigate.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- upgrade strategy type (e.g. Recreate or RollingUpdate)
+strategyType: Recreate
+
+image:
+  # -- Docker registry/repository to pull the image from
+  repository: ghcr.io/blakeblackshear/frigate
+  # -- Overrides the default tag (appVersion) used in Chart.yaml ([Docker Hub](https://hub.docker.com/r/blakeblackshear/frigate/tags?page=1))
+  tag:
+  # -- Docker image pull policy
+  pullPolicy: IfNotPresent
+
+# -- Docker image pull policy
+imagePullSecrets: []
+
+# -- additional ENV variables to set. Prefix with FRIGATE_ to target Frigate configuration values
+env: {}
+  # TZ: UTC
+
+# -- set environment variables from Secret(s)
+envFromSecrets: []
+  # secrets are required before `helm install`
+  # - frigate-rstp-credentials
+
+coral:
+  # -- enables the use of a Coral device
+  enabled: false
+  # -- path on the host to which to mount the Coral device
+  hostPath: /dev/bus/usb
+
+gpu:
+  nvidia:
+    # -- Enables NVIDIA GPU compatibility. Must also use the "amd64nvidia" tagged image
+    enabled: false
+
+    # -- Overrides the default runtimeClassName
+    runtimeClassName:
+
+# -- declare extra volumes to use for Frigate
+extraVolumes: []
+# -- declare additional volume mounts
+extraVolumeMounts: []
+
+# -- amount of shared memory to use for caching
+shmSize: 1Gi
+
+# -- use memory for tmpfs (mounted to /tmp)
+tmpfs:
+  enabled: true
+  sizeLimit: 1Gi
+
+# nameOverride -- Overrides the name of resources
+nameOverride: ""
+
+# fullnameOverride -- Overrides the Full Name of resources
+fullnameOverride: ""
+
+# -- frigate configuration - see [Docs](https://docs.frigate.video/configuration/index) for more info
+config: |
+  mqtt:
+    # Required: host name
+    host: mqtt.server.com
+    # Optional: port (default: shown below)
+    port: 1883
+    # Optional: topic prefix (default: shown below)
+    # WARNING: must be unique if you are running multiple instances
+    topic_prefix: frigate
+    # Optional: client id (default: shown below)
+    # WARNING: must be unique if you are running multiple instances
+    client_id: frigate
+    # Optional: user
+    user: mqtt_user
+    # Optional: password
+    # NOTE: Environment variables that begin with 'FRIGATE_' may be referenced in {}.
+    #       eg. password: '{FRIGATE_MQTT_PASSWORD}'
+    password: password
+    # Optional: interval in seconds for publishing stats (default: shown below)
+    stats_interval: 60
+
+  detectors:
+    # coral:
+    #   type: edgetpu
+    #   device: usb
+    cpu1:
+      type: cpu
+
+  # cameras:
+  #   # Name of your camera
+  #   front_door:
+  #     ffmpeg:
+  #       inputs:
+  #         - path: rtsp://{FRIGATE_RSTP_USERNAME}:{FRIGATE_RTSP_PASSWORD}@10.0.10.10:554/cam/realmonitor?channel=1&subtype=2
+  #           roles:
+  #             - detect
+  #             - rtmp
+  #     width: 1280
+  #     height: 720
+  #     fps: 5
+
+# Probes configuration
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 30
+    failureThreshold: 5
+    timeoutSeconds: 10
+  readiness:
+    enabled: true
+    initialDelaySeconds: 30
+    failureThreshold: 5
+    timeoutSeconds: 10
+  startup:
+    enabled: false
+    failureThreshold: 30
+    periodSeconds: 10
+
+service:
+  # -- Type of Service to use
+  type: ClusterIP
+  # -- Port the Service should communicate on
+  port: 5000
+  ## Specify the nodePort value for the LoadBalancer and NodePort service types.
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+  ##
+  # nodePort:
+  ## Provide any additional annotations which may be required. This can be used to
+  ## set the LoadBalancer service type to internal only.
+  ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#internal-load-balancer
+  ##
+  annotations: {}
+  labels: {}
+
+  # -- Set specific IP address for LoadBalancer. `service.type` must be set to `LoadBalancer`
+  loadBalancerIP:
+
+  # loadBalancerSourceRanges: []
+  ## Set the externalTrafficPolicy in the Service to either Cluster or Local
+  # externalTrafficPolicy: Cluster
+
+  # default IP family to use for the service
+  ipFamilyPolicy: SingleStack
+  # ipFamilies for service
+  ipFamilies: []
+
+ingress:
+  # -- Enables the use of an Ingress Controller to front the Service and can provide HTTPS
+  enabled: false
+
+  # -- ingressClassName for using on clusters with multiple ingresses, default is null
+  ingressClassName: ~
+
+  # -- annotations to configure your Ingress. See your Ingress Controller's Docs for more info.
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+    # For NGINX INC, these may be neccessary
+    # nginx.org/proxy-read-timeout: "3600"
+    # nginx.org/proxy-send-timeout: "3600"
+    # nginx.org/websocket-services: "<release_name>-frigate" # TODO: can this be automated?
+
+  # -- list of hosts and their paths and ports that ingress controller should repsond to.
+  # -- alternatively use `http` if anonymous auth is allowed
+  hosts:
+    - host: chart.example.local
+      paths:
+        - path: '/'
+          portName: http-auth
+
+  # -- list of TLS configurations
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+persistence:
+  data:
+    # Data directory is obsolete. Use config and media instead.
+    enabled: false
+    accessMode: ReadWriteOnce
+    size: 10Gi
+    skipuninstall: false
+
+  config:
+    # -- Enables persistence for the config directory
+    enabled: false
+    ## frigate data Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    ##
+    ## If you want to reuse an existing claim, you can pass the name of the PVC using
+    ## the existingClaim variable
+    # existingClaim: your-claim
+    # subPath: some-subpath
+
+    # -- [access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) to use for the PVC
+    accessMode: ReadWriteOnce
+
+    # -- size/capacity of the PVC
+    size: 100Mi
+
+    # -- Do not delete the pvc upon helm uninstall
+    skipuninstall: false
+
+    ## Copy configMap config into volume to make writable
+    ## All live changes are lost when pod restarts, but this allows
+    ## an easy way to run migrations and edit config, then scrape
+    ## it from the API or copy out of the pod and update local helm values
+    ephemeralWritableConfigYaml: true
+
+  media:
+    # -- Enables persistence for the media directory
+    enabled: false
+    ## frigate data Persistent Volume Storage Class
+    ## If defined, storageClassName: <storageClass>
+    ## If set to "-", storageClassName: "", which disables dynamic provisioning
+    ## If undefined (the default) or set to null, no storageClassName spec is
+    ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+    ##   GKE, AWS & OpenStack)
+    ##
+    # storageClass: "-"
+    ##
+    ## If you want to reuse an existing claim, you can pass the name of the PVC using
+    ## the existingClaim variable
+    # existingClaim: your-claim
+    # subPath: some-subpath
+
+    # -- [access mode](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes) to use for the PVC
+    accessMode: ReadWriteOnce
+
+    # -- size/capacity of the PVC
+    size: 10Gi
+
+    # -- Do not delete the pvc upon helm uninstall
+    skipuninstall: false
+
+# -- Set resource limits/requests for the Pod(s)
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  #   gpu.intel.com/i915: 1
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+  #   gpu.intel.com/i915: 1
+
+# -- Set Frigate Container Security Context
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+  # privileged: true
+
+# -- Set Pod level Security Context
+# -- the container level securiy context defined above
+# -- will override it for frigate container
+podSecurityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+  # fsGroup: 1000
+  # privileged: true
+
+# -- Node Selector configuration
+nodeSelector: {}
+
+# -- Node toleration configuration
+tolerations: []
+
+# -- Set Pod affinity rules
+affinity: {}
+
+# -- Set additonal pod Annotations
+podAnnotations: {}
+
+# -- Define extra init containers
+extraInitContainers: []

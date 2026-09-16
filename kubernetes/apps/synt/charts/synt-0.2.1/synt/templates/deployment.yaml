@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "synt.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "synt.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "synt.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: synt
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.meilisearch.enabled }}
+          # Wait for the meilisearch sidecar to be ready, then exec into the
+          # binary so it stays PID 1 (signals + probes work normally).
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              echo "Waiting for Meilisearch on localhost:7700..."
+              while ! wget -qO- http://127.0.0.1:7700/health >/dev/null 2>&1; do
+                sleep 1
+              done
+              echo "Meilisearch is ready"
+              exec synt -db /data/synt.db -meilisearch http://127.0.0.1:7700{{ range .Values.args }} {{ . | quote }}{{ end }}
+          {{- else }}
+          args:
+            - "-db"
+            - "/data/synt.db"
+            {{- range .Values.args }}
+            - {{ . | quote }}
+            {{- end }}
+          {{- end }}
+          env:
+            - name: HOME
+              value: /data
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+        {{- if .Values.meilisearch.enabled }}
+        - name: meilisearch
+          image: "{{ .Values.meilisearch.image.repository }}:{{ .Values.meilisearch.image.tag }}"
+          imagePullPolicy: {{ .Values.meilisearch.image.pullPolicy }}
+          ports:
+            - containerPort: 7700
+              protocol: TCP
+          env:
+            - name: MEILI_DB_PATH
+              value: /meili_data/data.ms
+            - name: MEILI_NO_ANALYTICS
+              value: "true"
+          resources:
+            {{- toYaml .Values.meilisearch.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.meilisearch.persistence.enabled }}
+            - name: meilisearch-data
+              mountPath: /meili_data
+            {{- end }}
+        {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" .Release.Name) }}
+        {{- end }}
+        {{- if and .Values.meilisearch.enabled .Values.meilisearch.persistence.enabled }}
+        - name: meilisearch-data
+          persistentVolumeClaim:
+            claimName: {{ .Values.meilisearch.persistence.existingClaim | default (printf "%s-meilisearch" .Release.Name) }}
+        {{- end }}

@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "texas-fold-em.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "texas-fold-em.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "texas-fold-em.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: texas-fold-em
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: TEXAS_FOLDEM_LISTEN_ADDR
+              value: "0.0.0.0:8080"
+            - name: TEXAS_FOLDEM_STATE_PATH
+              value: "/data/state.json"
+            - name: TEXAS_FOLDEM_BROKER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.existingSecret | default .Release.Name }}
+                  key: broker-key
+            - name: TEXAS_FOLDEM_ADMIN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.existingSecret | default .Release.Name }}
+                  key: admin-key
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{/*
+              extraEnv accepts the full Kubernetes env-entry shape, so
+              callers can supply secretKeyRef / configMapKeyRef / fieldRef
+              entries — needed for the integration's FIREFLY_PAT and
+              LLM_API_KEY which come from a Secret.
+            */}}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" .Release.Name) }}
+        {{- end }}

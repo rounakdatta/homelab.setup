@@ -1,0 +1,13 @@
+apiVersion: v2
+appVersion: 0.4.2
+description: MCP server over HTTP for a locally archived Zepp Life dataset
+home: https://github.com/rounakdatta/zepp-life-mcp
+keywords:
+- mcp
+- zepp-life
+- health
+name: zepp-life-mcp
+sources:
+- https://github.com/rounakdatta/zepp-life-mcp
+type: application
+version: 0.4.2
