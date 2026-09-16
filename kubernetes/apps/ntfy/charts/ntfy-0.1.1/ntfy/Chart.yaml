@@ -1,0 +1,12 @@
+apiVersion: v2
+appVersion: v2.11.0
+description: 'Unofficial Chart for ntfy, a simple HTTP-based pub-sub notification
+  service. This Chart also provides automated backups of ntfy to services like AWS
+  S3. https://github.com/binwiederhier/ntfy '
+maintainers:
+- email: armel@rm3l.org
+  name: rm3l
+  url: https://rm3l.org
+name: ntfy
+type: application
+version: 0.1.1

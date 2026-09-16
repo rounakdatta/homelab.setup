@@ -1,0 +1,149 @@
+# Default values for ntfy.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: binwiederhier/ntfy
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# -- Strategy used to replace old Pods by new ones
+strategy: {}
+  # type: RollingUpdate
+  # rollingUpdate:
+  #   maxSurge: 1
+  #   maxUnavailable: 33%
+
+# -- Host networking requested for the pod. Beware that setting this to true requires all container ports declared in the pod to be free on the node.
+hostNetwork: false
+
+priorityClassName: ""
+
+config:
+  existingSecretRef:
+    name: ""
+    key: "server.yaml"
+  existingConfigMap:
+    name: ""
+    key: "server.yaml"
+  # -- Sample config. See https://github.com/binwiederhier/ntfy/blob/main/server/server.yml
+  sample:
+    log-level: info
+    behind-proxy: true
+    base-url: https://chart-example.local
+
+cache:
+  enabled: true
+  existingClaim: null
+  volumeClaimSpec:
+    accessModes:
+      - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+
+# -- Additional Volume mounts
+extraVolumeMounts: []
+
+# -- Additional volumes
+extraVolumes: []
+
+backup:
+  # -- Note that this depends on the Access Mode set for the persistent volume claim (PVC) specified.
+  # -- As a consequence, backups will not be possible if the PVC access mode is set to ReadWriteOncePod (Kubernetes 1.22+),
+  # -- since the volume will be accessible only to the sole ntfy pod.
+  enabled: false
+  # -- How frequently the Backup job should run. Cron Syntax, as supported by Kubernetes CronJobs
+  schedule: "@daily"
+  concurrencyPolicy: Forbid
+  restartPolicy: OnFailure
+  ttlSecondsAfterFinished: 300
+  activeDeadlineSeconds: 1800
+  backoffLimit: 1
+  parallelism: 1
+  imagePullPolicy: IfNotPresent
+  resources: {}
+  aws:
+    # -- For now, only AWS is supported. Setting this to `false` (while `backup.enabled` is `true`) will cause a deployment error.
+    enabled: true
+    # -- AWS Access Key. Must have the permissions to write to the target bucket.
+    accessKeyId: "my-aws-access-key-id"
+    # -- AWS Secret Key. Must have the permissions to write to the target bucket.
+    secretKey: "my-aws-secret-key"
+    # -- Target destination bucket (absolute) in AWS S3, where the backup resources should be written
+    s3:
+      destination: "s3://path/to/my/ntfy-backup-bucket"

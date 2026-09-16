@@ -1,0 +1,351 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "tinyauth.fullname" . }}
+  labels:
+    {{- include "tinyauth.labels" . | nindent 4 }}
+spec:
+  {{- with .Values.deploymentStrategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "tinyauth.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "tinyauth.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "tinyauth.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.tinyauth.server.port }}
+              protocol: TCP
+          env:
+            # Top-level tinyauth config
+            {{- if .Values.tinyauth.appUrl }}
+            - name: TINYAUTH_APPURL
+              value: {{ .Values.tinyauth.appUrl | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.resources.path }}
+            - name: TINYAUTH_RESOURCES_PATH
+              value: {{ .Values.tinyauth.resources.path | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.database.path }}
+            - name: TINYAUTH_DATABASE_PATH
+              value: {{ .Values.tinyauth.database.path | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.analytics.enabled }}
+            - name: TINYAUTH_ANALYTICS_ENABLED
+              value: {{ .Values.tinyauth.analytics.enabled | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.resources.enabled }}
+            - name: TINYAUTH_RESOURCES_ENABLED
+              value: {{ .Values.tinyauth.resources.enabled | quote }}
+            {{- end }}
+            # server config
+            {{- if .Values.tinyauth.server.port }}
+            - name: TINYAUTH_SERVER_PORT
+              value: {{ .Values.tinyauth.server.port | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.server.address }}
+            - name: TINYAUTH_SERVER_ADDRESS
+              value: {{ .Values.tinyauth.server.address | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.server.socketPath }}
+            - name: TINYAUTH_SERVER_SOCKETPATH
+              value: {{ .Values.tinyauth.server.socketPath | quote }}
+            {{- end }}
+            # auth config
+            {{- if .Values.tinyauth.auth.ip.allow }}
+            - name: TINYAUTH_AUTH_IP_ALLOW
+              value: {{ .Values.tinyauth.auth.ip.allow | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.ip.block }}
+            - name: TINYAUTH_AUTH_IP_BLOCK
+              value: {{ .Values.tinyauth.auth.ip.block | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.users }}
+            - name: TINYAUTH_AUTH_USERS
+              value: {{ .Values.tinyauth.auth.users | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.usersFile }}
+            - name: TINYAUTH_AUTH_USERSFILE
+              value: {{ .Values.tinyauth.auth.usersFile | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.secureCookie }}
+            - name: TINYAUTH_AUTH_SECURECOOKIE
+              value: {{ .Values.tinyauth.auth.secureCookie | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.sessionExpiry }}
+            - name: TINYAUTH_AUTH_SESSIONEXPIRY
+              value: {{ .Values.tinyauth.auth.sessionExpiry | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.sessionMaxLifetime }}
+            - name: TINYAUTH_AUTH_SESSIONMAXLIFETIME
+              value: {{ .Values.tinyauth.auth.sessionMaxLifetime | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.loginTimeout }}
+            - name: TINYAUTH_AUTH_LOGINTIMEOUT
+              value: {{ .Values.tinyauth.auth.loginTimeout | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.loginMaxRetries }}
+            - name: TINYAUTH_AUTH_LOGINMAXRETRIES
+              value: {{ .Values.tinyauth.auth.loginMaxRetries | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.auth.trustedProxies }}
+            - name: TINYAUTH_AUTH_TRUSTEDPROXIES
+              value: {{ .Values.tinyauth.auth.trustedProxies | quote }}
+            {{- end }}
+            # oauth config
+            {{- if .Values.tinyauth.oauth.whitelist }}
+            - name: TINYAUTH_OAUTH_WHITELIST
+              value: {{ .Values.tinyauth.oauth.whitelist | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.oauth.autoRedirect }}
+            - name: TINYAUTH_OAUTH_AUTOREDIRECT
+              value: {{ .Values.tinyauth.oauth.autoRedirect | quote }}
+            {{- end }}
+            {{- range .Values.tinyauth.oauth.providers }}
+            {{- if not .id }}{{- continue }}{{- end }}
+            {{- $providerId := .id | upper }}
+            {{- if .clientId }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_CLIENTID
+              value: {{ .clientId | quote }}
+            {{- end }}
+            {{- if .clientSecretSecretRef.name }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_CLIENTSECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .clientSecretSecretRef.name }}
+                  key: {{ .clientSecretSecretRef.key }}
+            {{- else if .clientSecret }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_CLIENTSECRET
+              value: {{ .clientSecret | quote }}
+            {{- end }}
+            {{- if .clientSecretFile }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_CLIENTSECRETFILE
+              value: {{ .clientSecretFile | quote }}
+            {{- end }}
+            {{- if .scopes }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_SCOPES
+              value: {{ .scopes | quote }}
+            {{- end }}
+            {{- if .redirectUrl }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_REDIRECTURL
+              value: {{ .redirectUrl | quote }}
+            {{- end }}
+            {{- if .authUrl }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_AUTHURL
+              value: {{ .authUrl | quote }}
+            {{- end }}
+            {{- if .tokenUrl }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_TOKENURL
+              value: {{ .tokenUrl | quote }}
+            {{- end }}
+            {{- if .userInfoUrl }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_USERINFOURL
+              value: {{ .userInfoUrl | quote }}
+            {{- end }}
+            {{- if .insecure }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_INSECURE
+              value: {{ .insecure | quote }}
+            {{- end }}
+            {{- if .name }}
+            - name: TINYAUTH_OAUTH_PROVIDERS_{{ $providerId }}_NAME
+              value: {{ .name | quote }}
+            {{- end }}
+            {{- end }}
+            # oidc config
+            {{- if .Values.tinyauth.oidc.privateKeyPath }}
+            - name: TINYAUTH_OIDC_PRIVATEKEYPATH
+              value: {{ .Values.tinyauth.oidc.privateKeyPath | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.oidc.publicKeyPath }}
+            - name: TINYAUTH_OIDC_PUBLICKEYPATH
+              value: {{ .Values.tinyauth.oidc.publicKeyPath | quote }}
+            {{- end }}
+            {{- range .Values.tinyauth.oidc.clients }}
+            {{- if not .id }}{{- continue }}{{- end }}
+            {{- $clientId := .id | upper }}
+            {{- if .clientId }}
+            - name: TINYAUTH_OIDC_CLIENTS_{{ $clientId }}_CLIENTID
+              value: {{ .clientId | quote }}
+            {{- end }}
+            {{- if .clientSecretSecretRef.name }}
+            - name: TINYAUTH_OIDC_CLIENTS_{{ $clientId }}_CLIENTSECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .clientSecretSecretRef.name }}
+                  key: {{ .clientSecretSecretRef.key }}
+            {{- else if .clientSecret }}
+            - name: TINYAUTH_OIDC_CLIENTS_{{ $clientId }}_CLIENTSECRET
+              value: {{ .clientSecret | quote }}
+            {{- end }}
+            {{- if .clientSecretFile }}
+            - name: TINYAUTH_OIDC_CLIENTS_{{ $clientId }}_CLIENTSECRETFILE
+              value: {{ .clientSecretFile | quote }}
+            {{- end }}
+            {{- if .trustedRedirectUris }}
+            - name: TINYAUTH_OIDC_CLIENTS_{{ $clientId }}_TRUSTEDREDIRECTURIS
+              value: {{ .trustedRedirectUris | quote }}
+            {{- end }}
+            {{- if .name }}
+            - name: TINYAUTH_OIDC_CLIENTS_{{ $clientId }}_NAME
+              value: {{ .name | quote }}
+            {{- end }}
+            {{- end }}
+            # ui config
+            {{- if .Values.tinyauth.ui.title }}
+            - name: TINYAUTH_UI_TITLE
+              value: {{ .Values.tinyauth.ui.title | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ui.forgotPasswordMessage }}
+            - name: TINYAUTH_UI_FORGOTPASSWORDMESSAGE
+              value: {{ .Values.tinyauth.ui.forgotPasswordMessage | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ui.backgroundImage }}
+            - name: TINYAUTH_UI_BACKGROUNDIMAGE
+              value: {{ .Values.tinyauth.ui.backgroundImage | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ui.warningsEnabled }}
+            - name: TINYAUTH_UI_WARNINGSENABLED
+              value: {{ .Values.tinyauth.ui.warningsEnabled | quote }}
+            {{- end }}
+            # ldap config
+            {{- if .Values.tinyauth.ldap.address }}
+            - name: TINYAUTH_LDAP_ADDRESS
+              value: {{ .Values.tinyauth.ldap.address | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ldap.bindDn }}
+            - name: TINYAUTH_LDAP_BINDDN
+              value: {{ .Values.tinyauth.ldap.bindDn | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ldap.bindPasswordSecretRef.name }}
+            - name: TINYAUTH_LDAP_BINDPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.tinyauth.ldap.bindPasswordSecretRef.name }}
+                  key: {{ .Values.tinyauth.ldap.bindPasswordSecretRef.key }}
+            {{- else if .Values.tinyauth.ldap.bindPassword }}
+            - name: TINYAUTH_LDAP_BINDPASSWORD
+              value: {{ .Values.tinyauth.ldap.bindPassword | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ldap.baseDn }}
+            - name: TINYAUTH_LDAP_BASEDN
+              value: {{ .Values.tinyauth.ldap.baseDn | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ldap.insecure }}
+            - name: TINYAUTH_LDAP_INSECURE
+              value: {{ .Values.tinyauth.ldap.insecure | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ldap.searchFilter }}
+            - name: TINYAUTH_LDAP_SEARCHFILTER
+              value: {{ .Values.tinyauth.ldap.searchFilter | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ldap.authCert }}
+            - name: TINYAUTH_LDAP_AUTHCERT
+              value: {{ .Values.tinyauth.ldap.authCert | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ldap.authKey }}
+            - name: TINYAUTH_LDAP_AUTHKEY
+              value: {{ .Values.tinyauth.ldap.authKey | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.ldap.groupCacheTtl }}
+            - name: TINYAUTH_LDAP_GROUPCACHETTL
+              value: {{ .Values.tinyauth.ldap.groupCacheTtl | quote }}
+            {{- end }}
+            # log config
+            {{- if .Values.tinyauth.log.level }}
+            - name: TINYAUTH_LOG_LEVEL
+              value: {{ .Values.tinyauth.log.level | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.log.json }}
+            - name: TINYAUTH_LOG_JSON
+              value: {{ .Values.tinyauth.log.json | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.log.streams.http.enabled }}
+            - name: TINYAUTH_LOG_STREAMS_HTTP_ENABLED
+              value: {{ .Values.tinyauth.log.streams.http.enabled | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.log.streams.http.level }}
+            - name: TINYAUTH_LOG_STREAMS_HTTP_LEVEL
+              value: {{ .Values.tinyauth.log.streams.http.level | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.log.streams.app.enabled }}
+            - name: TINYAUTH_LOG_STREAMS_APP_ENABLED
+              value: {{ .Values.tinyauth.log.streams.app.enabled | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.log.streams.app.level }}
+            - name: TINYAUTH_LOG_STREAMS_APP_LEVEL
+              value: {{ .Values.tinyauth.log.streams.app.level | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.log.streams.audit.enabled }}
+            - name: TINYAUTH_LOG_STREAMS_AUDIT_ENABLED
+              value: {{ .Values.tinyauth.log.streams.audit.enabled | quote }}
+            {{- end }}
+            {{- if .Values.tinyauth.log.streams.audit.level }}
+            - name: TINYAUTH_LOG_STREAMS_AUDIT_LEVEL
+              value: {{ .Values.tinyauth.log.streams.audit.level | quote }}
+            {{- end }}
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+            {{- with .Values.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (include "tinyauth.fullname" .) }}
+        {{- end }}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "agentfest.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    # Recreate, not RollingUpdate: the home directory is ReadWriteOnce and
+    # single-writer, so two pods must never overlap.
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "agentfest.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agentfest.selectorLabels" . | nindent 8 }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: agentfest
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: AGENTFEST_CODEMAN_VERSION
+              value: {{ .Values.codeman.version | quote }}
+            - name: AGENTFEST_CLAUDE_CODE_VERSION
+              value: {{ .Values.claudeCode.version | quote }}
+            - name: CODEMAN_PORT
+              value: {{ .Values.codeman.port | quote }}
+            - name: CODEMAN_BIND_HOST
+              value: "0.0.0.0"
+            {{- if .Values.ssh.enabled }}
+            - name: AGENTFEST_SSH_DIR
+              value: {{ .Values.ssh.mountPath | quote }}
+            {{- end }}
+            {{- if .Values.codeman.allowedHosts }}
+            - name: CODEMAN_ALLOWED_HOSTS
+              value: {{ .Values.codeman.allowedHosts | quote }}
+            {{- end }}
+            {{- if .Values.auth.enabled }}
+            - name: CODEMAN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.auth.existingSecret | default (printf "%s-auth" .Release.Name) }}
+                  key: codeman-password
+            {{- else }}
+            {{/*
+              With no CODEMAN_PASSWORD, Codeman's auth middleware returns before
+              registering anything, so there is no Basic prompt and no failure
+              counter. Setting this explicitly is the difference between "we
+              decided this" and "someone forgot the secret": without it Codeman
+              still starts, but prints a multi-line warning on every boot that
+              buries anything else in the log.
+            */}}
+            - name: CODEMAN_ALLOW_UNAUTHENTICATED_NETWORK
+              value: "1"
+            {{- end }}
+            {{/*
+              extraEnv accepts the full Kubernetes env-entry shape, so callers
+              can supply secretKeyRef / configMapKeyRef / fieldRef entries.
+            */}}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.codeman.port }}
+              protocol: TCP
+          {{/*
+            No readiness/liveness probes on purpose. First boot runs a
+            home-manager activation and an npm install before Codeman listens,
+            which can take minutes on a cold volume; a probe tuned for that is
+            useless afterwards, and a probe tuned for steady state would
+            restart-loop the very first deploy. Revisit once boot time is known.
+          */}}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: home
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+            {{- if .Values.ssh.enabled }}
+            - name: ssh
+              mountPath: {{ .Values.ssh.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.dshm.enabled }}
+            - name: dshm
+              mountPath: /dev/shm
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: home
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-home" .Release.Name) }}
+        {{- end }}
+        {{- if .Values.ssh.enabled }}
+        - name: ssh
+          secret:
+            secretName: {{ .Values.ssh.existingSecret }}
+            defaultMode: {{ .Values.ssh.defaultMode }}
+        {{- end }}
+        {{- if .Values.dshm.enabled }}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.dshm.size }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

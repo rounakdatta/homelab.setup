@@ -1,0 +1,24 @@
+{{- if and .Values.persistence.enabled (eq .Values.persistence.existingClaim "") }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "firefly-iii.fullname" . }}
+  labels:
+    {{- include "firefly-iii.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessModes }}
+  {{- if .Values.persistence.storageClassName }}
+  storageClassName: {{ .Values.persistence.storageClassName }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.storage }}
+  {{- if .Values.persistence.selector }}
+  selector:
+    {{- toYaml .Values.persistence.selector | nindent 4 }}
+  {{- end }}
+  {{- if .Values.persistence.volumeName }}
+  volumeName: {{ .Values.persistence.volumeName | quote }}
+  {{- end }}
+{{- end }}

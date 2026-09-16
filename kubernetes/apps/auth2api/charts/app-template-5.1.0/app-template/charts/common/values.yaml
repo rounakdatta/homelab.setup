@@ -1,0 +1,2505 @@
+# yaml-language-server: $schema=values.schema.json
+
+# -- Allows for configuring chart-wide settings
+global:
+  # -- (string) Set the chart name
+  nameOverride: null
+  # -- (string) Set the chart fullname definition
+  fullnameOverride: null
+  # -- Always append identifier slugs to resource names, regardless of the enabled
+  # resource count.
+  alwaysAppendIdentifierToResourceName: false
+  # -- Set to true to propagate global metadata to Pod labels.
+  propagateGlobalMetadataToPods: false
+  # -- Set additional global labels. Helm templates can be used.
+  labels: {}
+  # -- Set additional global annotations. Helm templates can be used.
+  annotations: {}
+  # -- When true (default), automatically create a dedicated ServiceAccount using
+  # the release name as the identifier if no serviceAccount is explicitly
+  # configured. If any serviceAccount entries are present, the default is not
+  # created and user configuration takes precedence.
+  createDefaultServiceAccount: true
+
+# -- Set the strategy for the default pod options. Defaults to overwrite.
+# overwrite: If pod-level options are set, use those instead of the defaults.
+# merge: If pod-level options are set, merge them with the defaults.
+defaultPodOptionsStrategy: overwrite
+
+# -- Set default options for all controllers / pods here. Each of these options
+# can be overridden on a controller level. Useful for setting node selectors,
+# tolerations, security contexts, or service accounts that should apply to every
+# pod.
+defaultPodOptions:
+  # -- Set affinity constraint rules. Helm templates can be used. See
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+  affinity: {}
+    # -- Describes node affinity scheduling rules for the pod.
+    # nodeAffinity: {}
+      # -- The scheduler will prefer to schedule pods to nodes that satisfy the
+      # affinity expressions specified by this field, but it may choose a node that
+      # violates one or more of the expressions. The node that is most preferred is
+      # the one with the greatest sum of weights, i.e. for each node that meets all of
+      # the scheduling requirements (resource request, requiredDuringScheduling
+      # affinity expressions, etc.), compute a sum by iterating through the elements
+      # of this field and adding "weight" to the sum if the node matches the
+      # corresponding matchExpressions; the node(s) with the highest sum are the most
+      # preferred.
+      # preferredDuringSchedulingIgnoredDuringExecution: []
+      # -- If the affinity requirements specified by this field are not met at
+      # scheduling time, the pod will not be scheduled onto the node. If the affinity
+      # requirements specified by this field cease to be met at some point during pod
+      # execution (e.g. due to an update), the system may or may not try to eventually
+      # evict the pod from its node.
+      # requiredDuringSchedulingIgnoredDuringExecution: {}
+        # -- Required. A list of node selector terms. The terms are ORed.
+        # nodeSelectorTerms: []
+    # -- Describes pod affinity scheduling rules (e.g. co-locate this pod in the
+    # same node, zone, etc. as some other pod(s)).
+    # podAffinity: {}
+      # -- The scheduler will prefer to schedule pods to nodes that satisfy the
+      # affinity expressions specified by this field, but it may choose a node that
+      # violates one or more of the expressions. The node that is most preferred is
+      # the one with the greatest sum of weights, i.e. for each node that meets all of
+      # the scheduling requirements (resource request, requiredDuringScheduling
+      # affinity expressions, etc.), compute a sum by iterating through the elements
+      # of this field and adding "weight" to the sum if the node has pods which
+      # matches the corresponding podAffinityTerm; the node(s) with the highest sum
+      # are the most preferred.
+      # preferredDuringSchedulingIgnoredDuringExecution: []
+      # -- If the affinity requirements specified by this field are not met at
+      # scheduling time, the pod will not be scheduled onto the node. If the affinity
+      # requirements specified by this field cease to be met at some point during pod
+      # execution (e.g. due to a pod label update), the system may or may not try to
+      # eventually evict the pod from its node. When there are multiple elements, the
+      # lists of nodes corresponding to each podAffinityTerm are intersected, i.e. all
+      # terms must be satisfied.
+      # requiredDuringSchedulingIgnoredDuringExecution: []
+    # -- Describes pod anti-affinity scheduling rules (e.g. avoid putting this pod
+    # in the same node, zone, etc. as some other pod(s)).
+    # podAntiAffinity: {}
+      # -- The scheduler will prefer to schedule pods to nodes that satisfy the
+      # anti-affinity expressions specified by this field, but it may choose a node
+      # that violates one or more of the expressions. The node that is most preferred
+      # is the one with the greatest sum of weights, i.e. for each node that meets all
+      # of the scheduling requirements (resource request, requiredDuringScheduling
+      # anti-affinity expressions, etc.), compute a sum by iterating through the
+      # elements of this field and adding "weight" to the sum if the node has pods
+      # which matches the corresponding podAffinityTerm; the node(s) with the highest
+      # sum are the most preferred.
+      # preferredDuringSchedulingIgnoredDuringExecution: []
+      # -- If the anti-affinity requirements specified by this field are not met at
+      # scheduling time, the pod will not be scheduled onto the node. If the
+      # anti-affinity requirements specified by this field cease to be met at some
+      # point during pod execution (e.g. due to a pod label update), the system may or
+      # may not try to eventually evict the pod from its node. When there are multiple
+      # elements, the lists of nodes corresponding to each podAffinityTerm are
+      # intersected, i.e. all terms must be satisfied.
+      # requiredDuringSchedulingIgnoredDuringExecution: []
+  # -- Annotations to set on the item.
+  annotations: {}
+  # -- Set to true to automatically mount the service account token.
+  automountServiceAccountToken: false
+  # -- Specifies the DNS parameters of a pod. Parameters specified here will be
+  # merged to the generated DNS configuration based on DNSPolicy. Configuring the
+  # `ndots` option may resolve nslookup issues on some Kubernetes setups.
+  dnsConfig: {}
+    # -- A list of DNS name server IP addresses. This will be appended to the base
+    # nameservers generated from DNSPolicy. Duplicated nameservers will be removed.
+    # nameservers: []
+    # -- A list of DNS resolver options. This will be merged with the base options
+    # generated from DNSPolicy. Duplicated entries will be removed. Resolution
+    # options given in Options will override those that appear in the base
+    # DNSPolicy.
+    # options: []
+    # -- A list of DNS search domains for host-name lookup. This will be appended to
+    # the base search paths generated from DNSPolicy. Duplicated search paths will
+    # be removed.
+    # searches: []
+  # -- (string) Configure the Pod DNS policy. Defaults to 'ClusterFirst' if
+  # hostNetwork is false and 'ClusterFirstWithHostNet' if hostNetwork is true.
+  # dnsPolicy:
+  # -- Enable/disable the generation of environment variables for services. See
+  # https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/#accessing-the-service
+  enableServiceLinks: false
+  # -- Use hostAliases to add custom entries to /etc/hosts - mapping IP addresses
+  # to hostnames. See
+  # https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+  hostAliases: []
+  # -- Set to true to use the host's ipc namespace.
+  hostIPC: false
+  # -- Set to false to disable host networking on the Pod. When using hostNetwork,
+  # make sure you set dnsPolicy to 'ClusterFirstWithHostNet'
+  hostNetwork: false
+  # -- Set to true to use the host's pid namespace.
+  hostPID: false
+  # -- (bool) Set to false to create a new userns for the Pod. (Requires
+  # Kubernetes 1.29 or newer)
+  hostUsers: null
+  # -- (string) Set the Pod's hostname.
+  # hostname:
+  # -- Set image pull secrets.
+  imagePullSecrets: []
+  # -- Labels to set on the item.
+  labels: {}
+  # -- Node selection constraint. See
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+  nodeSelector: {}
+  # -- (string) Custom priority class for different treatment by the scheduler.
+  # priorityClassName:
+  # -- Set the resource requests / limits for the Pod. (Requires Kubernetes 1.32
+  # or newer)
+  resources: {}
+    # -- Claims lists the names of resources, defined in spec.resourceClaims, that
+    # are used by this container. This is an alpha field and requires enabling the
+    # DynamicResourceAllocation feature gate. This field is immutable. It can only
+    # be set for containers.
+    # claims: []
+    # -- Limits describes the maximum amount of compute resources allowed. More
+    # info:
+    # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+    # limits: {}
+    # -- Requests describes the minimum amount of compute resources required. If
+    # Requests is omitted for a container, it defaults to Limits if that is
+    # explicitly specified, otherwise to an implementation-defined value. Requests
+    # cannot exceed Limits. More info:
+    # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+    # requests: {}
+  # -- ResourceClaims defines which ResourceClaims must be allocated and reserved
+  # before the Pod is allowed to start. The resources will be made available to
+  # those containers which consume them by name. (Requires Kubernetes 1.32 or
+  # newer)
+  resourceClaims: []
+  # -- Pod-level resize policy for controlling container restart on resource
+  # resize. (Requires Kubernetes 1.36 or newer with
+  # InPlacePodLevelResourcesVerticalScaling enabled)
+  resizePolicy: []
+  # -- (string) Set container restart policy. Defaults to 'Always'. When
+  # controller.type is 'cronjob' it defaults to 'Never'.
+  # restartPolicy:
+  # -- (string) Set a runtimeClassName other than the default one (ie: `nvidia`).
+  # runtimeClassName:
+  # -- (string) Set a custom scheduler name.
+  # schedulerName:
+  # -- SchedulingGates is an opaque list of values that if specified will block
+  # scheduling the pod. If schedulingGates is not empty, the pod will stay in the
+  # SchedulingGated state and the scheduler will not attempt to schedule the pod.
+  # See
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/pod-scheduling-readiness/
+  schedulingGates: []
+  # -- Configure the Security Context for the Pod.
+  securityContext: {}
+    # -- (int) A special supplemental group that applies to all containers in a pod.
+    # Some volume types allow the Kubelet to change the ownership of that volume to
+    # be owned by the pod: 1. The owning GID will be the FSGroup 2. The setgid bit
+    # is set (new files created in the volume will be owned by FSGroup) 3. The
+    # permission bits are OR'd with rw-rw---- If unset, the Kubelet will not modify
+    # the ownership and permissions of any volume. Note that this field cannot be
+    # set when spec.os.name is windows.
+    # fsGroup:
+    # -- (string) fsGroupChangePolicy defines behavior of changing ownership and
+    # permission of the volume before being exposed inside Pod. This field will only
+    # apply to volume types which support fsGroup based ownership(and permissions).
+    # It will have no effect on ephemeral volume types such as: secret, configmaps
+    # and emptydir. Valid values are "OnRootMismatch" and "Always". If not
+    # specified, "Always" is used. Note that this field cannot be set when
+    # spec.os.name is windows.
+    # fsGroupChangePolicy:
+    # -- (int) The GID to run the entrypoint of the container process. Uses runtime
+    # default if unset. May also be set in SecurityContext. If set in both
+    # SecurityContext and PodSecurityContext, the value specified in SecurityContext
+    # takes precedence for that container. Note that this field cannot be set when
+    # spec.os.name is windows.
+    # runAsGroup:
+    # -- (bool) Indicates that the container must run as a non-root user. If true,
+    # the Kubelet will validate the image at runtime to ensure that it does not run
+    # as UID 0 (root) and fail to start the container if it does. If unset or false,
+    # no such validation will be performed. May also be set in SecurityContext. If
+    # set in both SecurityContext and PodSecurityContext, the value specified in
+    # SecurityContext takes precedence.
+    # runAsNonRoot:
+    # -- (int) The UID to run the entrypoint of the container process. Defaults to
+    # user specified in image metadata if unspecified. May also be set in
+    # SecurityContext. If set in both SecurityContext and PodSecurityContext, the
+    # value specified in SecurityContext takes precedence for that container. Note
+    # that this field cannot be set when spec.os.name is windows.
+    # runAsUser:
+    # -- The SELinux context to be applied to all containers. If unspecified, the
+    # container runtime will allocate a random SELinux context for each container.
+    # May also be set in SecurityContext. If set in both SecurityContext and
+    # PodSecurityContext, the value specified in SecurityContext takes precedence
+    # for that container. Note that this field cannot be set when spec.os.name is
+    # windows.
+    # seLinuxOptions: {}
+      # -- (string) Level is SELinux level label that applies to the container.
+      # level:
+      # -- (string) Role is a SELinux role label that applies to the container.
+      # role:
+      # -- (string) Type is a SELinux type label that applies to the container.
+      # type:
+      # -- (string) User is a SELinux user label that applies to the container.
+      # user:
+    # -- The seccomp options to use by the containers in this pod. Note that this
+    # field cannot be set when spec.os.name is windows.
+    # seccompProfile: {}
+      # -- (string) localhostProfile indicates a profile defined in a file on the node
+      # should be used. The profile must be preconfigured on the node to work. Must be
+      # a descending path, relative to the kubelet's configured seccomp profile
+      # location. Must be set if type is "Localhost". Must NOT be set for any other
+      # type.
+      # localhostProfile:
+      # -- type indicates which kind of seccomp profile will be applied. Valid options
+      # are: Localhost - a profile defined in a file on the node should be used.
+      # RuntimeDefault - the container runtime default profile should be used.
+      # Unconfined - no profile should be applied.
+      # type: ""
+    # -- A list of groups applied to the first process run in each container, in
+    # addition to the container's primary GID, the fsGroup (if specified), and group
+    # memberships defined in the container image for the uid of the container
+    # process. If unspecified, no additional groups are added to any container. Note
+    # that group memberships defined in the container image for the uid of the
+    # container process are still effective, even if they are not included in this
+    # list. Note that this field cannot be set when spec.os.name is windows.
+    # supplementalGroups: []
+    # -- (string) Defines how supplemental groups of the the first process in each
+    # container are calculated. Valid values are "Merge" and "Strict". If not
+    # specified, "Merge" is used. Note that this field cannot be set when
+    # spec.os.name is windows.
+    # supplementalGroupsPolicy:
+    # -- Sysctls hold a list of namespaced sysctls used for the pod. Pods with
+    # unsupported sysctls (by the container runtime) might fail to launch. Note that
+    # this field cannot be set when spec.os.name is windows.
+    # sysctls: []
+  # -- (bool) Allows sharing process namespace between containers in a Pod. See
+  # https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
+  shareProcessNamespace: null
+  # -- (int) Duration in seconds the pod needs to terminate gracefully. See
+  # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+  terminationGracePeriodSeconds: null
+  # -- Specify taint tolerations. See
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+  tolerations: []
+  # -- Defines topologySpreadConstraint rules. See
+  # https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  topologySpreadConstraints: []
+
+# -- Define the Pod controllers to be generated by the chart. Each key is a
+# controller identifier. Supported types: deployment (default), statefulset,
+# daemonset, cronjob, job.
+# @default -- See below
+
+#   controllers:
+#     main:
+#       containers:
+#         main:
+#           image:
+#             repository: nginx
+#             tag: latest
+controllers: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the controller.
+    # enabled: true
+    # -- Controller type. Supported values: deployment, daemonset, statefulset,
+    # cronjob, job.
+    # type: deployment
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- Pod-level options for this controller.
+    # pod: {}
+    # -- Set affinity constraint rules. Helm templates can be used. See
+    # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+    # affinity: {}
+      # -- Describes node affinity scheduling rules for the pod.
+      # nodeAffinity: {}
+        # -- The scheduler will prefer to schedule pods to nodes that satisfy the
+        # affinity expressions specified by this field, but it may choose a node that
+        # violates one or more of the expressions. The node that is most preferred is
+        # the one with the greatest sum of weights, i.e. for each node that meets all of
+        # the scheduling requirements (resource request, requiredDuringScheduling
+        # affinity expressions, etc.), compute a sum by iterating through the elements
+        # of this field and adding "weight" to the sum if the node matches the
+        # corresponding matchExpressions; the node(s) with the highest sum are the most
+        # preferred.
+        # preferredDuringSchedulingIgnoredDuringExecution: []
+        # -- If the affinity requirements specified by this field are not met at
+        # scheduling time, the pod will not be scheduled onto the node. If the affinity
+        # requirements specified by this field cease to be met at some point during pod
+        # execution (e.g. due to an update), the system may or may not try to eventually
+        # evict the pod from its node.
+        # requiredDuringSchedulingIgnoredDuringExecution: {}
+          # -- Required. A list of node selector terms. The terms are ORed.
+          # nodeSelectorTerms: []
+      # -- Describes pod affinity scheduling rules (e.g. co-locate this pod in the
+      # same node, zone, etc. as some other pod(s)).
+      # podAffinity: {}
+        # -- The scheduler will prefer to schedule pods to nodes that satisfy the
+        # affinity expressions specified by this field, but it may choose a node that
+        # violates one or more of the expressions. The node that is most preferred is
+        # the one with the greatest sum of weights, i.e. for each node that meets all of
+        # the scheduling requirements (resource request, requiredDuringScheduling
+        # affinity expressions, etc.), compute a sum by iterating through the elements
+        # of this field and adding "weight" to the sum if the node has pods which
+        # matches the corresponding podAffinityTerm; the node(s) with the highest sum
+        # are the most preferred.
+        # preferredDuringSchedulingIgnoredDuringExecution: []
+        # -- If the affinity requirements specified by this field are not met at
+        # scheduling time, the pod will not be scheduled onto the node. If the affinity
+        # requirements specified by this field cease to be met at some point during pod
+        # execution (e.g. due to a pod label update), the system may or may not try to
+        # eventually evict the pod from its node. When there are multiple elements, the
+        # lists of nodes corresponding to each podAffinityTerm are intersected, i.e. all
+        # terms must be satisfied.
+        # requiredDuringSchedulingIgnoredDuringExecution: []
+      # -- Describes pod anti-affinity scheduling rules (e.g. avoid putting this pod
+      # in the same node, zone, etc. as some other pod(s)).
+      # podAntiAffinity: {}
+        # -- The scheduler will prefer to schedule pods to nodes that satisfy the
+        # anti-affinity expressions specified by this field, but it may choose a node
+        # that violates one or more of the expressions. The node that is most preferred
+        # is the one with the greatest sum of weights, i.e. for each node that meets all
+        # of the scheduling requirements (resource request, requiredDuringScheduling
+        # anti-affinity expressions, etc.), compute a sum by iterating through the
+        # elements of this field and adding "weight" to the sum if the node has pods
+        # which matches the corresponding podAffinityTerm; the node(s) with the highest
+        # sum are the most preferred.
+        # preferredDuringSchedulingIgnoredDuringExecution: []
+        # -- If the anti-affinity requirements specified by this field are not met at
+        # scheduling time, the pod will not be scheduled onto the node. If the
+        # anti-affinity requirements specified by this field cease to be met at some
+        # point during pod execution (e.g. due to a pod label update), the system may or
+        # may not try to eventually evict the pod from its node. When there are multiple
+        # elements, the lists of nodes corresponding to each podAffinityTerm are
+        # intersected, i.e. all terms must be satisfied.
+        # requiredDuringSchedulingIgnoredDuringExecution: []
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Set to true to automatically mount the service account token.
+    # automountServiceAccountToken: false
+    # -- Specifies the DNS parameters of a pod. Parameters specified here will be
+    # merged to the generated DNS configuration based on DNSPolicy. Configuring the
+    # `ndots` option may resolve nslookup issues on some Kubernetes setups.
+    # dnsConfig: {}
+      # -- A list of DNS name server IP addresses. This will be appended to the base
+      # nameservers generated from DNSPolicy. Duplicated nameservers will be removed.
+      # nameservers: []
+      # -- A list of DNS resolver options. This will be merged with the base options
+      # generated from DNSPolicy. Duplicated entries will be removed. Resolution
+      # options given in Options will override those that appear in the base
+      # DNSPolicy.
+      # options: []
+      # -- A list of DNS search domains for host-name lookup. This will be appended to
+      # the base search paths generated from DNSPolicy. Duplicated search paths will
+      # be removed.
+      # searches: []
+    # -- (string) Configure the Pod DNS policy. Defaults to 'ClusterFirst' if
+    # hostNetwork is false and 'ClusterFirstWithHostNet' if hostNetwork is true.
+    # dnsPolicy:
+    # -- Enable/disable the generation of environment variables for services. See
+    # https://kubernetes.io/docs/concepts/services-networking/connect-applications-service/#accessing-the-service
+    # enableServiceLinks: false
+    # -- Use hostAliases to add custom entries to /etc/hosts - mapping IP addresses
+    # to hostnames. See
+    # https://kubernetes.io/docs/concepts/services-networking/add-entries-to-pod-etc-hosts-with-host-aliases/
+    # hostAliases: []
+    # -- Set to true to use the host's ipc namespace.
+    # hostIPC: false
+    # -- Set to false to disable host networking on the Pod. When using hostNetwork,
+    # make sure you set dnsPolicy to 'ClusterFirstWithHostNet'
+    # hostNetwork: false
+    # -- Set to true to use the host's pid namespace.
+    # hostPID: false
+    # -- (bool) Set to false to create a new userns for the Pod. (Requires
+    # Kubernetes 1.29 or newer)
+    # hostUsers: null
+    # -- (string) Set the Pod's hostname.
+    # hostname:
+    # -- Set image pull secrets.
+    # imagePullSecrets: []
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- Node selection constraint. See
+    # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#nodeselector
+    # nodeSelector: {}
+    # -- (string) Custom priority class for different treatment by the scheduler.
+    # priorityClassName:
+    # -- Set the resource requests / limits for the Pod. (Requires Kubernetes 1.32
+    # or newer)
+    # resources: {}
+      # -- Claims lists the names of resources, defined in spec.resourceClaims, that
+      # are used by this container. This is an alpha field and requires enabling the
+      # DynamicResourceAllocation feature gate. This field is immutable. It can only
+      # be set for containers.
+      # claims: []
+      # -- Limits describes the maximum amount of compute resources allowed. More
+      # info:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      # limits: {}
+      # -- Requests describes the minimum amount of compute resources required. If
+      # Requests is omitted for a container, it defaults to Limits if that is
+      # explicitly specified, otherwise to an implementation-defined value. Requests
+      # cannot exceed Limits. More info:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      # requests: {}
+    # -- ResourceClaims defines which ResourceClaims must be allocated and reserved
+    # before the Pod is allowed to start. The resources will be made available to
+    # those containers which consume them by name. (Requires Kubernetes 1.32 or
+    # newer)
+    # resourceClaims: []
+    # -- Pod-level resize policy for controlling container restart on resource
+    # resize. (Requires Kubernetes 1.36 or newer with
+    # InPlacePodLevelResourcesVerticalScaling enabled)
+    # resizePolicy: []
+    # -- (string) Set container restart policy. Defaults to 'Always'. When
+    # controller.type is 'cronjob' it defaults to 'Never'.
+    # restartPolicy:
+    # -- (string) Set a runtimeClassName other than the default one (ie: `nvidia`).
+    # runtimeClassName:
+    # -- (string) Set a custom scheduler name.
+    # schedulerName:
+    # -- SchedulingGates is an opaque list of values that if specified will block
+    # scheduling the pod. If schedulingGates is not empty, the pod will stay in the
+    # SchedulingGated state and the scheduler will not attempt to schedule the pod.
+    # See
+    # https://kubernetes.io/docs/concepts/scheduling-eviction/pod-scheduling-readiness/
+    # schedulingGates: []
+    # -- Configure the Security Context for the Pod.
+    # securityContext: {}
+      # -- (int) A special supplemental group that applies to all containers in a pod.
+      # Some volume types allow the Kubelet to change the ownership of that volume to
+      # be owned by the pod: 1. The owning GID will be the FSGroup 2. The setgid bit
+      # is set (new files created in the volume will be owned by FSGroup) 3. The
+      # permission bits are OR'd with rw-rw---- If unset, the Kubelet will not modify
+      # the ownership and permissions of any volume. Note that this field cannot be
+      # set when spec.os.name is windows.
+      # fsGroup:
+      # -- (string) fsGroupChangePolicy defines behavior of changing ownership and
+      # permission of the volume before being exposed inside Pod. This field will only
+      # apply to volume types which support fsGroup based ownership(and permissions).
+      # It will have no effect on ephemeral volume types such as: secret, configmaps
+      # and emptydir. Valid values are "OnRootMismatch" and "Always". If not
+      # specified, "Always" is used. Note that this field cannot be set when
+      # spec.os.name is windows.
+      # fsGroupChangePolicy:
+      # -- (int) The GID to run the entrypoint of the container process. Uses runtime
+      # default if unset. May also be set in SecurityContext. If set in both
+      # SecurityContext and PodSecurityContext, the value specified in SecurityContext
+      # takes precedence for that container. Note that this field cannot be set when
+      # spec.os.name is windows.
+      # runAsGroup:
+      # -- (bool) Indicates that the container must run as a non-root user. If true,
+      # the Kubelet will validate the image at runtime to ensure that it does not run
+      # as UID 0 (root) and fail to start the container if it does. If unset or false,
+      # no such validation will be performed. May also be set in SecurityContext. If
+      # set in both SecurityContext and PodSecurityContext, the value specified in
+      # SecurityContext takes precedence.
+      # runAsNonRoot:
+      # -- (int) The UID to run the entrypoint of the container process. Defaults to
+      # user specified in image metadata if unspecified. May also be set in
+      # SecurityContext. If set in both SecurityContext and PodSecurityContext, the
+      # value specified in SecurityContext takes precedence for that container. Note
+      # that this field cannot be set when spec.os.name is windows.
+      # runAsUser:
+      # -- The SELinux context to be applied to all containers. If unspecified, the
+      # container runtime will allocate a random SELinux context for each container.
+      # May also be set in SecurityContext. If set in both SecurityContext and
+      # PodSecurityContext, the value specified in SecurityContext takes precedence
+      # for that container. Note that this field cannot be set when spec.os.name is
+      # windows.
+      # seLinuxOptions: {}
+        # -- (string) Level is SELinux level label that applies to the container.
+        # level:
+        # -- (string) Role is a SELinux role label that applies to the container.
+        # role:
+        # -- (string) Type is a SELinux type label that applies to the container.
+        # type:
+        # -- (string) User is a SELinux user label that applies to the container.
+        # user:
+      # -- The seccomp options to use by the containers in this pod. Note that this
+      # field cannot be set when spec.os.name is windows.
+      # seccompProfile: {}
+        # -- (string) localhostProfile indicates a profile defined in a file on the node
+        # should be used. The profile must be preconfigured on the node to work. Must be
+        # a descending path, relative to the kubelet's configured seccomp profile
+        # location. Must be set if type is "Localhost". Must NOT be set for any other
+        # type.
+        # localhostProfile:
+        # -- type indicates which kind of seccomp profile will be applied. Valid options
+        # are: Localhost - a profile defined in a file on the node should be used.
+        # RuntimeDefault - the container runtime default profile should be used.
+        # Unconfined - no profile should be applied.
+        # type: ""
+      # -- A list of groups applied to the first process run in each container, in
+      # addition to the container's primary GID, the fsGroup (if specified), and group
+      # memberships defined in the container image for the uid of the container
+      # process. If unspecified, no additional groups are added to any container. Note
+      # that group memberships defined in the container image for the uid of the
+      # container process are still effective, even if they are not included in this
+      # list. Note that this field cannot be set when spec.os.name is windows.
+      # supplementalGroups: []
+      # -- (string) Defines how supplemental groups of the the first process in each
+      # container are calculated. Valid values are "Merge" and "Strict". If not
+      # specified, "Merge" is used. Note that this field cannot be set when
+      # spec.os.name is windows.
+      # supplementalGroupsPolicy:
+      # -- Sysctls hold a list of namespaced sysctls used for the pod. Pods with
+      # unsupported sysctls (by the container runtime) might fail to launch. Note that
+      # this field cannot be set when spec.os.name is windows.
+      # sysctls: []
+    # -- (bool) Allows sharing process namespace between containers in a Pod. See
+    # https://kubernetes.io/docs/tasks/configure-pod-container/share-process-namespace/
+    # shareProcessNamespace: null
+    # -- (int) Duration in seconds the pod needs to terminate gracefully. See
+    # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+    # terminationGracePeriodSeconds: null
+    # -- Specify taint tolerations. See
+    # https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+    # tolerations: []
+    # -- Defines topologySpreadConstraint rules. See
+    # https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+    # topologySpreadConstraints: []
+    # -- (int) Number of desired pods. When a HorizontalPodAutoscaler is configured,
+    # `replicas` is automatically suppressed on the controller and propagated to HPA
+    # `minReplicas` if not explicitly set.
+    # replicas: null
+    # -- (int) ReplicaSet revision history limit.
+    # revisionHistoryLimit:
+    # -- Apply defaultContainerOptions to initContainers.
+    # applyDefaultContainerOptionsToInitContainers: true
+    # -- Strategy for default container options. overwrite: use container-level
+    # options if set. merge: merge container-level options with defaults.
+    # defaultContainerOptionsStrategy: overwrite
+    # -- Default options for all (init)Containers. Each can be overridden on a
+    # container level.
+    # defaultContainerOptions: {}
+    # args: []
+    # command: []
+    # env: []
+    # envFrom: []
+    # image: {}
+      # -- (string)
+      # pullPolicy:
+      # -- (string)
+      # digest:
+      # -- (string)
+      # repository:
+      # -- (string/float)
+      # tag:
+    # -- ResourceRequirements describes the compute resource requirements.
+    # resources: {}
+      # -- Claims lists the names of resources, defined in spec.resourceClaims, that
+      # are used by this container. This is an alpha field and requires enabling the
+      # DynamicResourceAllocation feature gate. This field is immutable. It can only
+      # be set for containers.
+      # claims: []
+      # -- Limits describes the maximum amount of compute resources allowed. More
+      # info:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      # limits: {}
+      # -- Requests describes the minimum amount of compute resources required. If
+      # Requests is omitted for a container, it defaults to Limits if that is
+      # explicitly specified, otherwise to an implementation-defined value. Requests
+      # cannot exceed Limits. More info:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      # requests: {}
+    # -- SecurityContext holds security configuration that will be applied to a
+    # container. Some fields are present in both SecurityContext and
+    # PodSecurityContext. When both are set, the values in SecurityContext take
+    # precedence.
+    # securityContext: {}
+      # -- (bool) AllowPrivilegeEscalation controls whether a process can gain more
+      # privileges than its parent process. This bool directly controls if the
+      # no_new_privs flag will be set on the container process.
+      # AllowPrivilegeEscalation is true always when the container is: 1) run as
+      # Privileged 2) has CAP_SYS_ADMIN Note that this field cannot be set when
+      # spec.os.name is windows.
+      # allowPrivilegeEscalation:
+      # -- The capabilities to add/drop when running containers. Defaults to the
+      # default set of capabilities granted by the container runtime. Note that this
+      # field cannot be set when spec.os.name is windows.
+      # capabilities: {}
+        # -- Added capabilities
+        # add: []
+        # -- Removed capabilities
+        # drop: []
+      # -- (bool) Run container in privileged mode. Processes in privileged containers
+      # are essentially equivalent to root on the host. Defaults to false. Note that
+      # this field cannot be set when spec.os.name is windows.
+      # privileged:
+      # -- (string) procMount denotes the type of proc mount to use for the
+      # containers. The default is DefaultProcMount which uses the container runtime
+      # defaults for readonly paths and masked paths. This requires the ProcMountType
+      # feature flag to be enabled. Note that this field cannot be set when
+      # spec.os.name is windows.
+      # procMount:
+      # -- (bool) Whether this container has a read-only root filesystem. Default is
+      # false. Note that this field cannot be set when spec.os.name is windows.
+      # readOnlyRootFilesystem:
+      # -- (int) The GID to run the entrypoint of the container process. Uses runtime
+      # default if unset. May also be set in PodSecurityContext. If set in both
+      # SecurityContext and PodSecurityContext, the value specified in SecurityContext
+      # takes precedence. Note that this field cannot be set when spec.os.name is
+      # windows.
+      # runAsGroup:
+      # -- (bool) Indicates that the container must run as a non-root user. If true,
+      # the Kubelet will validate the image at runtime to ensure that it does not run
+      # as UID 0 (root) and fail to start the container if it does. If unset or false,
+      # no such validation will be performed. May also be set in PodSecurityContext.
+      # If set in both SecurityContext and PodSecurityContext, the value specified in
+      # SecurityContext takes precedence.
+      # runAsNonRoot:
+      # -- (int) The UID to run the entrypoint of the container process. Defaults to
+      # user specified in image metadata if unspecified. May also be set in
+      # PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the
+      # value specified in SecurityContext takes precedence. Note that this field
+      # cannot be set when spec.os.name is windows.
+      # runAsUser:
+      # -- The SELinux context to be applied to the container. If unspecified, the
+      # container runtime will allocate a random SELinux context for each container.
+      # May also be set in PodSecurityContext. If set in both SecurityContext and
+      # PodSecurityContext, the value specified in SecurityContext takes precedence.
+      # Note that this field cannot be set when spec.os.name is windows.
+      # seLinuxOptions: {}
+        # -- (string) Level is SELinux level label that applies to the container.
+        # level:
+        # -- (string) Role is a SELinux role label that applies to the container.
+        # role:
+        # -- (string) Type is a SELinux type label that applies to the container.
+        # type:
+        # -- (string) User is a SELinux user label that applies to the container.
+        # user:
+      # -- The seccomp options to use by this container. If seccomp options are
+      # provided at both the pod & container level, the container options override the
+      # pod options. Note that this field cannot be set when spec.os.name is windows.
+      # seccompProfile: {}
+        # -- (string) localhostProfile indicates a profile defined in a file on the node
+        # should be used. The profile must be preconfigured on the node to work. Must be
+        # a descending path, relative to the kubelet's configured seccomp profile
+        # location. Must be set if type is "Localhost". Must NOT be set for any other
+        # type.
+        # localhostProfile:
+        # -- type indicates which kind of seccomp profile will be applied. Valid options
+        # are: Localhost - a profile defined in a file on the node should be used.
+        # RuntimeDefault - the container runtime default profile should be used.
+        # Unconfined - no profile should be applied.
+        # type: ""
+    # -- InitContainers as dictionary items.
+    # @default -- See below
+    # initContainers: {}
+    # Example entry - rename as needed
+    # main:
+      # -- Set to false to disable the container.
+      # enabled: true
+      # -- Arguments for the container entrypoint.
+      # args: []
+      # -- Command for the container entrypoint.
+      # command: []
+      # -- Specify container dependencies to determine render order.
+      # dependsOn: []
+      # -- Environment variables for the container. Supports multiple syntax styles:
+      # simple map (key: value), list of K8s v1.EnvVar entries, and valueFrom
+      # references (configMapKeyRef, secretKeyRef, fieldRef, resourceFieldRef). Helm
+      # templates can be used in values. See the Environment Variables howto for
+      # detailed patterns and examples.
+      # env: []
+      # -- Secrets and/or ConfigMaps to load as environment variables in bulk. Each
+      # entry references either a ConfigMap (via `configMap` name or
+      # `configMapRef.identifier`) or a Secret (via `secret` name or
+      # `secretRef.identifier`), with optional `prefix`. See the Environment Variables
+      # howto for detailed patterns.
+      # envFrom: []
+      # -- Image configuration for the container.
+      # image: {}
+      # -- (string)
+      # pullPolicy:
+      # -- (string)
+      # digest:
+      # -- (string)
+      # repository:
+      # -- (string/float)
+      # tag:
+      # -- Lifecycle event hooks (postStart, preStop) for the container. See
+      # https://kubernetes.io/docs/tasks/configure-pod-container/attach-handler-lifecycle-event/
+      # and
+      # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+      # for details.
+      # lifecycle: {}
+      # -- PostStart is called immediately after a container is created. If the
+      # handler fails, the container is terminated and restarted according to its
+      # restart policy. Other management of the container blocks until the hook
+      # completes. More info:
+      # https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
+      # postStart: {}
+        # -- Exec specifies the action to take.
+        # exec: {}
+          # -- Command is the command line to execute inside the container, the working
+          # directory for the command is root ('/') in the container's filesystem. The
+          # command is simply exec'd, it is not run inside a shell, so traditional shell
+          # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+          # call out to that shell. Exit status of 0 is treated as live/healthy and
+          # non-zero is unhealthy.
+          # command: []
+        # -- HTTPGet specifies the http request to perform.
+        # httpGet: {}
+          # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+          # to set "Host" in httpHeaders instead.
+          # host: null
+          # -- Custom headers to set in the request. HTTP allows repeated headers.
+          # httpHeaders: []
+          # -- (string) Path to access on the HTTP server.
+          # path: null
+          # -- Name or number of the port to access on the container. Number must be in
+          # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+          # port: ""
+          # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+          # scheme: null
+        # -- Sleep represents the duration that the container should sleep before being
+        # terminated.
+        # sleep: {}
+          # -- Seconds is the number of seconds to sleep.
+          # seconds: 0
+        # -- Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept for
+        # the backward compatibility. There are no validation of this field and
+        # lifecycle hooks will fail in runtime when tcp handler is specified.
+        # tcpSocket: {}
+          # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+          # host: null
+          # -- Number or name of the port to access on the container. Number must be in
+          # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+          # port: ""
+      # -- PreStop is called immediately before a container is terminated due to an
+      # API request or management event such as liveness/startup probe failure,
+      # preemption, resource contention, etc. The handler is not called if the
+      # container crashes or exits. The Pod's termination grace period countdown
+      # begins before the PreStop hook is executed. Regardless of the outcome of the
+      # handler, the container will eventually terminate within the Pod's termination
+      # grace period (unless delayed by finalizers). Other management of the container
+      # blocks until the hook completes or until the termination grace period is
+      # reached. More info:
+      # https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
+      # preStop: {}
+        # -- Exec specifies the action to take.
+        # exec: {}
+          # -- Command is the command line to execute inside the container, the working
+          # directory for the command is root ('/') in the container's filesystem. The
+          # command is simply exec'd, it is not run inside a shell, so traditional shell
+          # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+          # call out to that shell. Exit status of 0 is treated as live/healthy and
+          # non-zero is unhealthy.
+          # command: []
+        # -- HTTPGet specifies the http request to perform.
+        # httpGet: {}
+          # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+          # to set "Host" in httpHeaders instead.
+          # host: null
+          # -- Custom headers to set in the request. HTTP allows repeated headers.
+          # httpHeaders: []
+          # -- (string) Path to access on the HTTP server.
+          # path: null
+          # -- Name or number of the port to access on the container. Number must be in
+          # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+          # port: ""
+          # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+          # scheme: null
+        # -- Sleep represents the duration that the container should sleep before being
+        # terminated.
+        # sleep: {}
+          # -- Seconds is the number of seconds to sleep.
+          # seconds: 0
+        # -- Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept for
+        # the backward compatibility. There are no validation of this field and
+        # lifecycle hooks will fail in runtime when tcp handler is specified.
+        # tcpSocket: {}
+          # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+          # host: null
+          # -- Number or name of the port to access on the container. Number must be in
+          # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+          # port: ""
+      # -- (string) Override the container name.
+      # nameOverride:
+      # -- Ports to expose from the container.
+      # ports: []
+      # -- Probe settings for the container. See
+      # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+      # for details.
+      # probes: {}
+      # -- Liveness probe configuration.
+      # liveness: {}
+        # -- Enable/disable this probe.
+        # enabled: false
+        # -- Set to `true` to use the raw `spec` object as-is instead of deriving probe
+        # details from `type`/`path`/`port`.
+        # custom: false
+        # -- (string) HTTP path for HTTP/HTTPS probes.
+        # path:
+        # -- (float/string) Port for the probe. Can be a port number or a named port.
+        # port:
+        # -- (string) Identifier of a container port or service to probe. When unset,
+        # the probe uses the container's primary port.
+        # service:
+        # -- Raw probe spec. When `custom: true`, this is used as-is. Otherwise merged
+        # with values derived from `type`/`path`/`port`. Typical fields include
+        # `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`.
+        # spec: {}
+          # -- Exec specifies the action to take.
+          # exec: {}
+            # -- Command is the command line to execute inside the container, the working
+            # directory for the command is root ('/') in the container's filesystem. The
+            # command is simply exec'd, it is not run inside a shell, so traditional shell
+            # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+            # call out to that shell. Exit status of 0 is treated as live/healthy and
+            # non-zero is unhealthy.
+            # command: []
+          # -- (int) Minimum consecutive failures for the probe to be considered failed
+          # after having succeeded. Defaults to 3. Minimum value is 1.
+          # failureThreshold: null
+          # -- GRPC specifies an action involving a GRPC port.
+          # grpc: {}
+            # -- Port number of the gRPC service. Number must be in the range 1 to 65535.
+            # port: 0
+            # -- (string) Service is the name of the service to place in the gRPC
+            # HealthCheckRequest (see
+            # https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is
+            # not specified, the default behavior is defined by gRPC.
+            # service: null
+          # -- HTTPGet specifies the http request to perform.
+          # httpGet: {}
+            # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+            # to set "Host" in httpHeaders instead.
+            # host: null
+            # -- Custom headers to set in the request. HTTP allows repeated headers.
+            # httpHeaders: []
+            # -- (string) Path to access on the HTTP server.
+            # path: null
+            # -- Name or number of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+            # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+            # scheme: null
+          # -- (int) Number of seconds after the container has started before liveness
+          # probes are initiated. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # initialDelaySeconds: null
+          # -- (int) How often (in seconds) to perform the probe. Default to 10 seconds.
+          # Minimum value is 1.
+          # periodSeconds: null
+          # -- (int) Minimum consecutive successes for the probe to be considered
+          # successful after having failed. Defaults to 1. Must be 1 for liveness and
+          # startup. Minimum value is 1.
+          # successThreshold: null
+          # -- TCPSocket specifies an action involving a TCP port.
+          # tcpSocket: {}
+            # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+            # host: null
+            # -- Number or name of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+          # -- (int) Optional duration in seconds the pod needs to terminate gracefully
+          # upon probe failure. The grace period is the duration in seconds after the
+          # processes running in the pod are sent a termination signal and the time when
+          # the processes are forcibly halted with a kill signal. Set this value longer
+          # than the expected cleanup time for your process. If this value is nil, the
+          # pod's terminationGracePeriodSeconds will be used. Otherwise, this value
+          # overrides the value provided by the pod spec. Value must be non-negative
+          # integer. The value zero indicates stop immediately via the kill signal (no
+          # opportunity to shut down). This is a beta field and requires enabling
+          # ProbeTerminationGracePeriod feature gate. Minimum value is 1.
+          # spec.terminationGracePeriodSeconds is used if unset.
+          # terminationGracePeriodSeconds: null
+          # -- (int) Number of seconds after which the probe times out. Defaults to 1
+          # second. Minimum value is 1. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # timeoutSeconds: null
+        # -- (string) Probe type. Defaults to `TCP` for liveness, readiness and startup
+        # probes. `AUTO` attempts to infer the probe type from the container's ports.
+        # type:
+      # -- Readiness probe configuration.
+      # readiness: {}
+        # -- Enable/disable this probe.
+        # enabled: false
+        # -- Set to `true` to use the raw `spec` object as-is instead of deriving probe
+        # details from `type`/`path`/`port`.
+        # custom: false
+        # -- (string) HTTP path for HTTP/HTTPS probes.
+        # path:
+        # -- (float/string) Port for the probe. Can be a port number or a named port.
+        # port:
+        # -- (string) Identifier of a container port or service to probe. When unset,
+        # the probe uses the container's primary port.
+        # service:
+        # -- Raw probe spec. When `custom: true`, this is used as-is. Otherwise merged
+        # with values derived from `type`/`path`/`port`. Typical fields include
+        # `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`.
+        # spec: {}
+          # -- Exec specifies the action to take.
+          # exec: {}
+            # -- Command is the command line to execute inside the container, the working
+            # directory for the command is root ('/') in the container's filesystem. The
+            # command is simply exec'd, it is not run inside a shell, so traditional shell
+            # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+            # call out to that shell. Exit status of 0 is treated as live/healthy and
+            # non-zero is unhealthy.
+            # command: []
+          # -- (int) Minimum consecutive failures for the probe to be considered failed
+          # after having succeeded. Defaults to 3. Minimum value is 1.
+          # failureThreshold: null
+          # -- GRPC specifies an action involving a GRPC port.
+          # grpc: {}
+            # -- Port number of the gRPC service. Number must be in the range 1 to 65535.
+            # port: 0
+            # -- (string) Service is the name of the service to place in the gRPC
+            # HealthCheckRequest (see
+            # https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is
+            # not specified, the default behavior is defined by gRPC.
+            # service: null
+          # -- HTTPGet specifies the http request to perform.
+          # httpGet: {}
+            # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+            # to set "Host" in httpHeaders instead.
+            # host: null
+            # -- Custom headers to set in the request. HTTP allows repeated headers.
+            # httpHeaders: []
+            # -- (string) Path to access on the HTTP server.
+            # path: null
+            # -- Name or number of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+            # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+            # scheme: null
+          # -- (int) Number of seconds after the container has started before liveness
+          # probes are initiated. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # initialDelaySeconds: null
+          # -- (int) How often (in seconds) to perform the probe. Default to 10 seconds.
+          # Minimum value is 1.
+          # periodSeconds: null
+          # -- (int) Minimum consecutive successes for the probe to be considered
+          # successful after having failed. Defaults to 1. Must be 1 for liveness and
+          # startup. Minimum value is 1.
+          # successThreshold: null
+          # -- TCPSocket specifies an action involving a TCP port.
+          # tcpSocket: {}
+            # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+            # host: null
+            # -- Number or name of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+          # -- (int) Optional duration in seconds the pod needs to terminate gracefully
+          # upon probe failure. The grace period is the duration in seconds after the
+          # processes running in the pod are sent a termination signal and the time when
+          # the processes are forcibly halted with a kill signal. Set this value longer
+          # than the expected cleanup time for your process. If this value is nil, the
+          # pod's terminationGracePeriodSeconds will be used. Otherwise, this value
+          # overrides the value provided by the pod spec. Value must be non-negative
+          # integer. The value zero indicates stop immediately via the kill signal (no
+          # opportunity to shut down). This is a beta field and requires enabling
+          # ProbeTerminationGracePeriod feature gate. Minimum value is 1.
+          # spec.terminationGracePeriodSeconds is used if unset.
+          # terminationGracePeriodSeconds: null
+          # -- (int) Number of seconds after which the probe times out. Defaults to 1
+          # second. Minimum value is 1. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # timeoutSeconds: null
+        # -- (string) Probe type. Defaults to `TCP` for liveness, readiness and startup
+        # probes. `AUTO` attempts to infer the probe type from the container's ports.
+        # type:
+      # -- Startup probe configuration.
+      # startup: {}
+        # -- Enable/disable this probe.
+        # enabled: false
+        # -- Set to `true` to use the raw `spec` object as-is instead of deriving probe
+        # details from `type`/`path`/`port`.
+        # custom: false
+        # -- (string) HTTP path for HTTP/HTTPS probes.
+        # path:
+        # -- (float/string) Port for the probe. Can be a port number or a named port.
+        # port:
+        # -- (string) Identifier of a container port or service to probe. When unset,
+        # the probe uses the container's primary port.
+        # service:
+        # -- Raw probe spec. When `custom: true`, this is used as-is. Otherwise merged
+        # with values derived from `type`/`path`/`port`. Typical fields include
+        # `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`.
+        # spec: {}
+          # -- Exec specifies the action to take.
+          # exec: {}
+            # -- Command is the command line to execute inside the container, the working
+            # directory for the command is root ('/') in the container's filesystem. The
+            # command is simply exec'd, it is not run inside a shell, so traditional shell
+            # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+            # call out to that shell. Exit status of 0 is treated as live/healthy and
+            # non-zero is unhealthy.
+            # command: []
+          # -- (int) Minimum consecutive failures for the probe to be considered failed
+          # after having succeeded. Defaults to 3. Minimum value is 1.
+          # failureThreshold: null
+          # -- GRPC specifies an action involving a GRPC port.
+          # grpc: {}
+            # -- Port number of the gRPC service. Number must be in the range 1 to 65535.
+            # port: 0
+            # -- (string) Service is the name of the service to place in the gRPC
+            # HealthCheckRequest (see
+            # https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is
+            # not specified, the default behavior is defined by gRPC.
+            # service: null
+          # -- HTTPGet specifies the http request to perform.
+          # httpGet: {}
+            # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+            # to set "Host" in httpHeaders instead.
+            # host: null
+            # -- Custom headers to set in the request. HTTP allows repeated headers.
+            # httpHeaders: []
+            # -- (string) Path to access on the HTTP server.
+            # path: null
+            # -- Name or number of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+            # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+            # scheme: null
+          # -- (int) Number of seconds after the container has started before liveness
+          # probes are initiated. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # initialDelaySeconds: null
+          # -- (int) How often (in seconds) to perform the probe. Default to 10 seconds.
+          # Minimum value is 1.
+          # periodSeconds: null
+          # -- (int) Minimum consecutive successes for the probe to be considered
+          # successful after having failed. Defaults to 1. Must be 1 for liveness and
+          # startup. Minimum value is 1.
+          # successThreshold: null
+          # -- TCPSocket specifies an action involving a TCP port.
+          # tcpSocket: {}
+            # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+            # host: null
+            # -- Number or name of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+          # -- (int) Optional duration in seconds the pod needs to terminate gracefully
+          # upon probe failure. The grace period is the duration in seconds after the
+          # processes running in the pod are sent a termination signal and the time when
+          # the processes are forcibly halted with a kill signal. Set this value longer
+          # than the expected cleanup time for your process. If this value is nil, the
+          # pod's terminationGracePeriodSeconds will be used. Otherwise, this value
+          # overrides the value provided by the pod spec. Value must be non-negative
+          # integer. The value zero indicates stop immediately via the kill signal (no
+          # opportunity to shut down). This is a beta field and requires enabling
+          # ProbeTerminationGracePeriod feature gate. Minimum value is 1.
+          # spec.terminationGracePeriodSeconds is used if unset.
+          # terminationGracePeriodSeconds: null
+          # -- (int) Number of seconds after which the probe times out. Defaults to 1
+          # second. Minimum value is 1. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # timeoutSeconds: null
+        # -- (string) Probe type. Defaults to `TCP` for liveness, readiness and startup
+        # probes. `AUTO` attempts to infer the probe type from the container's ports.
+        # type:
+      # -- Resource requests and limits for the container.
+      # resources: {}
+      # -- Claims lists the names of resources, defined in spec.resourceClaims, that
+      # are used by this container. This is an alpha field and requires enabling the
+      # DynamicResourceAllocation feature gate. This field is immutable. It can only
+      # be set for containers.
+      # claims: []
+      # -- Limits describes the maximum amount of compute resources allowed. More
+      # info:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      # limits: {}
+      # -- Requests describes the minimum amount of compute resources required. If
+      # Requests is omitted for a container, it defaults to Limits if that is
+      # explicitly specified, otherwise to an implementation-defined value. Requests
+      # cannot exceed Limits. More info:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      # requests: {}
+      # -- Configure whether the container should be restarted when resizing. This
+      # allows fine-grained control based on resource type (CPU or memory).
+      # resizePolicy: []
+      # -- (string) Restart policy for the container.
+      # restartPolicy:
+      # -- Security context for the container.
+      # securityContext: {}
+      # -- (bool) AllowPrivilegeEscalation controls whether a process can gain more
+      # privileges than its parent process. This bool directly controls if the
+      # no_new_privs flag will be set on the container process.
+      # AllowPrivilegeEscalation is true always when the container is: 1) run as
+      # Privileged 2) has CAP_SYS_ADMIN Note that this field cannot be set when
+      # spec.os.name is windows.
+      # allowPrivilegeEscalation:
+      # -- The capabilities to add/drop when running containers. Defaults to the
+      # default set of capabilities granted by the container runtime. Note that this
+      # field cannot be set when spec.os.name is windows.
+      # capabilities: {}
+        # -- Added capabilities
+        # add: []
+        # -- Removed capabilities
+        # drop: []
+      # -- (bool) Run container in privileged mode. Processes in privileged containers
+      # are essentially equivalent to root on the host. Defaults to false. Note that
+      # this field cannot be set when spec.os.name is windows.
+      # privileged:
+      # -- (string) procMount denotes the type of proc mount to use for the
+      # containers. The default is DefaultProcMount which uses the container runtime
+      # defaults for readonly paths and masked paths. This requires the ProcMountType
+      # feature flag to be enabled. Note that this field cannot be set when
+      # spec.os.name is windows.
+      # procMount:
+      # -- (bool) Whether this container has a read-only root filesystem. Default is
+      # false. Note that this field cannot be set when spec.os.name is windows.
+      # readOnlyRootFilesystem:
+      # -- (int) The GID to run the entrypoint of the container process. Uses runtime
+      # default if unset. May also be set in PodSecurityContext. If set in both
+      # SecurityContext and PodSecurityContext, the value specified in SecurityContext
+      # takes precedence. Note that this field cannot be set when spec.os.name is
+      # windows.
+      # runAsGroup:
+      # -- (bool) Indicates that the container must run as a non-root user. If true,
+      # the Kubelet will validate the image at runtime to ensure that it does not run
+      # as UID 0 (root) and fail to start the container if it does. If unset or false,
+      # no such validation will be performed. May also be set in PodSecurityContext.
+      # If set in both SecurityContext and PodSecurityContext, the value specified in
+      # SecurityContext takes precedence.
+      # runAsNonRoot:
+      # -- (int) The UID to run the entrypoint of the container process. Defaults to
+      # user specified in image metadata if unspecified. May also be set in
+      # PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the
+      # value specified in SecurityContext takes precedence. Note that this field
+      # cannot be set when spec.os.name is windows.
+      # runAsUser:
+      # -- The SELinux context to be applied to the container. If unspecified, the
+      # container runtime will allocate a random SELinux context for each container.
+      # May also be set in PodSecurityContext. If set in both SecurityContext and
+      # PodSecurityContext, the value specified in SecurityContext takes precedence.
+      # Note that this field cannot be set when spec.os.name is windows.
+      # seLinuxOptions: {}
+        # -- (string) Level is SELinux level label that applies to the container.
+        # level:
+        # -- (string) Role is a SELinux role label that applies to the container.
+        # role:
+        # -- (string) Type is a SELinux type label that applies to the container.
+        # type:
+        # -- (string) User is a SELinux user label that applies to the container.
+        # user:
+      # -- The seccomp options to use by this container. If seccomp options are
+      # provided at both the pod & container level, the container options override the
+      # pod options. Note that this field cannot be set when spec.os.name is windows.
+      # seccompProfile: {}
+        # -- (string) localhostProfile indicates a profile defined in a file on the node
+        # should be used. The profile must be preconfigured on the node to work. Must be
+        # a descending path, relative to the kubelet's configured seccomp profile
+        # location. Must be set if type is "Localhost". Must NOT be set for any other
+        # type.
+        # localhostProfile:
+        # -- type indicates which kind of seccomp profile will be applied. Valid options
+        # are: Localhost - a profile defined in a file on the node should be used.
+        # RuntimeDefault - the container runtime default profile should be used.
+        # Unconfined - no profile should be applied.
+        # type: ""
+      # -- Keep the standard input open on the container.
+      # stdin: false
+      # -- (string) Path at which the file to which the container's termination
+      # message will be written is mounted into the container's filesystem. See
+      # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+      # for details.
+      # terminationMessagePath:
+      # -- (string) How the container's termination message should be populated.
+      # `File` will read the termination message from terminationMessagePath.
+      # `FallbackToLogsOnError` uses the last chunk of container log output if the
+      # termination message file is empty or the container errored. See
+      # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+      # for details.
+      # terminationMessagePolicy:
+      # -- Allocate a TTY for the container.
+      # tty: false
+      # -- (string) Working directory for the container.
+      # workingDir:
+    # -- Containers as dictionary items.
+    # @default -- See below
+    # containers: {}
+    # Example entry - rename as needed
+    # main:
+      # -- Set to false to disable the container.
+      # enabled: true
+      # -- Arguments for the container entrypoint.
+      # args: []
+      # -- Command for the container entrypoint.
+      # command: []
+      # -- Specify container dependencies to determine render order.
+      # dependsOn: []
+      # -- Environment variables for the container. Supports multiple syntax styles:
+      # simple map (key: value), list of K8s v1.EnvVar entries, and valueFrom
+      # references (configMapKeyRef, secretKeyRef, fieldRef, resourceFieldRef). Helm
+      # templates can be used in values. See the Environment Variables howto for
+      # detailed patterns and examples.
+      # env: []
+      # -- Secrets and/or ConfigMaps to load as environment variables in bulk. Each
+      # entry references either a ConfigMap (via `configMap` name or
+      # `configMapRef.identifier`) or a Secret (via `secret` name or
+      # `secretRef.identifier`), with optional `prefix`. See the Environment Variables
+      # howto for detailed patterns.
+      # envFrom: []
+      # -- Image configuration for the container.
+      # image: {}
+      # -- (string)
+      # pullPolicy:
+      # -- (string)
+      # digest:
+      # -- (string)
+      # repository:
+      # -- (string/float)
+      # tag:
+      # -- Lifecycle event hooks (postStart, preStop) for the container. See
+      # https://kubernetes.io/docs/tasks/configure-pod-container/attach-handler-lifecycle-event/
+      # and
+      # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+      # for details.
+      # lifecycle: {}
+      # -- PostStart is called immediately after a container is created. If the
+      # handler fails, the container is terminated and restarted according to its
+      # restart policy. Other management of the container blocks until the hook
+      # completes. More info:
+      # https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
+      # postStart: {}
+        # -- Exec specifies the action to take.
+        # exec: {}
+          # -- Command is the command line to execute inside the container, the working
+          # directory for the command is root ('/') in the container's filesystem. The
+          # command is simply exec'd, it is not run inside a shell, so traditional shell
+          # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+          # call out to that shell. Exit status of 0 is treated as live/healthy and
+          # non-zero is unhealthy.
+          # command: []
+        # -- HTTPGet specifies the http request to perform.
+        # httpGet: {}
+          # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+          # to set "Host" in httpHeaders instead.
+          # host: null
+          # -- Custom headers to set in the request. HTTP allows repeated headers.
+          # httpHeaders: []
+          # -- (string) Path to access on the HTTP server.
+          # path: null
+          # -- Name or number of the port to access on the container. Number must be in
+          # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+          # port: ""
+          # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+          # scheme: null
+        # -- Sleep represents the duration that the container should sleep before being
+        # terminated.
+        # sleep: {}
+          # -- Seconds is the number of seconds to sleep.
+          # seconds: 0
+        # -- Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept for
+        # the backward compatibility. There are no validation of this field and
+        # lifecycle hooks will fail in runtime when tcp handler is specified.
+        # tcpSocket: {}
+          # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+          # host: null
+          # -- Number or name of the port to access on the container. Number must be in
+          # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+          # port: ""
+      # -- PreStop is called immediately before a container is terminated due to an
+      # API request or management event such as liveness/startup probe failure,
+      # preemption, resource contention, etc. The handler is not called if the
+      # container crashes or exits. The Pod's termination grace period countdown
+      # begins before the PreStop hook is executed. Regardless of the outcome of the
+      # handler, the container will eventually terminate within the Pod's termination
+      # grace period (unless delayed by finalizers). Other management of the container
+      # blocks until the hook completes or until the termination grace period is
+      # reached. More info:
+      # https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
+      # preStop: {}
+        # -- Exec specifies the action to take.
+        # exec: {}
+          # -- Command is the command line to execute inside the container, the working
+          # directory for the command is root ('/') in the container's filesystem. The
+          # command is simply exec'd, it is not run inside a shell, so traditional shell
+          # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+          # call out to that shell. Exit status of 0 is treated as live/healthy and
+          # non-zero is unhealthy.
+          # command: []
+        # -- HTTPGet specifies the http request to perform.
+        # httpGet: {}
+          # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+          # to set "Host" in httpHeaders instead.
+          # host: null
+          # -- Custom headers to set in the request. HTTP allows repeated headers.
+          # httpHeaders: []
+          # -- (string) Path to access on the HTTP server.
+          # path: null
+          # -- Name or number of the port to access on the container. Number must be in
+          # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+          # port: ""
+          # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+          # scheme: null
+        # -- Sleep represents the duration that the container should sleep before being
+        # terminated.
+        # sleep: {}
+          # -- Seconds is the number of seconds to sleep.
+          # seconds: 0
+        # -- Deprecated. TCPSocket is NOT supported as a LifecycleHandler and kept for
+        # the backward compatibility. There are no validation of this field and
+        # lifecycle hooks will fail in runtime when tcp handler is specified.
+        # tcpSocket: {}
+          # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+          # host: null
+          # -- Number or name of the port to access on the container. Number must be in
+          # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+          # port: ""
+      # -- (string) Override the container name.
+      # nameOverride:
+      # -- Ports to expose from the container.
+      # ports: []
+      # -- Probe settings for the container. See
+      # https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+      # for details.
+      # probes: {}
+      # -- Liveness probe configuration.
+      # liveness: {}
+        # -- Enable/disable this probe.
+        # enabled: false
+        # -- Set to `true` to use the raw `spec` object as-is instead of deriving probe
+        # details from `type`/`path`/`port`.
+        # custom: false
+        # -- (string) HTTP path for HTTP/HTTPS probes.
+        # path:
+        # -- (float/string) Port for the probe. Can be a port number or a named port.
+        # port:
+        # -- (string) Identifier of a container port or service to probe. When unset,
+        # the probe uses the container's primary port.
+        # service:
+        # -- Raw probe spec. When `custom: true`, this is used as-is. Otherwise merged
+        # with values derived from `type`/`path`/`port`. Typical fields include
+        # `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`.
+        # spec: {}
+          # -- Exec specifies the action to take.
+          # exec: {}
+            # -- Command is the command line to execute inside the container, the working
+            # directory for the command is root ('/') in the container's filesystem. The
+            # command is simply exec'd, it is not run inside a shell, so traditional shell
+            # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+            # call out to that shell. Exit status of 0 is treated as live/healthy and
+            # non-zero is unhealthy.
+            # command: []
+          # -- (int) Minimum consecutive failures for the probe to be considered failed
+          # after having succeeded. Defaults to 3. Minimum value is 1.
+          # failureThreshold: null
+          # -- GRPC specifies an action involving a GRPC port.
+          # grpc: {}
+            # -- Port number of the gRPC service. Number must be in the range 1 to 65535.
+            # port: 0
+            # -- (string) Service is the name of the service to place in the gRPC
+            # HealthCheckRequest (see
+            # https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is
+            # not specified, the default behavior is defined by gRPC.
+            # service: null
+          # -- HTTPGet specifies the http request to perform.
+          # httpGet: {}
+            # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+            # to set "Host" in httpHeaders instead.
+            # host: null
+            # -- Custom headers to set in the request. HTTP allows repeated headers.
+            # httpHeaders: []
+            # -- (string) Path to access on the HTTP server.
+            # path: null
+            # -- Name or number of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+            # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+            # scheme: null
+          # -- (int) Number of seconds after the container has started before liveness
+          # probes are initiated. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # initialDelaySeconds: null
+          # -- (int) How often (in seconds) to perform the probe. Default to 10 seconds.
+          # Minimum value is 1.
+          # periodSeconds: null
+          # -- (int) Minimum consecutive successes for the probe to be considered
+          # successful after having failed. Defaults to 1. Must be 1 for liveness and
+          # startup. Minimum value is 1.
+          # successThreshold: null
+          # -- TCPSocket specifies an action involving a TCP port.
+          # tcpSocket: {}
+            # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+            # host: null
+            # -- Number or name of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+          # -- (int) Optional duration in seconds the pod needs to terminate gracefully
+          # upon probe failure. The grace period is the duration in seconds after the
+          # processes running in the pod are sent a termination signal and the time when
+          # the processes are forcibly halted with a kill signal. Set this value longer
+          # than the expected cleanup time for your process. If this value is nil, the
+          # pod's terminationGracePeriodSeconds will be used. Otherwise, this value
+          # overrides the value provided by the pod spec. Value must be non-negative
+          # integer. The value zero indicates stop immediately via the kill signal (no
+          # opportunity to shut down). This is a beta field and requires enabling
+          # ProbeTerminationGracePeriod feature gate. Minimum value is 1.
+          # spec.terminationGracePeriodSeconds is used if unset.
+          # terminationGracePeriodSeconds: null
+          # -- (int) Number of seconds after which the probe times out. Defaults to 1
+          # second. Minimum value is 1. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # timeoutSeconds: null
+        # -- (string) Probe type. Defaults to `TCP` for liveness, readiness and startup
+        # probes. `AUTO` attempts to infer the probe type from the container's ports.
+        # type:
+      # -- Readiness probe configuration.
+      # readiness: {}
+        # -- Enable/disable this probe.
+        # enabled: false
+        # -- Set to `true` to use the raw `spec` object as-is instead of deriving probe
+        # details from `type`/`path`/`port`.
+        # custom: false
+        # -- (string) HTTP path for HTTP/HTTPS probes.
+        # path:
+        # -- (float/string) Port for the probe. Can be a port number or a named port.
+        # port:
+        # -- (string) Identifier of a container port or service to probe. When unset,
+        # the probe uses the container's primary port.
+        # service:
+        # -- Raw probe spec. When `custom: true`, this is used as-is. Otherwise merged
+        # with values derived from `type`/`path`/`port`. Typical fields include
+        # `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`.
+        # spec: {}
+          # -- Exec specifies the action to take.
+          # exec: {}
+            # -- Command is the command line to execute inside the container, the working
+            # directory for the command is root ('/') in the container's filesystem. The
+            # command is simply exec'd, it is not run inside a shell, so traditional shell
+            # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+            # call out to that shell. Exit status of 0 is treated as live/healthy and
+            # non-zero is unhealthy.
+            # command: []
+          # -- (int) Minimum consecutive failures for the probe to be considered failed
+          # after having succeeded. Defaults to 3. Minimum value is 1.
+          # failureThreshold: null
+          # -- GRPC specifies an action involving a GRPC port.
+          # grpc: {}
+            # -- Port number of the gRPC service. Number must be in the range 1 to 65535.
+            # port: 0
+            # -- (string) Service is the name of the service to place in the gRPC
+            # HealthCheckRequest (see
+            # https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is
+            # not specified, the default behavior is defined by gRPC.
+            # service: null
+          # -- HTTPGet specifies the http request to perform.
+          # httpGet: {}
+            # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+            # to set "Host" in httpHeaders instead.
+            # host: null
+            # -- Custom headers to set in the request. HTTP allows repeated headers.
+            # httpHeaders: []
+            # -- (string) Path to access on the HTTP server.
+            # path: null
+            # -- Name or number of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+            # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+            # scheme: null
+          # -- (int) Number of seconds after the container has started before liveness
+          # probes are initiated. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # initialDelaySeconds: null
+          # -- (int) How often (in seconds) to perform the probe. Default to 10 seconds.
+          # Minimum value is 1.
+          # periodSeconds: null
+          # -- (int) Minimum consecutive successes for the probe to be considered
+          # successful after having failed. Defaults to 1. Must be 1 for liveness and
+          # startup. Minimum value is 1.
+          # successThreshold: null
+          # -- TCPSocket specifies an action involving a TCP port.
+          # tcpSocket: {}
+            # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+            # host: null
+            # -- Number or name of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+          # -- (int) Optional duration in seconds the pod needs to terminate gracefully
+          # upon probe failure. The grace period is the duration in seconds after the
+          # processes running in the pod are sent a termination signal and the time when
+          # the processes are forcibly halted with a kill signal. Set this value longer
+          # than the expected cleanup time for your process. If this value is nil, the
+          # pod's terminationGracePeriodSeconds will be used. Otherwise, this value
+          # overrides the value provided by the pod spec. Value must be non-negative
+          # integer. The value zero indicates stop immediately via the kill signal (no
+          # opportunity to shut down). This is a beta field and requires enabling
+          # ProbeTerminationGracePeriod feature gate. Minimum value is 1.
+          # spec.terminationGracePeriodSeconds is used if unset.
+          # terminationGracePeriodSeconds: null
+          # -- (int) Number of seconds after which the probe times out. Defaults to 1
+          # second. Minimum value is 1. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # timeoutSeconds: null
+        # -- (string) Probe type. Defaults to `TCP` for liveness, readiness and startup
+        # probes. `AUTO` attempts to infer the probe type from the container's ports.
+        # type:
+      # -- Startup probe configuration.
+      # startup: {}
+        # -- Enable/disable this probe.
+        # enabled: false
+        # -- Set to `true` to use the raw `spec` object as-is instead of deriving probe
+        # details from `type`/`path`/`port`.
+        # custom: false
+        # -- (string) HTTP path for HTTP/HTTPS probes.
+        # path:
+        # -- (float/string) Port for the probe. Can be a port number or a named port.
+        # port:
+        # -- (string) Identifier of a container port or service to probe. When unset,
+        # the probe uses the container's primary port.
+        # service:
+        # -- Raw probe spec. When `custom: true`, this is used as-is. Otherwise merged
+        # with values derived from `type`/`path`/`port`. Typical fields include
+        # `initialDelaySeconds`, `periodSeconds`, `timeoutSeconds`, `failureThreshold`.
+        # spec: {}
+          # -- Exec specifies the action to take.
+          # exec: {}
+            # -- Command is the command line to execute inside the container, the working
+            # directory for the command is root ('/') in the container's filesystem. The
+            # command is simply exec'd, it is not run inside a shell, so traditional shell
+            # instructions ('|', etc) won't work. To use a shell, you need to explicitly
+            # call out to that shell. Exit status of 0 is treated as live/healthy and
+            # non-zero is unhealthy.
+            # command: []
+          # -- (int) Minimum consecutive failures for the probe to be considered failed
+          # after having succeeded. Defaults to 3. Minimum value is 1.
+          # failureThreshold: null
+          # -- GRPC specifies an action involving a GRPC port.
+          # grpc: {}
+            # -- Port number of the gRPC service. Number must be in the range 1 to 65535.
+            # port: 0
+            # -- (string) Service is the name of the service to place in the gRPC
+            # HealthCheckRequest (see
+            # https://github.com/grpc/grpc/blob/master/doc/health-checking.md). If this is
+            # not specified, the default behavior is defined by gRPC.
+            # service: null
+          # -- HTTPGet specifies the http request to perform.
+          # httpGet: {}
+            # -- (string) Host name to connect to, defaults to the pod IP. You probably want
+            # to set "Host" in httpHeaders instead.
+            # host: null
+            # -- Custom headers to set in the request. HTTP allows repeated headers.
+            # httpHeaders: []
+            # -- (string) Path to access on the HTTP server.
+            # path: null
+            # -- Name or number of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+            # -- (string) Scheme to use for connecting to the host. Defaults to HTTP.
+            # scheme: null
+          # -- (int) Number of seconds after the container has started before liveness
+          # probes are initiated. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # initialDelaySeconds: null
+          # -- (int) How often (in seconds) to perform the probe. Default to 10 seconds.
+          # Minimum value is 1.
+          # periodSeconds: null
+          # -- (int) Minimum consecutive successes for the probe to be considered
+          # successful after having failed. Defaults to 1. Must be 1 for liveness and
+          # startup. Minimum value is 1.
+          # successThreshold: null
+          # -- TCPSocket specifies an action involving a TCP port.
+          # tcpSocket: {}
+            # -- (string) Optional: Host name to connect to, defaults to the pod IP.
+            # host: null
+            # -- Number or name of the port to access on the container. Number must be in
+            # the range 1 to 65535. Name must be an IANA_SVC_NAME.
+            # port: ""
+          # -- (int) Optional duration in seconds the pod needs to terminate gracefully
+          # upon probe failure. The grace period is the duration in seconds after the
+          # processes running in the pod are sent a termination signal and the time when
+          # the processes are forcibly halted with a kill signal. Set this value longer
+          # than the expected cleanup time for your process. If this value is nil, the
+          # pod's terminationGracePeriodSeconds will be used. Otherwise, this value
+          # overrides the value provided by the pod spec. Value must be non-negative
+          # integer. The value zero indicates stop immediately via the kill signal (no
+          # opportunity to shut down). This is a beta field and requires enabling
+          # ProbeTerminationGracePeriod feature gate. Minimum value is 1.
+          # spec.terminationGracePeriodSeconds is used if unset.
+          # terminationGracePeriodSeconds: null
+          # -- (int) Number of seconds after which the probe times out. Defaults to 1
+          # second. Minimum value is 1. More info:
+          # https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#container-probes
+          # timeoutSeconds: null
+        # -- (string) Probe type. Defaults to `TCP` for liveness, readiness and startup
+        # probes. `AUTO` attempts to infer the probe type from the container's ports.
+        # type:
+      # -- Resource requests and limits for the container.
+      # resources: {}
+      # -- Claims lists the names of resources, defined in spec.resourceClaims, that
+      # are used by this container. This is an alpha field and requires enabling the
+      # DynamicResourceAllocation feature gate. This field is immutable. It can only
+      # be set for containers.
+      # claims: []
+      # -- Limits describes the maximum amount of compute resources allowed. More
+      # info:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      # limits: {}
+      # -- Requests describes the minimum amount of compute resources required. If
+      # Requests is omitted for a container, it defaults to Limits if that is
+      # explicitly specified, otherwise to an implementation-defined value. Requests
+      # cannot exceed Limits. More info:
+      # https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+      # requests: {}
+      # -- Configure whether the container should be restarted when resizing. This
+      # allows fine-grained control based on resource type (CPU or memory).
+      # resizePolicy: []
+      # -- (string) Restart policy for the container.
+      # restartPolicy:
+      # -- Security context for the container.
+      # securityContext: {}
+      # -- (bool) AllowPrivilegeEscalation controls whether a process can gain more
+      # privileges than its parent process. This bool directly controls if the
+      # no_new_privs flag will be set on the container process.
+      # AllowPrivilegeEscalation is true always when the container is: 1) run as
+      # Privileged 2) has CAP_SYS_ADMIN Note that this field cannot be set when
+      # spec.os.name is windows.
+      # allowPrivilegeEscalation:
+      # -- The capabilities to add/drop when running containers. Defaults to the
+      # default set of capabilities granted by the container runtime. Note that this
+      # field cannot be set when spec.os.name is windows.
+      # capabilities: {}
+        # -- Added capabilities
+        # add: []
+        # -- Removed capabilities
+        # drop: []
+      # -- (bool) Run container in privileged mode. Processes in privileged containers
+      # are essentially equivalent to root on the host. Defaults to false. Note that
+      # this field cannot be set when spec.os.name is windows.
+      # privileged:
+      # -- (string) procMount denotes the type of proc mount to use for the
+      # containers. The default is DefaultProcMount which uses the container runtime
+      # defaults for readonly paths and masked paths. This requires the ProcMountType
+      # feature flag to be enabled. Note that this field cannot be set when
+      # spec.os.name is windows.
+      # procMount:
+      # -- (bool) Whether this container has a read-only root filesystem. Default is
+      # false. Note that this field cannot be set when spec.os.name is windows.
+      # readOnlyRootFilesystem:
+      # -- (int) The GID to run the entrypoint of the container process. Uses runtime
+      # default if unset. May also be set in PodSecurityContext. If set in both
+      # SecurityContext and PodSecurityContext, the value specified in SecurityContext
+      # takes precedence. Note that this field cannot be set when spec.os.name is
+      # windows.
+      # runAsGroup:
+      # -- (bool) Indicates that the container must run as a non-root user. If true,
+      # the Kubelet will validate the image at runtime to ensure that it does not run
+      # as UID 0 (root) and fail to start the container if it does. If unset or false,
+      # no such validation will be performed. May also be set in PodSecurityContext.
+      # If set in both SecurityContext and PodSecurityContext, the value specified in
+      # SecurityContext takes precedence.
+      # runAsNonRoot:
+      # -- (int) The UID to run the entrypoint of the container process. Defaults to
+      # user specified in image metadata if unspecified. May also be set in
+      # PodSecurityContext. If set in both SecurityContext and PodSecurityContext, the
+      # value specified in SecurityContext takes precedence. Note that this field
+      # cannot be set when spec.os.name is windows.
+      # runAsUser:
+      # -- The SELinux context to be applied to the container. If unspecified, the
+      # container runtime will allocate a random SELinux context for each container.
+      # May also be set in PodSecurityContext. If set in both SecurityContext and
+      # PodSecurityContext, the value specified in SecurityContext takes precedence.
+      # Note that this field cannot be set when spec.os.name is windows.
+      # seLinuxOptions: {}
+        # -- (string) Level is SELinux level label that applies to the container.
+        # level:
+        # -- (string) Role is a SELinux role label that applies to the container.
+        # role:
+        # -- (string) Type is a SELinux type label that applies to the container.
+        # type:
+        # -- (string) User is a SELinux user label that applies to the container.
+        # user:
+      # -- The seccomp options to use by this container. If seccomp options are
+      # provided at both the pod & container level, the container options override the
+      # pod options. Note that this field cannot be set when spec.os.name is windows.
+      # seccompProfile: {}
+        # -- (string) localhostProfile indicates a profile defined in a file on the node
+        # should be used. The profile must be preconfigured on the node to work. Must be
+        # a descending path, relative to the kubelet's configured seccomp profile
+        # location. Must be set if type is "Localhost". Must NOT be set for any other
+        # type.
+        # localhostProfile:
+        # -- type indicates which kind of seccomp profile will be applied. Valid options
+        # are: Localhost - a profile defined in a file on the node should be used.
+        # RuntimeDefault - the container runtime default profile should be used.
+        # Unconfined - no profile should be applied.
+        # type: ""
+      # -- Keep the standard input open on the container.
+      # stdin: false
+      # -- (string) Path at which the file to which the container's termination
+      # message will be written is mounted into the container's filesystem. See
+      # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+      # for details.
+      # terminationMessagePath:
+      # -- (string) How the container's termination message should be populated.
+      # `File` will read the termination message from terminationMessagePath.
+      # `FallbackToLogsOnError` uses the last chunk of container log output if the
+      # termination message file is empty or the container errored. See
+      # https://kubernetes.io/docs/reference/kubernetes-api/workload-resources/pod-v1/#lifecycle
+      # for details.
+      # terminationMessagePolicy:
+      # -- Allocate a TTY for the container.
+      # tty: false
+      # -- (string) Working directory for the container.
+      # workingDir:
+    # -- ServiceAccount used by the controller. Only use one of `name` or
+    # `identifier`. When both are specified, `identifier` takes priority.
+    # serviceAccount: {}
+    # -- (string) Reference a serviceAccount by its name. Helm templates are
+    # supported.
+    # name:
+    # -- (string) Reference a serviceAccount configured in this chart by its key.
+    # identifier:
+    # -- PodDisruptionBudget Policy for this controller.
+    # podDisruptionBudget: {}
+    # -- (int/string)
+    # minAvailable:
+    # -- (int/string)
+    # maxUnavailable:
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- HorizontalPodAutoscaler configuration for this controller. Only supported
+    # for deployment and statefulset types. See
+    # https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/ for
+    # details.
+    # horizontalPodAutoscaler: {}
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Scaling behavior configuration. Passed through directly to the
+    # autoscaling/v2 HPA spec.
+    # behavior: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- Maximum number of replicas.
+    # maxReplicas: 0
+    # -- Metrics to use for scaling. Passed through directly to the autoscaling/v2
+    # HPA spec.
+    # metrics: []
+    # -- (int) Minimum number of replicas. Set to 0 to enable scale-to-zero when the
+    # HPAScaleToZero feature gate is enabled.
+    # minReplicas: null
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- Rolling update options. Only valid when strategy is `RollingUpdate`. Both
+    # the shorthand keys (`surge`/`unavailable`) and the upstream Kubernetes keys
+    # (`maxSurge`/`maxUnavailable`) are accepted. When both are set, the Kubernetes
+    # key takes priority. The shorthand keys are deprecated and Will be removed in
+    # v6.0.
+    # rollingUpdate: {}
+    # -- (int/string) Maximum number of pods that can be created over the desired
+    # replicas during the update.
+    # maxSurge:
+    # -- (int/string) Maximum number of pods that can be unavailable during the
+    # update.
+    # maxUnavailable:
+    # -- (int/string) Deprecated: use `maxSurge` instead. Will be removed in v6.0.
+    # Maximum number of pods that can be created over the desired replicas during
+    # the update.
+    # surge:
+    # -- (int/string) Deprecated: use `maxUnavailable` instead. Will be removed in
+    # v6.0. Maximum number of pods that can be unavailable during the update.
+    # unavailable:
+    # -- Controller upgrade strategy. Valid values: `Recreate` or `RollingUpdate`.
+    # strategy: Recreate
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- Kubernetes serviceAccount objects to be generated by the chart
+# @default -- See below
+serviceAccount: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the ServiceAccount.
+    # enabled: true
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- Set to true to create a long-lived static token for the ServiceAccount.
+    # staticToken: false
+    # -- (bool) Set to false to prevent the ServiceAccount token from being
+    # automatically mounted.
+    # automountServiceAccountToken:
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- Kubernetes ConfigMaps to be generated by the chart. Additional ConfigMaps
+# can be added by adding a dictionary key similar to the 'config' object.
+# @default -- See below
+configMaps: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the ConfigMap.
+    # enabled: true
+    # -- Set to true to include this ConfigMap in the checksum calculation for
+    # rolling updates.
+    # includeInChecksum: true
+    # -- Specify a list of controller identifiers for which to include this
+    # ConfigMap in the checksum calculation for rolling updates.
+    # includeChecksumInControllers: []
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- ConfigMap data content. Helm templates are supported.
+    # data: {}
+    # -- ConfigMap binaryData content.
+    # binaryData: {}
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- Generate ConfigMaps from files in the chart filesystem
+configMapsFromFolder:
+  enabled: false
+  # -- (string) Base path containing configmap subfolders
+  # basePath:
+  autoDetectBinary: false
+  # @default -- See below
+  configMapsOverrides: {}
+    # Example entry - rename as needed
+    # main:
+      # -- (string)
+      # forceRename: null
+      # -- Annotations to set on the item.
+      # annotations: {}
+      # -- Labels to set on the item.
+      # labels: {}
+      # @default -- See below
+      # fileAttributeOverrides: {}
+      # Example entry - rename as needed
+      # main:
+        # exclude: false
+        # binary: false
+        # escaped: false
+        # isEnvFile: false
+
+# -- Kubernetes Secrets to be generated by the chart. Be aware that these values
+# are not encrypted by default, and could therefore be visible to anybody with
+# access to the values.yaml file. Additional Secrets can be added by adding a
+# dictionary key similar to the 'secret' object.
+# @default -- See below
+secrets: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the Secret.
+    # enabled: true
+    # -- Set to true to include this Secret in the checksum calculation for rolling
+    # updates.
+    # includeInChecksum: true
+    # -- Specify a list of controller identifiers for which to include this Secret
+    # in the checksum calculation for rolling updates.
+    # includeChecksumInControllers: []
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- (string) Secret type.
+    # type:
+    # -- Secret stringData content. Helm templates are supported.
+    # stringData: {}
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- Generate Secrets from files in the chart filesystem
+secretsFromFolder:
+  enabled: false
+  # -- (string) Base path containing secret subfolders
+  # basePath:
+  # @default -- See below
+  overrides: {}
+    # Example entry - rename as needed
+    # main:
+      # -- (string)
+      # forceRename: null
+      # -- Annotations to set on the item.
+      # annotations: {}
+      # -- Labels to set on the item.
+      # labels: {}
+      # @default -- See below
+      # fileAttributeOverrides: {}
+      # Example entry - rename as needed
+      # main:
+        # exclude: false
+        # binary: false
+        # escaped: false
+        # isEnvFile: false
+
+# -- Kubernetes Ingress objects to be generated by the chart. Each key is an
+# ingress identifier.
+# @default -- See below
+
+#   ingress:
+#     main:
+#       className: nginx
+#       hosts:
+#         - host: app.example.com
+#           paths:
+#             - path: /
+#               pathType: Prefix
+#               service:
+#                 identifier: main
+#                 port: http
+ingress: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the Ingress.
+    # enabled: true
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- (string) Set the ingressClass used for this Ingress.
+    # className:
+    # -- Set the defaultBackend for this Ingress. This disables any other rules.
+    # defaultBackend: {}
+    # -- resource is an ObjectRef to another Kubernetes resource in the namespace of
+    # the Ingress object. If resource is specified, a service.Name and service.Port
+    # must not be specified. This is a mutually exclusive setting with "Service".
+    # resource: {}
+      # -- (string) APIGroup is the group for the resource being referenced. If
+      # APIGroup is not specified, the specified Kind must be in the core API group.
+      # For any other third-party types, APIGroup is required.
+      # apiGroup:
+      # -- Kind is the type of resource being referenced
+      # kind: ""
+      # -- Name is the name of resource being referenced
+      # name: ""
+    # -- service references a service as a backend. This is a mutually exclusive
+    # setting with "Resource".
+    # service: {}
+      # -- name is the referenced service. The service must exist in the same
+      # namespace as the Ingress object.
+      # name: ""
+      # -- port of the referenced service. A port name or port number is required for
+      # a IngressServiceBackend.
+      # port: {}
+        # -- (string) name is the name of the port on the Service. This is a mutually
+        # exclusive setting with "Number".
+        # name:
+        # -- (int) number is the numerical port number (e.g. 80) on the Service. This is
+        # a mutually exclusive setting with "Name".
+        # number:
+    # -- Configure the hosts for the Ingress.
+    # hosts: []
+    # -- Configure TLS for the Ingress.
+    # tls: []
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- Kubernetes Gateway API *Route objects to be generated by the chart.
+# Additional routes can be added by adding a dictionary key similar to the
+# 'main' route. See https://gateway-api.sigs.k8s.io/references/spec/ for the
+# Gateway API specification.
+# @default -- See below
+route: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the Route.
+    # enabled: true
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- (string) Override the namespace the Route is deployed to. When set to a
+    # different namespace than the release namespace, a ReferenceGrant is
+    # automatically generated (unless disabled).
+    # namespaceOverride:
+    # -- ReferenceGrant auto-generation for cross-namespace backend references. When
+    # the Route is deployed to a different namespace than its backend Services, a
+    # ReferenceGrant is automatically generated in the Services' namespace (the
+    # release namespace).
+    # referenceGrant:
+      # -- Set to false to disable automatic ReferenceGrant generation.
+      # enabled: true
+    # -- Host addresses for the Route. Helm templates are supported.
+    # hostnames: []
+    # -- (string) Route kind. Supported values: GRPCRoute, HTTPRoute, TCPRoute,
+    # TLSRoute, UDPRoute.
+    # kind:
+    # -- Resource the Route attaches to.
+    # parentRefs: []
+    # -- Rules for routing. Defaults to the primary service.
+    # rules: []
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- Kubernetes Service objects to be generated by the chart. Each key is a
+# service identifier.
+# @default -- See below
+
+#   service:
+#     main:
+#       controller: main
+#       ports:
+#         http:
+#           port: 80
+service: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the Service.
+    # enabled: true
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- (string) Service type. Supported values: ClusterIP, NodePort, LoadBalancer,
+    # ExternalName.
+    # type:
+    # -- (string)
+    # clusterIP:
+    # -- (string)
+    # externalName:
+    # -- (string)
+    # loadBalancerIP:
+    # loadBalancerSourceRanges: []
+    # -- (string)
+    # loadBalancerClass:
+    # -- (string) internalTrafficPolicy for the Service. Supported values: Cluster,
+    # Local. See
+    # https://kubernetes.io/docs/concepts/services-networking/service-traffic-policy/
+    # internalTrafficPolicy:
+    # -- (string) externalTrafficPolicy for the Service. Supported values: Cluster,
+    # Local. See https://kubernetes.io/docs/tutorials/services/source-ip/
+    # externalTrafficPolicy:
+    # -- (bool)
+    # allocateLoadBalancerNodePorts:
+    # -- (string)
+    # sessionAffinity:
+    # sessionAffinityConfig: {}
+    # externalIPs: []
+    # -- (bool)
+    # publishNotReadyAddresses:
+    # -- (string) ipFamilyPolicy for the Service. Supported values: SingleStack,
+    # PreferDualStack, RequireDualStack.
+    # ipFamilyPolicy:
+    # -- IP families for the Service. Supported values: IPv4, IPv6.
+    # ipFamilies: []
+    # -- (string) trafficDistribution for the Service. Supported values:
+    # PreferClose, PreferSameZone, PreferSameNode.
+    # trafficDistribution:
+    # -- (string) Controller this Service should target.
+    # controller:
+    # -- Set to true to make this the primary Service for the controller (used in
+    # probes, notes, etc). Only one Service can be marked as primary.
+    # primary: false
+    # -- Additional match labels for the Service selector.
+    # extraSelectorLabels: null
+    # -- Service port(s) configuration.
+    # @default -- See below
+    # ports: {}
+    # Example entry - rename as needed
+    # main:
+      # -- Set to false to disable the port.
+      # enabled: true
+      # -- Set to true to make this the primary port (used in probes, notes, etc).
+      # Only one port can be marked as primary.
+      # primary: false
+      # -- Port name / number.
+      # port: ""
+      # -- A range of ports to include in the Service.
+      # portRange: {}
+      # -- Start of the port range.
+      # start: 0
+      # -- End of the port range (inclusive).
+      # end: 0
+      # -- (string) Port protocol. Supported values: HTTP, HTTPS, TCP, UDP. HTTP and
+      # HTTPS spawn a TCP service and are used for internal URL and name generation.
+      # protocol:
+      # -- (string/int) Set the targetPort if you want the Service port to differ from
+      # the application port. If set, this value is used in the container definition
+      # instead of 'port'. Named ports are not supported for this field.
+      # targetPort:
+      # -- (string/int) nodePort value for LoadBalancer and NodePort Service types.
+      # See
+      # https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+      # nodePort:
+      # -- (string) appProtocol value for the port. See
+      # https://kubernetes.io/docs/concepts/services-networking/service/#application-protocol
+      # appProtocol:
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- serviceMonitor objects to be generated by the chart. Additional
+# ServiceMonitors can be added by adding a dictionary key similar to the 'main'
+# ServiceMonitor.
+# @default -- See below
+serviceMonitor: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the ServiceMonitor.
+    # enabled: true
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- The label to use to retrieve the job name from the target service's
+    # metadata. Defaults to 'app.kubernetes.io/name'. Helm templates can be used.
+    # jobLabel: app.kubernetes.io/name
+    # -- Endpoints allowed as part of this ServiceMonitor.
+    # endpoints: []
+    # -- Selector to select Endpoints objects.
+    # selector: {}
+    # -- matchLabels is a map of {key,value} pairs. The requirements are ANDed.
+    # matchLabels: {}
+    # -- matchExpressions is a list of label selector requirements. The requirements
+    # are ANDed.
+    # matchExpressions: []
+    # -- (string) Reference to a Service name to monitor. Helm templates are
+    # supported. Deprecated in favor of 'service'.
+    # serviceName:
+    # -- Transfers labels from the Kubernetes Service onto the created metrics. See
+    # https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitorspec
+    # for details.
+    # targetLabels: []
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- podMonitor objects to be generated by the chart. Additional PodMonitors can
+# be added by adding a dictionary key similar to the 'main' PodMonitor.
+# @default -- See below
+podMonitor: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the PodMonitor.
+    # enabled: true
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- The label to use to retrieve the job name from the target pod's metadata.
+    # Defaults to 'app.kubernetes.io/name'. Helm templates can be used.
+    # jobLabel: app.kubernetes.io/name
+    # -- Pod metrics endpoints allowed as part of this PodMonitor. Typical fields
+    # per endpoint include `port`, `scheme`, `path`, `interval`, `scrapeTimeout`.
+    # See
+    # https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#podmetricsendpoint
+    # for the full schema.
+    # podMetricsEndpoints: []
+    # -- Selector to select Pod objects.
+    # selector: {}
+    # -- matchLabels is a map of {key,value} pairs. The requirements are ANDed.
+    # matchLabels: {}
+    # -- matchExpressions is a list of label selector requirements. The requirements
+    # are ANDed.
+    # matchExpressions: []
+    # -- Controller whose pods to monitor.
+    # controller: {}
+    # -- Reference a controller identifier defined within the chart values.
+    # identifier: ""
+    # -- Transfers labels from the Kubernetes Pod onto the created metrics. See
+    # https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#podmonitorspec
+    # for details.
+    # podTargetLabels: []
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- networkPolicy objects to be generated by the chart. Additional
+# networkPolicies can be added by adding a dictionary key similar to the 'main'
+# networkPolicy.
+# @default -- See below
+networkpolicies: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the NetworkPolicy.
+    # enabled: true
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- (string) Controller this NetworkPolicy should target.
+    # controller:
+    # -- Additional match labels to add to the pod selector. These are merged with
+    # labels derived from the controller identifier.
+    # extraSelectorLabels: {}
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- Custom podSelector for the NetworkPolicy. Takes precedence over targeting a
+    # controller via the controller identifier.
+    # podSelector: null
+    # -- Policy types for the NetworkPolicy.
+    # policyTypes: []
+    # -- Ingress and egress rules for the NetworkPolicy. See
+    # https://kubernetes.io/docs/concepts/services-networking/network-policies/#networkpolicy-resource
+    # for details. Use `- {}` as an item to allow all traffic for that direction.
+    # rules:
+      # -- Ingress rules for this networkPolicy. An entry of `{}` allows all ingress
+      # traffic.
+      # ingress: []
+      # -- Egress rules for this networkPolicy. An entry of `{}` allows all egress
+      # traffic.
+      # egress: []
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+
+# -- Configure persistent storage and mount options. Each key is an identifier
+# for a persistence item. Supported types: persistentVolumeClaim (default),
+# configMap, secret, nfs, emptyDir, hostPath, image, custom. By default each
+# item mounts to /<identifier>. Use globalMounts or advancedMounts to customize
+# mount paths.
+# @default -- See below
+
+#   persistence:
+#     config:
+#       type: persistentVolumeClaim
+#       accessMode: ReadWriteOnce
+#       size: 1Gi
+#       globalMounts:
+#         - path: /config
+#     tmp:
+#       type: emptyDir
+#   persistence:
+#     config:
+#       type: persistentVolumeClaim
+#       accessMode: ReadWriteOnce
+#       size: 1Gi
+#   persistence:
+#     config:
+#       type: persistentVolumeClaim
+#       accessMode: ReadWriteOnce
+#       size: 10Gi
+#       storageClass: fast-ssd
+#       retain: true
+#       globalMounts:
+#         - path: /config
+persistence: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the persistence item.
+    # enabled: true
+    # -- Configure mounts to all controllers and containers. By default the
+    # persistence item will be mounted to /<name_of_the_persistence_item>. Each
+    # entry supports: path, readOnly, subPath, subPathExpr, and mountPropagation.
+    #   globalMounts:
+    #     - path: /config
+    #   globalMounts:
+    #     - path: /data
+    #       readOnly: true
+    #     - path: /data/subdir
+    #       subPath: subdir
+    # globalMounts: []
+    # -- Explicitly configure mounts for specific controllers and containers.
+    # Structure: advancedMounts.<controller_name>.<container_name>[].path Use this
+    # instead of globalMounts when different controllers need different mount
+    # configurations.
+    #   advancedMounts:
+    #     main:
+    #       main:
+    #         - path: /config
+    #       sidecar:
+    #         - path: /shared
+    #           readOnly: true
+    # advancedMounts: {}
+    # -- AccessMode for the persistent volume. Make sure to select an access mode
+    # that is supported by your storage provider! See
+    # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+    # accessMode: ""
+    # -- Annotations to set on the item.
+    # annotations: {}
+    # -- The optional data source for the persistentVolumeClaim. See
+    # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-populators-and-data-sources
+    # dataSource: {}
+    # -- (string)
+    # apiGroup:
+    # kind: ""
+    # name: ""
+    # -- The optional volume populator for the persistentVolumeClaim. See
+    # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#volume-populators-and-data-sources
+    # dataSourceRef: {}
+    # -- (string)
+    # apiGroup:
+    # kind: ""
+    # name: ""
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Labels to set on the item.
+    # labels: {}
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (bool) Set to true to retain the PVC upon helm uninstall.
+    # retain:
+    # -- The amount of storage that is requested for the persistent volume.
+    # size: ""
+    # -- (string) Storage Class for the config volume. If set to '-', dynamic
+    # provisioning is disabled. If set to something else, the given storageClass is
+    # used. If undefined (the default) or set to null, no storageClassName spec is
+    # set, choosing the default provisioner.
+    # storageClass:
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:
+    # type: persistentVolumeClaim
+    # -- (string)
+    # volumeName:
+
+# -- Configure the Roles and Role Bindings for the chart here
+rbac:
+  # -- (Cluster)Role objects to be generated by the chart
+  # @default -- See below
+  roles: {}
+    # Example entry - rename as needed
+    # main:
+      # -- Set to false to disable the Role or ClusterRole.
+      # enabled: true
+      # -- Set the type of RBAC resource. Supported values: Role, ClusterRole.
+      # type: Role
+      # -- Annotations to set on the item.
+      # annotations: {}
+      # -- Labels to set on the item.
+      # labels: {}
+      # -- Set the rules for the Role or ClusterRole.
+      # rules: []
+      # -- (string) Override the default resource name. Mutually exclusive with prefix
+      # and suffix.
+      # forceRename:
+      # -- Prefix to prepend to the resource name. Mutually exclusive with
+      # forceRename.
+      # prefix: ""
+      # -- (string) Suffix to append to the resource name. Defaults to the resource
+      # identifier if there are multiple items, otherwise empty. Mutually exclusive
+      # with forceRename.
+      # suffix:
+  # -- (Cluster)RoleBinding objects to be generated by the chart
+  # @default -- See below
+  bindings: {}
+    # Example entry - rename as needed
+    # main:
+      # -- Set to false to disable the RoleBinding or ClusterRoleBinding.
+      # enabled: true
+      # -- Set the type of RBAC binding. Supported values: RoleBinding,
+      # ClusterRoleBinding.
+      # type: RoleBinding
+      # -- Annotations to set on the item.
+      # annotations: {}
+      # -- Labels to set on the item.
+      # labels: {}
+      # -- Reference the Role or ClusterRole to bind to.
+      # roleRef:
+        # -- Reference an Role or ClusterRole configured in this chart by its key.
+        # identifier: ""
+        # -- (string) Reference a Role or ClusterRole by its name. Helm template
+        # enabled.
+        # name:
+        # -- (string) The kind of the referenced object. Supported values: Role,
+        # ClusterRole.
+        # kind:
+      # -- Set the subjects for the RoleBinding or ClusterRoleBinding.
+      # subjects: []
+      # -- (string) Override the default resource name. Mutually exclusive with prefix
+      # and suffix.
+      # forceRename:
+      # -- Prefix to prepend to the resource name. Mutually exclusive with
+      # forceRename.
+      # prefix: ""
+      # -- (string) Suffix to append to the resource name. Defaults to the resource
+      # identifier if there are multiple items, otherwise empty. Mutually exclusive
+      # with forceRename.
+      # suffix:
+
+# -- Allows for the inclusion of raw Kubernetes resources that are not supported
+# by the chart otherwise​
+# @default -- See below
+rawResources: {}
+  # Example entry - rename as needed
+  # main:
+    # -- Set to false to disable the resource.
+    # enabled: true
+    # -- The raw K8s resource manifest to be rendered. apiVersion and kind are
+    # required.
+    # manifest:
+      # -- apiVersion of the resource.
+      # apiVersion: ""
+      # -- Kind of the resource.
+      # kind: ""
+      # metadata: {}
+      # -- (string) Namespace of the resource.
+      # namespace:
+      # -- Labels to set on the item.
+      # labels: {}
+      # -- Annotations to set on the item.
+      # annotations: {}
+    # -- (string) Override the default resource name. Mutually exclusive with prefix
+    # and suffix.
+    # forceRename:
+    # -- Prefix to prepend to the resource name. Mutually exclusive with
+    # forceRename.
+    # prefix: ""
+    # -- (string) Suffix to append to the resource name. Defaults to the resource
+    # identifier if there are multiple items, otherwise empty. Mutually exclusive
+    # with forceRename.
+    # suffix:

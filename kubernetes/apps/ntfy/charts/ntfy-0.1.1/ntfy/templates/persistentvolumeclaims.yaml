@@ -1,0 +1,8 @@
+{{- if and .Values.cache.enabled (not .Values.cache.existingClaim) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ntfy.fullname" . }}
+spec:
+  {{- toYaml .Values.cache.volumeClaimSpec | nindent 2 }}
+{{- end }}

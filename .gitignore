@@ -40,8 +40,10 @@ secrets.yaml
 # Logs
 *.log
 
-# Kustomize Helm chart inflator cache (created by `kubectl kustomize --enable-helm`)
-kubernetes/**/charts/
+# Helm charts are vendored, not ignored. `kustomize build --enable-helm`
+# inflates them into kubernetes/**/charts/ and they are committed, so a deploy
+# renders from the tree instead of fetching 17 charts from upstream on every
+# run. Re-render and commit the result whenever a chart `version:` changes.
 
 # agent-smith drops per-machine skill symlinks here (absolute paths into
 # ~/.cache), which are dangling for anyone else who clones this repo.

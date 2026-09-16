@@ -1,0 +1,76 @@
+{{- if .Values.sync.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "zepp-life-mcp.fullname" . }}-sync
+  labels:
+    {{- include "zepp-life-mcp.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.sync.schedule | quote }}
+  {{- if .Values.sync.timeZone }}
+  # Without this, Kubernetes reads the schedule in UTC, which silently means a
+  # different wall-clock hour than whoever wrote it intended.
+  timeZone: {{ .Values.sync.timeZone | quote }}
+  {{- end }}
+  concurrencyPolicy: {{ .Values.sync.concurrencyPolicy }}
+  successfulJobsHistoryLimit: {{ .Values.sync.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.sync.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.sync.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            {{- include "zepp-life-mcp.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: sync
+        spec:
+          restartPolicy: Never
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          # Must match the server: the claim is node-local and both need it.
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: sync
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              securityContext:
+                {{- toYaml .Values.securityContext | nindent 16 }}
+              args:
+                - sync
+                {{- if .Values.sync.startDate }}
+                - --start-date={{ .Values.sync.startDate }}
+                {{- end }}
+                {{- range .Values.sync.dataTypes }}
+                - --type={{ . }}
+                {{- end }}
+              env:
+                {{- include "zepp-life-mcp.commonEnv" . | nindent 16 }}
+              resources:
+                {{- toYaml .Values.sync.resources | nindent 16 }}
+              volumeMounts:
+                - name: data
+                  mountPath: {{ .Values.persistence.mountPath }}
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: data
+              {{- if .Values.persistence.enabled }}
+              persistentVolumeClaim:
+                claimName: {{ include "zepp-life-mcp.claimName" . }}
+              {{- else }}
+              emptyDir: {}
+              {{- end }}
+            - name: tmp
+              emptyDir: {}
+{{- end }}

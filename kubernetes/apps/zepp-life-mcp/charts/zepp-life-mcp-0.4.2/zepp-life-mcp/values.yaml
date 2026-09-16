@@ -1,0 +1,102 @@
+image:
+  repository: ghcr.io/rounakdatta/zepp-life-mcp
+  # Defaults to .Chart.AppVersion so a chart release deploys the image that
+  # release built. Pin here only to deliberately diverge.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+zepp:
+  mode: cloud_session
+  region: eu
+  timezone: Asia/Kolkata
+  # Optional. The adapter can discover it, but supplying it saves a request and
+  # lets a read-only pod identify the archive's owner with no upstream at all.
+  userId: ""
+  storeRawPayloads: true
+
+  # Secret holding the credentials. Never put them in this file: the homelab
+  # repo that supplies these values is public.
+  #   apptoken    -- the Zepp session cookie the sync job uses
+  #   bearerToken -- what MCP clients must send as `Authorization: Bearer ...`
+  existingSecret: zepp-life-mcp
+  secretKeys:
+    apptoken: apptoken
+    bearerToken: bearerToken
+
+server:
+  # The CronJob is the writer. Leaving this true keeps exactly one writer on the
+  # SQLite file and stops a client mutating the archive through the endpoint.
+  readOnly: true
+  port: 8080
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 25m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+service:
+  type: ClusterIP
+  port: 80
+
+sync:
+  enabled: true
+  # Nightly. The band uploads on its own schedule, so there is nothing to gain
+  # from syncing more often than the phone does.
+  schedule: "17 3 * * *"
+  # The IANA zone the schedule is written in. Leave empty and Kubernetes uses
+  # UTC, so "03:17" means 03:17 UTC regardless of what the comment beside it
+  # says. Requires Kubernetes 1.27+.
+  timeZone: ""
+  # Empty means every type the adapter offers, which includes workout_details.
+  dataTypes: []
+  # Leave EMPTY. The sync service already resumes from its stored cursor, and
+  # falls back to 2020-01-01 on a cloud source that has no cursor yet -- so an
+  # empty value gives a full backfill on the first run and an incremental pass
+  # after it. Setting a date here overrides the cursor and re-fetches the entire
+  # history on every run, which on a multi-year archive means re-processing
+  # hundreds of thousands of heart-rate samples nightly for nothing.
+  startDate: ""
+  # Forbid: two syncs must never write this SQLite file at once.
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  backoffLimit: 2
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: local-path
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  mountPath: /data
+
+# local-path volumes are node-local: a claim binds to whichever node first
+# consumes it and stays there. Both workloads must therefore land on the same
+# node, and it must be the stable one.
+nodeSelector:
+  node-role.kubernetes.io/control-plane: "true"
+tolerations: []
+affinity: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  fsGroup: 10001
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]

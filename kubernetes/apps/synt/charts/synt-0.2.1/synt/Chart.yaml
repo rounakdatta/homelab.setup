@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 0.1.0
+description: Synt — LLM Chat Archive (See You Next Time)
+name: synt
+type: application
+version: 0.2.1

@@ -1,0 +1,178 @@
+image:
+  repository: ghcr.io/rounakdatta/agentfest
+  # Pinned to the same tag as Chart.appVersion so a chart upgrade always
+  # corresponds to one specific image. Override at install time if you need
+  # to roll forward without bumping the chart.
+  tag: "0.1.33"
+  pullPolicy: IfNotPresent
+
+# One deployment is one computer. Scaling this is meaningless: the whole
+# machine — home directory, tmux sessions, Claude Code state — is a single
+# ReadWriteOnce volume with a single writer.
+replicaCount: 1
+
+# Codeman ships several releases a week, and it is installed into the
+# persistent volume rather than baked into the image. Bumping this value and
+# restarting the pod is the entire upgrade procedure — no image rebuild.
+# Claude Code is installed from npm into the persistent volume rather than
+# baked in from nixpkgs. The client version gates which models it can see —
+# nixpkgs' 2.1.86 predates Opus 5 and silently falls back to Opus 4.6 — and a
+# read-only Nix store cannot self-update out of that.
+#
+# Pinned to an exact version rather than "latest", so upgrades are deliberate
+# and reproducible (the marker-file logic still skips the reinstall when the pin
+# has not moved). Bump after checking the release, then restart the pod.
+claudeCode:
+  version: "2.1.233"
+
+codeman:
+  # Pinned to an exact version rather than "latest", so upgrades are deliberate
+  # and reproducible. Bumping is a one-line edit + pod restart; note the upgrade
+  # recompiles node-pty from source, the slowest part of a boot.
+  version: "1.19.3"
+  port: 3000
+  # Codeman rejects unknown Host headers before any handler runs (it is a
+  # DNS-rebinding guard). Tailscale's .ts.net is allowed out of the box, but a
+  # Traefik ingress on a custom domain is NOT — put that hostname here or every
+  # request comes back as `403 host not allowed`. Comma-separated; a leading
+  # dot matches subdomains.
+  allowedHosts: ""
+
+service:
+  type: ClusterIP
+  port: 3000
+
+persistence:
+  # The computer itself. /home/rounak holds the workspace, ~/.claude session
+  # state, ~/.npm-global (Codeman), git checkouts and build artifacts — so
+  # size this for real work, not for config.
+  enabled: true
+  # local-path is the homelab's only storage class, and it is node-local:
+  # this PVC pins the pod to whichever node first schedules it.
+  storageClass: ""
+  size: 200Gi
+  accessMode: ReadWriteOnce
+  mountPath: /home/rounak
+  # Reuse a pre-existing PVC instead of letting the chart create one.
+  existingClaim: ""
+
+# Codeman launches agents with --dangerously-skip-permissions by default, so
+# whoever reaches the UI controls the machine. This password is a second lock
+# behind Tinyauth, not a substitute for it.
+#
+# Turning it off is a real reduction in defence, and it is off-by-choice rather
+# than off-by-accident, so read this before flipping it.
+#
+# What you lose: the second lock. Whatever fronts the ingress becomes the only
+# thing between the network and a shell.
+#
+# What you gain: Codeman's auth is HTTP Basic, and only HTTP Basic — there is no
+# login route in the codebase to switch to. That means a browser-native dialog a
+# password manager cannot fill, guarding a shared static secret. It also brings a
+# brute-force limiter that is actively hostile behind a reverse proxy:
+#
+#   * AUTH_FAILURE_MAX (10) and the 15-minute window are hardcoded constants
+#     with no environment override.
+#   * The 429 is sent WITHOUT a WWW-Authenticate header, so once it trips the
+#     browser stops offering the password dialog at all. The credential check
+#     actually runs before the limiter, so the right password would still be
+#     accepted — you are simply never asked for it again.
+#   * Codeman builds its Fastify instance without trustProxy and never reads
+#     X-Forwarded-For, so behind an ingress every client shares one bucket of
+#     ten. Any credential-less request counts, including the first request of a
+#     page load.
+#
+# Net: behind an authenticating proxy it is a self-inflicted lockout more often
+# than a defence. Disable it only where something real (SSO, mTLS, a tailnet)
+# already stands in front.
+auth:
+  enabled: true
+  create: true
+  codemanPassword: ""
+  existingSecret: ""
+
+# Credentials the machine needs to be *itself*, mounted at runtime rather than
+# baked into the image.
+#
+# The SSH key is not optional in practice: dotfiles' claude-skills module
+# clones agent-smith during home-manager activation with no fault tolerance.
+# Without a key that can read that repo, activation fails — the entrypoint
+# deliberately continues so you can still reach a terminal and fix it, but the
+# environment will be incomplete until you do.
+# Credentials the machine needs to be *itself*, mounted at runtime rather than
+# baked into the image. Two keys, both stored in Bitwarden as secure notes
+# because they are multi-line armored blocks:
+#
+#   personal.pem  RSA private key. configs/ssh points github.com and gitlab.com
+#                 at ~/.ssh/keys/personal.pem, so this is what makes git work —
+#                 including claude-skills' agent-smith clone during activation.
+#   private.key   PGP private key. configs/gnupg imports it during activation,
+#                 which is what lets pass/gopass decrypt — and therefore what
+#                 the pass-backed MCP servers depend on.
+#
+# The entrypoint copies both to the paths dotfiles expects; they cannot be
+# mounted there directly because a Secret volume is read-only and both
+# destinations need to stay writable.
+ssh:
+  enabled: false
+  existingSecret: ""
+  mountPath: /run/secrets/agentfest
+  defaultMode: 256
+
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 100
+  # Makes the PVC group-writable so the non-root user actually owns its home.
+  fsGroup: 100
+  # Apply the container runtime's default seccomp profile.
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level securityContext, applied per-container in the Deployment.
+# Distinct from the pod securityContext above: capabilities and privilege
+# escalation are container properties, not pod ones.
+containerSecurityContext:
+  # The entrypoint never needs to gain privileges.
+  allowPrivilegeEscalation: false
+  capabilities:
+    # Drop every Linux capability. Nothing here needs one: the process is
+    # non-root and Codeman listens on 3000 (no bind below 1024).
+    drop:
+      - ALL
+  # Left false on purpose: the entrypoint's mktemp and a few tools write to
+  # /tmp and /var/tmp, which live on the image rootfs. To enable it, also mount
+  # emptyDir volumes at /tmp and /var/tmp, then flip this to true.
+  readOnlyRootFilesystem: false
+
+# A real /dev/shm. The container runtime's default is 64Mi, which is where
+# Chrome puts renderer shared memory — and Google's sign-in page exhausts it
+# (reCAPTCHA in an iframe). The renderer then wedges rather than crashing: the
+# browser stays up and reports the right URL while every page-level CDP call
+# times out, which reads as the automation being broken rather than the page
+# being dead. Cost an afternoon to find in automate-mic-doctor-refresh.
+#
+# Memory-backed, so it counts against the container's memory limit rather than
+# the node's disk. 1Gi against a 24Gi limit is noise.
+#
+# The skill measures /dev/shm and only adds --disable-dev-shm-usage below
+# 256Mi, so mounting this retires that workaround on its own.
+dshm:
+  enabled: true
+  size: 1Gi
+
+resources:
+  requests:
+    cpu: "2"
+    memory: 4Gi
+  limits:
+    memory: 24Gi
+
+# Agents run for hours; never let a slow shutdown truncate a long build.
+terminationGracePeriodSeconds: 60
+
+nodeSelector: {}
+tolerations: []
+
+# Appended verbatim to the container's env. Use for AWS/GCP profile hints,
+# CLAUDE_REAL_BINARY overrides, or anything sourced from another Secret.
+extraEnv: []

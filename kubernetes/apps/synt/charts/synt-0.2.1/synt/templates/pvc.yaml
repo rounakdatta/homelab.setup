@@ -1,0 +1,35 @@
+{{- if and .Values.persistence.enabled (not .Values.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-data
+  labels:
+    {{- include "synt.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}
+{{- if and .Values.meilisearch.enabled .Values.meilisearch.persistence.enabled (not .Values.meilisearch.persistence.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-meilisearch
+  labels:
+    {{- include "synt.meilisearchLabels" . | nindent 4 }}
+spec:
+  accessModes:
+    - {{ .Values.meilisearch.persistence.accessMode }}
+  {{- if .Values.meilisearch.persistence.storageClass }}
+  storageClassName: {{ .Values.meilisearch.persistence.storageClass | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.meilisearch.persistence.size }}
+{{- end }}

@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: v5.0.7
+description: The tiniest authentication and authorization server you have ever seen.
+name: tinyauth
+type: application
+version: 2.0.8

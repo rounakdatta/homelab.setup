@@ -1,0 +1,247 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "keel.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "keel.name" . }}
+    chart: {{ template "keel.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ template "keel.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "keel.name" . }}
+        release: {{ .Release.Name }}
+{{- with .Values.podAnnotations }}
+      annotations:
+{{ toYaml . | indent 8 }}
+{{- end }}
+    spec:
+      serviceAccountName: {{ template "serviceAccount.name" . }}
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{- toYaml . | nindent 8 }}
+{{- end }}
+      containers:
+{{- if .Values.extraContainers }}
+{{ toYaml .Values.extraContainers | indent 8 }}
+{{- end }}
+        - name: keel
+          # Note that we use appVersion to get images tag.
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/keel"]
+          volumeMounts:
+{{- if .Values.persistence.enabled }}
+            - name: storage-logs
+              mountPath: /data
+{{- end }}
+{{- if .Values.googleApplicationCredentials }}
+            - name: secret
+              mountPath: "/secret"
+              readOnly: true
+{{- end }}
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+{{- if .Values.googleApplicationCredentials }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /secret/google-application-credentials.json
+{{- end }}
+{{- if .Values.polling.enabled }}
+            # Enable polling
+            - name: POLL
+              value: "true"
+{{- else }}
+            # Disable polling
+            - name: POLL
+              value: "false"
+{{- end }}
+{{- if .Values.polling.defaultSchedule }}
+            # Set default poll schedule
+            - name: POLL_DEFAULTSCHEDULE
+              value: "{{ .Values.polling.defaultSchedule }}"
+{{- end }}
+{{- if .Values.helmProvider.enabled }}
+  {{- if eq .Values.helmProvider.version "v3" }}
+            # Enable/disable Helm provider
+            - name: HELM3_PROVIDER
+              value: "true"
+    {{- if .Values.helmProvider.helmDriver }}
+            - name: HELM_DRIVER
+              value: "{{ .Values.helmProvider.helmDriver }}"
+    {{- end }}
+    {{- if .Values.helmProvider.helmDriverSqlConnectionString }}
+            - name: HELM_DRIVER_SQL_CONNECTION_STRING
+              value: "{{ .Values.helmProvider.helmDriverSqlConnectionString }}"
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- if .Values.gcr.enabled }}
+            # Enable GCR with pub/sub support
+            - name: PROJECT_ID
+              value: "{{ .Values.gcr.projectId }}"
+  {{- if .Values.gcr.pubSub.enabled }}
+            - name: PUBSUB
+              value: "true"
+  {{- end }}
+  {{- if .Values.gcr.clusterName }}
+            # Customize the cluster name, mainly useful when outside of GKE
+            - name: CLUSTER_NAME
+              value: "{{ .Values.gcr.clusterName }}"
+  {{- end }}
+{{- end }}
+{{- if .Values.ecr.enabled }}
+            # Enable AWS ECR
+            - name: AWS_ACCESS_KEY_ID
+              value: "{{ .Values.ecr.accessKeyId }}"
+            - name: AWS_REGION
+              value: "{{ .Values.ecr.region }}"
+{{- end }}
+{{- if .Values.dockerRegistry.enabled }}
+            - name: DOCKER_REGISTRY_CFG
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dockerRegistry.name }}
+                  key: {{ .Values.dockerRegistry.key }}
+{{- end }}
+{{- if .Values.webhook.enabled }}
+            # Enable webhook endpoint
+            - name: WEBHOOK_ENDPOINT
+              value: "{{ .Values.webhook.endpoint }}"
+{{- end }}
+{{- if .Values.mattermost.enabled }}
+            # Enable mattermost endpoint
+            - name: MATTERMOST_ENDPOINT
+              value: "{{ .Values.mattermost.endpoint }}"
+{{- end }}
+{{- if .Values.basicauth.enabled }}
+            # Enable basic auth
+            - name: BASIC_AUTH_USER
+              value: "{{ .Values.basicauth.user }}"
+{{- end }}
+{{- if .Values.slack.enabled }}
+            - name: SLACK_CHANNELS
+              value: "{{ .Values.slack.channel }}"
+            - name: SLACK_APPROVALS_CHANNEL
+              value: "{{ .Values.slack.approvalsChannel }}"
+  {{- if .Values.slack.botName }}
+            - name: SLACK_BOT_NAME
+              value: "{{ .Values.slack.botName }}"
+  {{- end }}
+{{- end }}
+{{- if .Values.hipchat.enabled }}
+            # Enable hipchat approvials and notification
+            - name: HIPCHAT_CHANNELS
+              value: "{{ .Values.hipchat.channel }}"
+            - name: HIPCHAT_APPROVALS_CHANNEL
+              value: "{{ .Values.hipchat.approvalsChannel }}"
+            - name: HIPCHAT_APPROVALS_BOT_NAME
+              value: "{{ .Values.hipchat.botName }}"
+            - name: HIPCHAT_APPROVALS_USER_NAME
+              value: "{{ .Values.hipchat.userName }}"
+{{- end }}
+{{- if .Values.mail.enabled }}
+            # Enable mail notifications
+            - name: MAIL_SMTP_SERVER
+              value: "{{ .Values.mail.smtp.server }}"
+            - name: MAIL_SMTP_PORT
+              value: "{{ .Values.mail.smtp.port }}"
+            - name: MAIL_SMTP_USER
+              value: "{{ .Values.mail.smtp.user }}"
+            - name: MAIL_TO
+              value: "{{ .Values.mail.to }}"
+            - name: MAIL_FROM
+              value: "{{ .Values.mail.from }}"
+{{- end }}
+            - name: NOTIFICATION_LEVEL
+              value: "{{ .Values.notificationLevel }}"
+{{- if .Values.debug }}
+            # Enable debug logging
+            - name: DEBUG
+              value: "true"
+{{- end }}
+{{- if .Values.insecureRegistry }}
+            # Enable insecure registries
+            - name: INSECURE_REGISTRY
+              value: "{{ .Values.insecureRegistry }}"
+{{- end }}
+{{- if .Values.aws.region }}
+            - name: AWS_REGION
+              value: "{{ .Values.aws.region }}"
+{{- end }}
+{{- if or .Values.secret.create .Values.secret.name }}
+          envFrom:
+            - secretRef:
+                name: {{ .Values.secret.name | default (include "keel.fullname" .) }}
+{{- end }}
+          ports:
+            - containerPort: 9300
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9300
+            initialDelaySeconds: 30
+            timeoutSeconds: 10
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+{{- if .Values.webhookRelay.enabled }}
+        - name: webhookrelayd
+          image: "{{ .Values.webhookRelay.image.repository }}:{{ .Values.webhookRelay.image.tag }}"
+          imagePullPolicy: {{ .Values.webhookRelay.image.pullPolicy }}
+          command: ["/relayd"]
+          env:
+            - name: KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "keel.name" . }}-webhookrelay
+                  key: key
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ template "keel.name" . }}-webhookrelay
+                  key: secret
+            - name: BUCKET
+              value: "{{ .Values.webhookRelay.bucket }}"
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+{{- end }}
+{{- if .Values.persistence.enabled }}
+      volumes:
+        - name: storage-logs
+          persistentVolumeClaim:
+            claimName: {{ template "keel.fullname" . }}
+{{- end }}
+    {{- with .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+{{ toYaml . | indent 8 }}
+    {{- end }}
+{{- if .Values.googleApplicationCredentials }}
+      volumes:
+        - name: secret
+          secret:
+            secretName: {{ .Values.secret.name | default (include "keel.fullname" .) }}
+{{- end }}

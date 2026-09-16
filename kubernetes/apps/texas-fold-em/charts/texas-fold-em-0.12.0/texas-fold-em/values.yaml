@@ -1,0 +1,62 @@
+image:
+  repository: ghcr.io/rounakdatta/texas-fold-em
+  # Pinned to the same tag as Chart.appVersion so a chart upgrade
+  # always corresponds to one specific image. Override at install
+  # time if you need to roll forward without bumping the chart.
+  tag: "0.12.0"
+  pullPolicy: IfNotPresent
+
+# Single writer by design — do not scale beyond 1
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8080
+
+persistence:
+  # Stores state.json (refresh-token chain + bookkeeping) at /data
+  enabled: true
+  storageClass: ""
+  size: 1Gi
+  accessMode: ReadWriteOnce
+  # Reuse a pre-existing PVC instead of letting the chart create one.
+  # Useful when migrating from an existing deployment.
+  existingClaim: ""
+
+# Bearer keys. Either supply inline (secret.create: true) or bring your
+# own Secret (secret.create: false, secret.existingSecret: <name>).
+secret:
+  create: true
+  brokerKey: ""
+  adminKey: ""
+  existingSecret: ""
+
+env:
+  TEXAS_FOLDEM_REFRESH_LEAD: 2m
+  TEXAS_FOLDEM_KEEPWARM_EVERY: 30s
+  TEXAS_FOLDEM_HTTP_TIMEOUT: 15s
+  TEXAS_FOLDEM_SHUTDOWN_GRACE: 10s
+  TEXAS_FOLDEM_LOG_LEVEL: info
+
+# extraEnv lets callers append arbitrary env entries to the container
+# spec — including ones using valueFrom (secretKeyRef etc.). Used by the
+# fold→firefly integration to plumb FIREFLY_PAT and LLM_API_KEY from
+# a Secret. Empty by default.
+#
+# Example:
+#   extraEnv:
+#     - name: TEXAS_FOLDEM_INTEGRATION_ENABLED
+#       value: "true"
+#     - name: TEXAS_FOLDEM_FIREFLY_PAT
+#       valueFrom:
+#         secretKeyRef:
+#           name: texas-fold-em-credentials
+#           key: firefly-pat
+extraEnv: []
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 32Mi
+  limits:
+    memory: 128Mi

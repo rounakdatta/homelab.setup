@@ -1,0 +1,73 @@
+image:
+  repository: ghcr.io/rounakdatta/synt
+  tag: latest
+  pullPolicy: IfNotPresent
+
+# SQLite requires a single writer — do not scale beyond 1
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8080
+
+ingress:
+  enabled: false
+  className: ""
+  host: synt.example.com
+  annotations: {}
+  tls: []
+
+persistence:
+  # Stores SQLite DB and uploaded assets at /data
+  enabled: true
+  storageClass: ""
+  size: 5Gi
+  accessMode: ReadWriteOnce
+  # Reuse a pre-existing PVC instead of letting the chart create one.
+  # Useful when migrating from an existing deployment.
+  existingClaim: ""
+
+# Optional Meilisearch sidecar.
+# When enabled, runs meilisearch in the same pod as synt. The synt container
+# waits for /health on localhost:7700 before starting and is automatically
+# pointed at it via `-meilisearch http://localhost:7700`.
+# Disable to run meilisearch elsewhere — pass the URL through `args` instead,
+# e.g. `args: ["-meilisearch", "http://meilisearch.elsewhere.svc:7700"]`.
+meilisearch:
+  enabled: false
+  image:
+    repository: getmeili/meilisearch
+    # Pin to a specific version to avoid the index-format incompatibility that
+    # occurs when meilisearch jumps minor versions on `:latest`.
+    tag: v1.10
+    pullPolicy: IfNotPresent
+  persistence:
+    # Stores the meilisearch index at /meili_data
+    enabled: true
+    storageClass: ""
+    size: 2Gi
+    accessMode: ReadWriteOnce
+    existingClaim: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Extra args passed to the synt binary
+args: []
+# - "-db"
+# - "/data/synt.db"
+
+env: {}
+# MEILISEARCH_URL: "http://meilisearch:7700"
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

@@ -88,8 +88,18 @@ jobs:
 
       - name: Deploy manifests
         run: |
-          # Render once (helm fetches the chart over network)
+          # Render once. Charts are vendored under kubernetes/**/charts/, so
+          # this normally reads the tree instead of fetching 17 charts.
           kustomize build --enable-helm kubernetes/ > /tmp/manifest.yaml
+
+          # If the render changed the vendored charts, someone bumped a
+          # `version:` without re-rendering, and this deploy fetched from
+          # upstream after all. Not fatal -- the manifest is still correct --
+          # but the vendoring is only worth having if drift is visible.
+          if ! git diff --quiet -- kubernetes/; then
+            echo "::warning::vendored charts are stale; re-run 'kustomize build --enable-helm kubernetes/' and commit kubernetes/**/charts/"
+            git diff --stat -- kubernetes/ | tail -5
+          fi
 
           # Pre-apply selector migration: spec.selector is immutable, so any
           # workload whose selectorLabels change between deploys (typical when
