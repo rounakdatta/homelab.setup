@@ -20,6 +20,22 @@ server:
   # archive through the public endpoint.
   readOnly: true
 
+  # No CPU request, deliberately.
+  #
+  # The control-plane node is at 99% of CPU *requests* (3985m of 4000m) while
+  # actually using 42% (1705m). The scheduler, not the hardware, is what is
+  # full: requests across this cluster are provisioned far above real usage, so
+  # even a 25m request made this pod unschedulable with 2.3 cores genuinely idle.
+  #
+  # Dropping the request is the fix that touches only this app. Rebalancing the
+  # other workloads' requests is the real fix and belongs in its own change.
+  # This pod is idle between MCP calls, so it loses nothing by having no
+  # reservation -- under contention it simply yields.
+  resources:
+    requests:
+      cpu: null
+      memory: 128Mi
+
 sync:
   enabled: true
   # 03:17 IST. The band uploads on the phone's schedule; syncing more often than
@@ -30,6 +46,14 @@ sync:
   # run after it skips what is already archived and fetches only new workouts.
   dataTypes: []
   startDate: "2020-01-01"
+  # Same reasoning as the server: a 50m request would not fit either, and this
+  # runs once a night.
+  resources:
+    requests:
+      cpu: null
+      memory: 256Mi
+    limits:
+      memory: 1Gi
 
 persistence:
   enabled: true
