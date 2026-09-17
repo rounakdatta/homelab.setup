@@ -69,9 +69,12 @@ jobs:
             echo "== cpus ==";                 nproc
             echo "== where the disk went (GB, depth 1; capped at 2 min each) =="
             timeout 120 du -xBG -d1 /var/lib/rancher/k3s 2>/dev/null | sort -n | tail -6
-            timeout 120 du -xBG -d1 /var/lib/rancher/k3s/storage 2>/dev/null | sort -n | tail -10
+            # MB, not GB: -BG rounds every sub-gigabyte directory up to "1G", so a
+            # 2 MB PVC and a 900 MB one both read as 1G and the listing cannot
+            # answer "how big is this volume" at all.
+            timeout 120 du -xBM -d1 /var/lib/rancher/k3s/storage 2>/dev/null | sort -n | tail -12
             timeout 120 du -xBG -d1 /var/lib/rancher/k3s/agent 2>/dev/null | sort -n | tail -4
-            timeout 60 du -xsBG /var/log /var/lib/containerd /home /root /tmp /var/tmp /var/cache 2>/dev/null | sort -n
+            timeout 60 du -xsBM /var/log /var/lib/containerd /home /root /tmp /var/tmp /var/cache 2>/dev/null | sort -n
             echo "== container images ==";     k3s crictl imagefsinfo 2>/dev/null | tr -d ' \n' | cut -c1-300; echo; k3s crictl images 2>/dev/null | wc -l | sed 's/^/images: /'
             echo "== containers (name, state) =="
             k3s crictl ps -a 2>/dev/null | awk 'NR>1 {print $(NF-2), $(NF-1), $NF}' | sort | head -60
