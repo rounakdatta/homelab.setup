@@ -92,13 +92,19 @@ jobs:
           # this normally reads the tree instead of fetching 17 charts.
           kustomize build --enable-helm kubernetes/ > /tmp/manifest.yaml
 
-          # If the render changed the vendored charts, someone bumped a
+          # If the render touched the vendored charts, someone bumped a
           # `version:` without re-rendering, and this deploy fetched from
           # upstream after all. Not fatal -- the manifest is still correct --
           # but the vendoring is only worth having if drift is visible.
-          if ! git diff --quiet -- kubernetes/; then
+          #
+          # `git status --porcelain`, not `git diff`: a version bump inflates
+          # into a NEW directory (zepp-life-mcp-0.5.3/ beside the committed
+          # 0.4.2/), which is untracked. `git diff` only reports modified
+          # tracked files, so it stayed silent through exactly the case this
+          # guard exists for.
+          if [ -n "$(git status --porcelain -- kubernetes/)" ]; then
             echo "::warning::vendored charts are stale; re-run 'kustomize build --enable-helm kubernetes/' and commit kubernetes/**/charts/"
-            git diff --stat -- kubernetes/ | tail -5
+            git status --porcelain -- kubernetes/ | head -5
           fi
 
           # Pre-apply selector migration: spec.selector is immutable, so any
