@@ -74,6 +74,10 @@ jobs:
             # answer "how big is this volume" at all.
             timeout 120 du -xBM -d1 /var/lib/rancher/k3s/storage 2>/dev/null | sort -n | tail -12
             timeout 120 du -xBG -d1 /var/lib/rancher/k3s/agent 2>/dev/null | sort -n | tail -4
+            echo "== biggest individual files on the PVCs (a directory total hides these) =="
+            timeout 120 find /var/lib/rancher/k3s/storage -xdev -maxdepth 3 -type f -size +20M \
+              -printf '%s\t%p\n' 2>/dev/null | sort -rn | head -12 \
+              | awk -F'\t' '{printf "%8.0f MB  %s\n", $1/1048576, $2}'
             timeout 60 du -xsBM /var/log /var/lib/containerd /home /root /tmp /var/tmp /var/cache 2>/dev/null | sort -n
             echo "== container images ==";     k3s crictl imagefsinfo 2>/dev/null | tr -d ' \n' | cut -c1-300; echo; k3s crictl images 2>/dev/null | wc -l | sed 's/^/images: /'
             echo "== containers (name, state) =="
