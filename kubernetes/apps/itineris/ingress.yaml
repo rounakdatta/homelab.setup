@@ -15,11 +15,25 @@
 # Mirrors the other public ingresses (audiobookshelf, ntfy): cert-manager TLS
 # on the websecure entrypoint, nothing else.
 #
-# DNS is NOT wildcard on taptappers.club. Records live in the rounakdatta/oh-my-dns
-# repo (records.txt, synced to Cloudflare on push): this host is
-# `A itineris 88.214.24.194`, DNS-only like every other homelab host. Without
-# the record cert-manager's HTTP-01 challenge fails and the pod is healthy but
-# unreachable.
+# TWO HOSTS, one service. itineris.world is the shareable public address;
+# itineris.taptappers.club is kept so old links, the installed PWA and the
+# existing certificate keep working. Neither redirects to the other -- they are
+# the same site on two names, which is why the app must stay origin-agnostic
+# (nginx is `server_name _`, the service worker scopes are path-relative, and
+# session cookies are host-only so each name has its own independent session).
+#
+# DNS is NOT wildcard on either zone. Records live in the rounakdatta/oh-my-dns
+# repo (zones/<zone-name>.txt, synced to Cloudflare on push): these hosts are
+# `A itineris 173.234.14.113` in zones/taptappers.club.txt and `A @
+# 173.234.14.113` in zones/itineris.world.txt, DNS-only like every other
+# homelab host. Without the record cert-manager's HTTP-01 challenge fails and
+# the pod is healthy but unreachable.
+#
+# ORDER MATTERS on a new host: adding a name below makes cert-manager reissue
+# itineris-tls-secret as a SAN certificate covering both. If the new name does
+# not resolve yet its HTTP-01 challenge cannot complete and the renewal stalls
+# -- the existing certificate keeps serving until it expires, so this is
+# recoverable, but land the DNS first and verify it resolves.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -30,7 +44,20 @@ metadata:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
 spec:
   ingressClassName: traefik
+  # ADDING A DOMAIN: append a rule here and a name to tls.hosts below, do the
+  # same in ingress-admin.yaml, and add the DNS record. Nothing else -- see the
+  # runbook at the top of kustomization.yaml.
   rules:
+  - host: itineris.world
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: itineris
+            port:
+              number: 80
   - host: itineris.taptappers.club
     http:
       paths:
@@ -41,7 +68,11 @@ spec:
             name: itineris
             port:
               number: 80
+  # One secret, one certificate, every name a SAN on it. cert-manager solves an
+  # HTTP-01 challenge per name and reissues when the list changes, so a new
+  # domain needs no new secret and no new annotation.
   tls:
   - hosts:
+    - itineris.world
     - itineris.taptappers.club
     secretName: itineris-tls-secret

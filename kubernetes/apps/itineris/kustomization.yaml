@@ -4,6 +4,33 @@ kind: Kustomization
 
 namespace: apps
 
+# ADDING ANOTHER DOMAIN TO itineris
+#
+# itineris answers on several names at once -- itineris.world and
+# itineris.taptappers.club today -- serving the same site on each, with no
+# redirect between them. Nothing about the app is per-domain: nginx is
+# `server_name _`, service-worker scopes and the web manifests are all
+# root-relative, session cookies are host-only, and admin.auth.publicUrl is
+# empty so the OAuth redirect is derived from the request. So a new name costs
+# four edits and no app change:
+#
+#   1. oh-my-dns: add the record. A new apex is a new zone -- create
+#      zones/<domain>.txt, and make sure CLOUDFLARE_API_TOKEN covers that zone.
+#      DNS-only, never proxied. Verify it resolves BEFORE step 3.
+#   2. Google Cloud console: add https://<domain>/creator/auth/callback to the
+#      authorised redirect URIs of the OAuth client named in the
+#      itineris-google-oauth Secret. Sign-in on the new domain fails with
+#      redirect_uri_mismatch until this is done, and nothing in this repo can
+#      detect it.
+#   3. ingress.yaml: a rule plus a tls.hosts entry.
+#   4. ingress-admin.yaml: the same two, or /creator on the new domain silently
+#      serves the viewer through the SPA fallback.
+#
+# Steps 3 and 4 trigger one reissue of itineris-tls-secret as a SAN cert over
+# every listed name. Do them after step 1 has propagated: an unresolvable name
+# cannot pass HTTP-01, and the renewal stalls until it can (the existing cert
+# keeps serving meanwhile, so this is recoverable, not an outage).
+
 # Bumping is two lines that move together: `version` here and `image.tag` in
 # values.yaml (the chart would default the image from its appVersion anyway;
 # the explicit pin keeps the deployed image visible in this repo).
