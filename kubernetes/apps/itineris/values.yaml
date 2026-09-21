@@ -12,7 +12,7 @@ image:
   # on purpose: it puts the deployed image next to the chart version in
   # kustomization.yaml, so a bump PR touches both lines together -- the same
   # convention agentfest follows.
-  tag: "0.22.0"
+  tag: "0.23.3"
 
 # Photos, derivatives and the journal. local-path is advisory only (no quota
 # enforcement): the real limit is the node's free disk, so treat the size as
@@ -24,13 +24,13 @@ persistence:
   # itineris-data, is stranded on the rishra worker and kept for recovery.
   existingClaim: itineris-data-cp
 
-# Uploads + tagging at /admin, behind tinyauth via ingress-admin.yaml. The
-# empty allowlist means tinyauth's whitelist is the gate, same as every other
-# app in this cluster.
+# Uploads, tagging and gallery-making at /creator, routed by ingress-admin.yaml.
+# NOT behind tinyauth since 0.21: this service runs Google's authorization-code
+# flow itself, and the empty allowlist below is the gate -- see admin.auth.
 admin:
   enabled: true
   image:
-    tag: "0.22.0"
+    tag: "0.23.3"
   # EMPTY MEANS ANYONE, deliberately: every gallery carries a "Make my own"
   # button and strangers are meant to sign in and get their own journal.
   allowedEmails: ""
