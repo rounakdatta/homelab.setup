@@ -17,3 +17,20 @@ helmCharts:
 resources:
   - ingress.yaml
   - networkpolicy.yaml
+
+# `dshm` is an emptyDir (shared memory for the browser). Its contents cannot
+# outlive the pod, so a file-system backup of it is never meaningful — and
+# Velero logs a "pod is not running" warning for it against every completed or
+# evicted festie pod it finds, which is where most of our backup warnings came
+# from. The chart has no podAnnotations value, hence the patch.
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: festie
+      spec:
+        template:
+          metadata:
+            annotations:
+              backup.velero.io/backup-volumes-excludes: "dshm"

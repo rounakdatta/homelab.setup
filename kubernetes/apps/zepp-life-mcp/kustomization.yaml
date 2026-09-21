@@ -17,3 +17,32 @@ helmCharts:
 
 resources:
   - ingress.yaml
+
+# `tmp` is an emptyDir on both the server Deployment and the sync CronJob.
+# The CronJob case is the one that actually bit us: its completed pods linger
+# (successfulJobsHistoryLimit), and Velero raises a "Skip pod volume tmp ...
+# pod is not running" warning for each one it meets on the nightly run. The
+# archive itself lives in the zepp-life-mcp-data PVC and is still backed up.
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: zepp-life-mcp
+      spec:
+        template:
+          metadata:
+            annotations:
+              backup.velero.io/backup-volumes-excludes: "tmp"
+  - patch: |-
+      apiVersion: batch/v1
+      kind: CronJob
+      metadata:
+        name: zepp-life-mcp-sync
+      spec:
+        jobTemplate:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes-excludes: "tmp"

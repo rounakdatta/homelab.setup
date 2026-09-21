@@ -33,3 +33,22 @@ resources:
   - middleware.yaml
   - ingress.yaml
   - ingress-admin.yaml
+
+# `config` here is an emptyDir, so its contents die with the pod and a Velero
+# file-system backup of it can never restore anything. Excluding it also stops
+# the "pod is not running" warning Velero raises for it against completed and
+# evicted pods. app-template has no podAnnotations value, hence the patch.
+patches:
+  - target:
+      kind: Deployment
+      name: auth2api
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: auth2api
+      spec:
+        template:
+          metadata:
+            annotations:
+              backup.velero.io/backup-volumes-excludes: "config"

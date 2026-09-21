@@ -19,3 +19,29 @@ resources:
   - ingress.yaml
   - ingress-admin.yaml
   - pvc.yaml
+
+# `tmp` and `config` are emptyDirs on both deployments — nothing in them
+# survives a pod restart, so Velero backing them up buys nothing and only
+# produces "pod is not running" warnings against dead pods. The real state
+# lives in the itineris-data-cp PVC, which is still backed up.
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: itineris
+      spec:
+        template:
+          metadata:
+            annotations:
+              backup.velero.io/backup-volumes-excludes: "tmp,config"
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: itineris-admin
+      spec:
+        template:
+          metadata:
+            annotations:
+              backup.velero.io/backup-volumes-excludes: "tmp"

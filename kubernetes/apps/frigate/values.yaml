@@ -67,6 +67,24 @@ persistence:
     size: 50Gi
     skipuninstall: true
 
+# Keep Velero off the volumes that are either ephemeral or not worth shipping.
+#
+# `media` is the big one: ~59Gi of recordings on the rishra worker, behind a
+# residential ~12Mbit uplink. A nightly file-system backup of it saturates that
+# link for hours and is the direct cause of the recurring
+# "timed out waiting for all PodVolumeBackups to complete" PartiallyFailed runs.
+# It is also a 3-day rolling buffer (see record.motion.days below) — frigate
+# deletes this data itself, so we would be paying to upload footage that expires
+# before most restores would ever want it. `config` (1Gi) is still backed up,
+# and that is the part that is actually painful to recreate.
+#
+# `dshm`, `tmp` and `data` are emptyDirs — by definition their contents do not
+# survive a pod restart, so backing them up is never meaningful. Velero also
+# emits a "pod is not running" warning for each of them whenever it meets a
+# completed/evicted pod, which is where most of our backup warnings came from.
+podAnnotations:
+  backup.velero.io/backup-volumes-excludes: "media,dshm,tmp,data"
+
 # We ship a standalone ingress.yaml (cert-manager + tinyauth middleware) to
 # match the convention used by every other app in this repo.
 ingress:
