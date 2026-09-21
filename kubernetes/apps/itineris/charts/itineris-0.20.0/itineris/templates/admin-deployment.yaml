@@ -1,0 +1,103 @@
+{{- if .Values.admin.enabled }}
+{{- if not .Values.persistence.enabled }}
+{{- fail "admin.enabled requires persistence.enabled: the admin has nowhere to write" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-admin
+  labels:
+    {{- include "itineris.adminLabels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    # Recreate, not RollingUpdate: moments.json has exactly one writer, and two
+    # admin pods overlapping could interleave writes.
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "itineris.adminSelectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "itineris.adminSelectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: admin
+          image: {{ include "itineris.adminImage" . | quote }}
+          imagePullPolicy: {{ .Values.admin.image.pullPolicy }}
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: ITINERIS_PORT
+              value: {{ .Values.admin.containerPort | quote }}
+            - name: ITINERIS_DATA_DIR
+              value: /srv/itineris
+            {{- if .Values.admin.allowedEmails }}
+            - name: ITINERIS_ADMIN_EMAILS
+              value: {{ .Values.admin.allowedEmails | quote }}
+            {{- end }}
+            {{- if .Values.googleMaps.existingSecret }}
+            # Server-side Google Places lookups (ratings on the map). `placesApiKey`
+            # is a separate server key for when the browser key is referrer-restricted.
+            - name: ITINERIS_GOOGLE_MAPS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.googleMaps.existingSecret | quote }}
+                  key: apiKey
+                  optional: true
+            - name: ITINERIS_GOOGLE_PLACES_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.googleMaps.existingSecret | quote }}
+                  key: placesApiKey
+                  optional: true
+            {{- else if .Values.googleMaps.apiKey }}
+            - name: ITINERIS_GOOGLE_MAPS_KEY
+              value: {{ .Values.googleMaps.apiKey | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.admin.containerPort }}
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /admin/healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /admin/healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.admin.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /srv/itineris
+            # libvips spills decoded images larger than ~100 MB (a 24-48 MP
+            # phone photo) to temp files; with a read-only rootfs this is the
+            # only place it can.
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "itineris.claimName" . }}
+        - name: tmp
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
