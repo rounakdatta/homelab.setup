@@ -9,6 +9,14 @@
 # homelab down with 5xx -- which is exactly what happened on 2026-07-29 when the
 # control-plane host was rebuilt and its hostname changed `rounak` -> `vizerizz`.
 #
+# It happened AGAIN on 2026-09-20: the host was renamed `vizerizz` -> `kanmani`
+# and k3s registered a third node, because this pin only takes effect on a fresh
+# install and the PR carrying it was still open. The value below is therefore
+# `kanmani`, matching the live node -- confirmed against
+# `kubernetes.io/hostname:kanmani` on the running control plane. Setting it to
+# anything the PVs do not already point at is what causes the outage, so read
+# the live label before changing it, never the last value written here.
+#
 # Pinning `--node-name` decouples the k3s node identity from the OS hostname, so
 # a future rebuild/rename of the host no longer orphans the volumes. That is why
 # this is a fixed literal and deliberately NOT `inventory_hostname` or
@@ -37,4 +45,4 @@
 # live one (annotation etcd.k3s.cattle.io/node-name), and k3s maps Node -> etcd
 # member through that, so deleting it can remove the only live etcd member and
 # destroy the cluster. Check before assuming otherwise.
-k3s_control_node_name: vizerizz
+k3s_control_node_name: kanmani
