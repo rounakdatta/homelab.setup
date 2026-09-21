@@ -40,9 +40,15 @@ admin:
   # two must never be separated: no Google client + no tinyauth would mean the
   # header is believed and anyone can set it.
   #
-  # The Secret comes from Bitwarden via ansible/playbook.yml. Without it the
-  # admin pod will not start, which is the failure mode we want -- /creator
-  # goes 503 rather than wide open, and the public viewer is untouched.
+  # The Secret comes from Bitwarden via ansible/playbook.yml, from the SAME
+  # Google client tinyauth signs people in with -- one OAuth client may carry
+  # several authorised redirect URIs, so itineris only needed its own adding.
+  # Reusing the client does NOT reuse tinyauth's whitelist: who may sign in
+  # here is `allowedEmails` above, empty on purpose.
+  #
+  # Without the Secret the admin pod will not start, which is the failure mode
+  # we want -- /creator goes 503 rather than wide open, and the public viewer
+  # is untouched.
   auth:
     existingSecret: itineris-google-oauth
     publicUrl: https://itineris.taptappers.club

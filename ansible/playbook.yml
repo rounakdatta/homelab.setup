@@ -230,21 +230,30 @@
           apiKey: itineris/google_maps_api_key
 
       # itineris: the Google OAuth client the creator app signs people in with.
-      # NOT the Maps key above -- that is an API key checked against a referrer
-      # restriction; this is an OAuth 2.0 client, made under Credentials ->
-      # Create credentials -> OAuth client ID (Web application) with the
-      # authorised redirect URI
+      #
+      # THE SAME CLIENT tinyauth uses, from the same two Bitwarden items -- one
+      # Google OAuth client may carry several authorised redirect URIs, so
+      # itineris only needed its own adding:
       #   https://itineris.taptappers.club/creator/auth/callback
-      # Two Bitwarden items, password = the value in each case. A REAL secret,
-      # unlike the browser key: the client secret never leaves the server.
-      # Without this Secret the admin pod will not start, which is deliberate --
+      # (alongside tinyauth's own). Secrets are namespaced, so the values are
+      # synced a second time into `apps` rather than shared across namespaces.
+      #
+      # NOT the Maps key above: that is an API key checked against a referrer
+      # restriction, and cannot stand in for an OAuth client. This one is a
+      # real secret and never leaves the server.
+      #
+      # It does NOT bring tinyauth's whitelist with it. Who may sign in to
+      # itineris is itineris's own `admin.allowedEmails`, which is empty on
+      # purpose -- the "Make my own" button is for strangers.
+      #
+      # Without this Secret the admin pod will not start, which is deliberate:
       # /creator goes 503 rather than falling back to trusting a header that
       # tinyauth no longer sets.
       - name: itineris-google-oauth
         namespace: apps
         data:
-          clientId: itineris/google_oauth_client_id
-          clientSecret: itineris/google_oauth_client_secret
+          clientId: tinyauth/google_client_id
+          clientSecret: tinyauth/google_client_secret
 
       # zepp-life-mcp: two unrelated credentials in one Secret.
       #
