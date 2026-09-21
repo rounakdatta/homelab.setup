@@ -51,7 +51,26 @@ admin:
   # is untouched.
   auth:
     existingSecret: itineris-google-oauth
-    publicUrl: https://itineris.taptappers.club
+    # EMPTY ON PURPOSE, and this is what makes extra domains free.
+    #
+    # The server builds its OAuth redirect_uri from this value when it is set,
+    # unconditionally, ignoring the request. Pinned to one host, a visitor who
+    # signs in at any OTHER name is sent to Google with the pinned host's
+    # redirect_uri and lands back there -- signed in on the wrong origin, still
+    # logged out on the one they came from.
+    #
+    # Empty, the server derives it per request from X-Forwarded-Host, which
+    # Traefik sets. Every host in ingress.yaml then signs in against itself,
+    # with no per-domain config here and nothing to update when another is
+    # added. Session cookies are host-only (no Domain attribute), so the two
+    # sites keep genuinely separate sessions.
+    #
+    # The gate is then Google's authorised-redirect-URI allowlist, which is
+    # where it belongs: a spoofed Host can only produce a redirect_uri that
+    # Google rejects. EVERY domain needs its own
+    # https://<domain>/creator/auth/callback added to the OAuth client, or
+    # sign-in on that domain fails at Google with redirect_uri_mismatch.
+    publicUrl: ""
 
 # Pinned to the control-plane node, unlike most apps here. Unpinned, the
 # scheduler put itineris on the rishra worker `jomjom` at its very first deploy,

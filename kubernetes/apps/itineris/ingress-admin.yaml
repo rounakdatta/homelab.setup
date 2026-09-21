@@ -36,8 +36,14 @@ metadata:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
 spec:
   ingressClassName: traefik
+  # EVERY host in ingress.yaml must also appear here. The public viewer's rule
+  # is a bare "/" prefix, so a host routed there but not here would serve the
+  # VIEWER at /creator via the SPA fallback rather than the creator app -- and
+  # every gallery carries a "Make my own" button linking to a root-relative
+  # /creator/, so that button would quietly break on the missing domain instead
+  # of 404ing.
   rules:
-  - host: itineris.taptappers.club
+  - host: itineris.world
     http:
       paths:
       - path: /creator
@@ -55,7 +61,25 @@ spec:
             name: itineris-admin
             port:
               number: 80
+  - host: itineris.taptappers.club
+    http:
+      paths:
+      - path: /creator
+        pathType: Prefix
+        backend:
+          service:
+            name: itineris-admin
+            port:
+              number: 80
+      - path: /admin
+        pathType: Prefix
+        backend:
+          service:
+            name: itineris-admin
+            port:
+              number: 80
   tls:
   - hosts:
+    - itineris.world
     - itineris.taptappers.club
     secretName: itineris-tls-secret
