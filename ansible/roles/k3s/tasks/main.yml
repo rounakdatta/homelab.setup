@@ -8,10 +8,16 @@
     path: /usr/local/bin/k3s
   register: k3s_binary
 
+# --node-name pins the k3s node identity so it no longer follows the OS hostname.
+# Without it, a host rebuild/rename registers a brand-new node and orphans every
+# local-path PV (immutable nodeAffinity) -- the 2026-07-29 outage. Note this only
+# takes effect on a fresh install (see the `when` below); the running cluster is
+# untouched. Read roles/k3s/defaults/main.yml before changing the value.
 - name: Install K3s with Tailscale configuration
   ansible.builtin.shell: |
     curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
       --cluster-init \
+      --node-name={{ k3s_control_node_name }} \
       --node-ip={{ host_tailscale_ip }} \
       --bind-address={{ host_tailscale_ip }} \
       --advertise-address={{ host_tailscale_ip }} \
@@ -42,6 +48,12 @@
   retries: 5
   delay: 10
   until: k3s_ready.rc == 0
+
+# Note: reclaimPolicy Retain is enforced in .github/workflows/deploy-stuff.yml
+# rather than here. A k3s restart resets the local-path StorageClass to Delete,
+# but PVs are only ever created when an app is added, which goes through that
+# workflow -- so the deploy-time check is where it actually matters, and keeping
+# a single copy avoids two safety-critical implementations drifting apart.
 
 - name: Fetch kubeconfig file
   ansible.builtin.fetch:
