@@ -1,17 +1,28 @@
 ---
-# The admin -- uploads and tagging -- behind tinyauth, on the SAME host as the
-# public viewer.
+# The creator app -- sign in, upload, curate -- on the SAME host as the public
+# viewer. Was /admin behind tinyauth until 0.21.0.
+#
+# NO tinyauth middleware any more, on purpose. itineris runs Google's
+# authorization-code flow itself now, and every gallery carries a "Make my own"
+# button that sends strangers here; a forward-auth login in front would block
+# exactly the people the button is for.
+#
+# THIS CHANGE AND values.yaml's admin.auth MUST SHIP TOGETHER. The server falls
+# back to trusting a `Remote-Email` header when no Google client is configured,
+# so dropping tinyauth on its own would mean anyone who sets that header is
+# anyone they like. With the Secret present the header is ignored outright; if
+# the Secret is missing the pod refuses to start, which is the safe direction.
+#
+# /admin stays routed here so old bookmarks and the installed PWA still work:
+# the app answers them with a 301 to the matching /creator path. It no longer
+# needs the middleware either, since everything behind it checks the session.
 #
 # Traefik attaches middlewares per router, and each Ingress object is its own
-# router. So this second object (path /admin, tinyauth middleware, admin
-# Service) coexists with ingress.yaml's open / router: the longer path rule
-# wins priority, /admin never reaches nginx, and / never needs a login.
-# texas-fold-em uses the same path-scoped pattern on fold.taptappers.club.
-#
-# The admin is a separate pod, not a path inside the public nginx, so this gated
-# router is the ONLY way to reach upload code -- no path trick against the
-# public pod can get there. The admin process additionally refuses any request
-# lacking the Remote-Email header tinyauth injects.
+# router. This object's path rules are longer than ingress.yaml's "/", so they
+# win priority and never reach nginx, while "/" stays open to visitors.
+# The object keeps its old NAME deliberately: `kubectl apply` does not prune,
+# so a renamed Ingress would leave the tinyauth-gated one behind still
+# claiming /admin.
 #
 # No cert-manager annotation on purpose: ingress.yaml owns the certificate for
 # this host; this object only reuses its secret so the router is TLS. Two
@@ -23,13 +34,20 @@ metadata:
   namespace: apps
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
-    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
   - host: itineris.taptappers.club
     http:
       paths:
+      - path: /creator
+        pathType: Prefix
+        backend:
+          service:
+            name: itineris-admin
+            port:
+              number: 80
+      # Old bookmarks and the installed PWA; the app 301s these to /creator.
       - path: /admin
         pathType: Prefix
         backend:

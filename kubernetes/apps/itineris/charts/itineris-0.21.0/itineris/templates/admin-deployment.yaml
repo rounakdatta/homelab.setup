@@ -37,9 +37,43 @@ spec:
               value: {{ .Values.admin.containerPort | quote }}
             - name: ITINERIS_DATA_DIR
               value: /srv/itineris
+            - name: ITINERIS_CREATOR_UI_DIR
+              value: /app/dist-admin
             {{- if .Values.admin.allowedEmails }}
-            - name: ITINERIS_ADMIN_EMAILS
+            # An optional guest list. Empty (the default) is the point of the
+            # product: anyone with a Google account can make their own journal.
+            - name: ITINERIS_CREATOR_EMAILS
               value: {{ .Values.admin.allowedEmails | quote }}
+            {{- end }}
+            {{- if .Values.admin.auth.existingSecret }}
+            # Google sign-in. With these set the service authenticates people
+            # itself and STOPS believing the forward-auth header, so it no
+            # longer needs an authenticating proxy in front of /creator.
+            - name: ITINERIS_GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.admin.auth.existingSecret | quote }}
+                  key: clientId
+            - name: ITINERIS_GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.admin.auth.existingSecret | quote }}
+                  key: clientSecret
+            # Optional: sessions survive a restart without it (the key is
+            # derived from the client secret), but set it to rotate them.
+            - name: ITINERIS_SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.admin.auth.existingSecret | quote }}
+                  key: sessionSecret
+                  optional: true
+            {{- end }}
+            {{- if .Values.admin.auth.publicUrl }}
+            # What Google must redirect back to. Worked out from the request
+            # when absent, which is right behind a single proxy and wrong
+            # behind two, so a public deployment should say it outright.
+            - name: ITINERIS_PUBLIC_URL
+              value: {{ .Values.admin.auth.publicUrl | quote }}
             {{- end }}
             {{- if .Values.googleMaps.existingSecret }}
             # Server-side Google Places lookups (ratings on the map). `placesApiKey`
@@ -66,13 +100,13 @@ spec:
               protocol: TCP
           readinessProbe:
             httpGet:
-              path: /admin/healthz
+              path: /creator/healthz
               port: http
             initialDelaySeconds: 3
             periodSeconds: 10
           livenessProbe:
             httpGet:
-              path: /admin/healthz
+              path: /creator/healthz
               port: http
             initialDelaySeconds: 15
             periodSeconds: 30

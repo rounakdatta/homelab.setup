@@ -12,7 +12,7 @@ image:
   # on purpose: it puts the deployed image next to the chart version in
   # kustomization.yaml, so a bump PR touches both lines together -- the same
   # convention agentfest follows.
-  tag: "0.20.2"
+  tag: "0.21.0"
 
 # Photos, derivatives and the journal. local-path is advisory only (no quota
 # enforcement): the real limit is the node's free disk, so treat the size as
@@ -30,8 +30,22 @@ persistence:
 admin:
   enabled: true
   image:
-    tag: "0.20.2"
+    tag: "0.21.0"
+  # EMPTY MEANS ANYONE, deliberately: every gallery carries a "Make my own"
+  # button and strangers are meant to sign in and get their own journal.
   allowedEmails: ""
+  # Google sign-in. With this set the service runs the authorization-code flow
+  # itself and STOPS trusting the forward-auth header -- which is why
+  # ingress-admin.yaml drops the tinyauth middleware in the same change. The
+  # two must never be separated: no Google client + no tinyauth would mean the
+  # header is believed and anyone can set it.
+  #
+  # The Secret comes from Bitwarden via ansible/playbook.yml. Without it the
+  # admin pod will not start, which is the failure mode we want -- /creator
+  # goes 503 rather than wide open, and the public viewer is untouched.
+  auth:
+    existingSecret: itineris-google-oauth
+    publicUrl: https://itineris.taptappers.club
 
 # Pinned to the control-plane node, unlike most apps here. Unpinned, the
 # scheduler put itineris on the rishra worker `jomjom` at its very first deploy,
