@@ -1,0 +1,101 @@
+# Provenance for the vendored Helm charts under kubernetes/**/charts/.
+#
+# GENERATED -- do not edit by hand. Regenerate with:
+#   python3 .github/scripts/charts-lock.py --write
+#
+# `sha256` is a content hash of the vendored directory, not an upstream
+# digest: it answers "has this tree been altered since it was vendored?",
+# which is checkable without talking to any upstream. `repo` and `version`
+# come from the sibling kustomization.yaml and say where it came from.
+
+charts:
+  - path: kubernetes/apps/agentfest/charts/agentfest-0.1.37
+    chart: agentfest
+    version: 0.1.37
+    repo: oci://ghcr.io/rounakdatta/charts
+    sha256: 11d0c684dbad0f0d30849234d0fdc1fc53a36d934e34ea4f1255bfd78b0fba9b
+  - path: kubernetes/apps/auth2api/charts/app-template-5.1.0
+    chart: app-template
+    version: 5.1.0
+    repo: oci://ghcr.io/bjw-s-labs/helm
+    sha256: 620439b6817242f77862c034f5b4978388815f57df18cc85b667de268ae2473a
+  - path: kubernetes/apps/bookstack/charts/bookstack-0.20.0
+    chart: bookstack
+    version: 0.20.0
+    repo: https://charts.gabe565.com
+    sha256: 7094963cec1cf87590265d1dcedcc7037a7b5746b24315fc5747b372ff321011
+  - path: kubernetes/apps/firefly/charts/firefly-iii-1.9.13
+    chart: firefly-iii
+    version: 1.9.13
+    repo: https://firefly-iii.github.io/kubernetes
+    sha256: 7dcdef3040b2ac740a0aebda225b44c6ae8841d3c7f1c61d9a180fd09ea4036d
+  - path: kubernetes/apps/frigate/charts/frigate-7.8.0
+    chart: frigate
+    version: 7.8.0
+    repo: https://blakeblackshear.github.io/blakeshome-charts
+    sha256: 1db32d40b66caf05f74557bd3affa14bb857dddf0ff0f1b0069d6335b51aa9f1
+  - path: kubernetes/apps/itineris/charts/itineris-0.20.0
+    chart: itineris
+    version: 0.20.0
+    repo: oci://ghcr.io/rounakdatta/charts
+    sha256: 8a5a64f60e4cad0533410ca3726aedcac270b6ef5157444fbc244c060b6ffe62
+  - path: kubernetes/apps/nextcloud/charts/nextcloud-9.0.6
+    chart: nextcloud
+    version: 9.0.6
+    repo: https://nextcloud.github.io/helm/
+    sha256: 5bc7a911a298229f205e8eaf23c6943d5527a5b1db4d54d6699b1027f03ead42
+  - path: kubernetes/apps/ntfy/charts/ntfy-0.1.1
+    chart: ntfy
+    version: 0.1.1
+    repo: https://helm-charts.rm3l.org
+    sha256: c587686c31dc6fd0b8b99edd2d0b37240788291c7522ef81887eea1589ac0429
+  - path: kubernetes/apps/synt/charts/synt-0.2.1
+    chart: synt
+    version: 0.2.1
+    repo: oci://ghcr.io/rounakdatta/charts
+    sha256: 1a6d64d7274500522135db4f02e8537fbd634e9e3e160e054070d61c69c35535
+  - path: kubernetes/apps/texas-fold-em/charts/texas-fold-em-0.12.0
+    chart: texas-fold-em
+    version: 0.12.0
+    repo: oci://ghcr.io/rounakdatta/charts
+    sha256: c89a1a2dd9e2452bd985beeae07f1f5fd2b293be2a9a6b8a7ff1e8b4a452281a
+  - path: kubernetes/apps/vikunja/charts/vikunja-v2.0.2
+    chart: vikunja
+    version: v2.0.2
+    repo: oci://ghcr.io/go-vikunja/helm-chart
+    sha256: 792ecdf7a25e442a81ea658ac15eb2604dfddf471b987cacecf9f5545d5ea372
+  - path: kubernetes/apps/webtrees/charts/webtrees-2.2.23
+    chart: webtrees
+    version: 2.2.23
+    repo: https://djjudas21.github.io/charts
+    sha256: f3c4b2fa4cbcdffeacdd8d6f38b0c496890a6bab84f9fe72898303ad811e14ad
+  - path: kubernetes/apps/zepp-life-mcp/charts/zepp-life-mcp-0.5.3
+    chart: zepp-life-mcp
+    version: 0.5.3
+    repo: oci://ghcr.io/rounakdatta/charts
+    sha256: 7a216f91e0d120d936dea86e2e33b8a26e4ef7b52eb421022f8611c5ca557886
+  - path: kubernetes/infrastructure/cert-manager/charts/cert-manager-v1.15.1
+    chart: cert-manager
+    version: v1.15.1
+    repo: https://charts.jetstack.io
+    sha256: f6fdc2430068625c42a73d8f07c11ee3c4319c9c911f95d4605f1b16a822cb67
+  - path: kubernetes/infrastructure/keel/charts/keel-1.0.5
+    chart: keel
+    version: 1.0.5
+    repo: https://charts.keel.sh
+    sha256: db3cb4d967455dcecbfc60da9da6b85f50038632f26ddd6af07de9d376fde913
+  - path: kubernetes/infrastructure/velero/charts/velero-11.2.0
+    chart: velero
+    version: 11.2.0
+    repo: https://vmware-tanzu.github.io/helm-charts
+    sha256: 2cb6b08361c7d8b3af55032dddbb9558ebaadfdd0dfbc67a1295c36a6fdbdd56
+  - path: kubernetes/infrastructure/velero/charts/velero-ui-0.14.0
+    chart: velero-ui
+    version: 0.14.0
+    repo: https://helm.otwld.com
+    sha256: 9d67cbbf26d6526c031c17478af6ccd5d414ef0f3bc75d67500cb661d67e3b27
+  - path: kubernetes/tinyauth/charts/tinyauth-2.0.8
+    chart: tinyauth
+    version: 2.0.8
+    repo: https://helm.tinyauth.app
+    sha256: a8abd2f622d2cb885361f0a56ff5e48e21823243d55ec38c0eba03a0c9389564
