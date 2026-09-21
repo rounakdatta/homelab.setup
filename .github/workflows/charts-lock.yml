@@ -1,0 +1,44 @@
+name: Vendored charts (offline check)
+
+# The charts under kubernetes/**/charts/ are upstream artifacts committed so a
+# deploy reads the tree instead of the network. This checks that none of them
+# has been altered since it was vendored.
+#
+# Deliberately offline: it never contacts a chart repo. Re-pulling 17 charts
+# from 13 upstreams would put those hosts back in the path of a green build --
+# the exact fragility the vendoring removed -- to detect drift that cannot
+# affect the cluster anyway, since the vendored copy is what deploys.
+#
+# The complementary check lives in deploy-stuff.yml: `git status --porcelain`
+# after a render, which catches a `version:` bumped without re-rendering.
+# This one catches the other half: the tree no longer matching what was
+# vendored. Neither needs the other.
+
+on:
+  pull_request:
+    paths:
+      - 'kubernetes/**'
+      - '.github/scripts/charts-lock.py'
+      - '.github/workflows/charts-lock.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'kubernetes/**'
+      - '.github/scripts/charts-lock.py'
+      - '.github/workflows/charts-lock.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # No pip install, no toolchain: the script imports nothing outside the
+      # standard library, so this is a few seconds of hashing and nothing else.
+      - name: Verify vendored charts against kubernetes/charts.lock
+        run: python3 .github/scripts/charts-lock.py --check

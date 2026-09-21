@@ -42,6 +42,8 @@ K3s is a lightweight Kubernetes distribution that's perfect for single-node home
 
 Most third-party apps are inflated from upstream Helm charts via Kustomize's `helmCharts` block (with values overridden in-tree), so version bumps stay a one-line change. Apps with no chart of their own use bjw-s `app-template`, a generic chart that takes any image — `auth2api` is the first. Manifests are organized using Kustomize and secrets are managed through Bitwarden — synced into Kubernetes Secrets by an Ansible play. The setup is fully declarative — adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
 
+Those charts are **vendored**: `kustomize build --enable-helm` writes each one into `kubernetes/<group>/<app>/charts/<name>-<version>/` and it is committed, so a deploy reads the tree instead of 13 third-party hosts. That is not tidiness — when the bjw-s chart repo started 404ing, one unfetchable chart broke every deploy. `kubernetes/charts.lock` records where each chart came from and pins its contents, and `.github/scripts/charts-lock.py --check` verifies the tree against it offline (run on every PR). A vendored chart is an upstream artifact and is never edited in place; to move one, bump `version:` in its `kustomization.yaml`, re-render, drop the old directory, and refresh the lock with `--write`.
+
 ## Philosophy
 
 The project was born as a hobby idea to organize knowledge. The core idea is to own the data and build amazing integrations that make everyday easy. As already mentioned, the homelab today hosts financial data lake, documentation & notetaking software, powerful to-do-listing tools, eBook and audiobook readers, file cloud, photo gallery, smart reminder & notification systems and so on!
