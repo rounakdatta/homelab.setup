@@ -9,11 +9,11 @@
 # come from the sibling kustomization.yaml and say where it came from.
 
 charts:
-  - path: kubernetes/apps/agentfest/charts/agentfest-0.1.37
+  - path: kubernetes/apps/agentfest/charts/agentfest-0.1.38
     chart: agentfest
-    version: 0.1.37
+    version: 0.1.38
     repo: oci://ghcr.io/rounakdatta/charts
-    sha256: 11d0c684dbad0f0d30849234d0fdc1fc53a36d934e34ea4f1255bfd78b0fba9b
+    sha256: 3dc44474606f823b25a26c405a419f1ac06b71f0ea916ce1493bf6dc33404a6d
   - path: kubernetes/apps/auth2api/charts/app-template-5.1.0
     chart: app-template
     version: 5.1.0
@@ -34,11 +34,11 @@ charts:
     version: 7.8.0
     repo: https://blakeblackshear.github.io/blakeshome-charts
     sha256: 1db32d40b66caf05f74557bd3affa14bb857dddf0ff0f1b0069d6335b51aa9f1
-  - path: kubernetes/apps/itineris/charts/itineris-0.20.1
+  - path: kubernetes/apps/itineris/charts/itineris-0.20.2
     chart: itineris
-    version: 0.20.1
+    version: 0.20.2
     repo: oci://ghcr.io/rounakdatta/charts
-    sha256: 3d0564083c46cef092775a5211f3eceaf5ddda866819be1e9e675cdaeb275a72
+    sha256: 4065b0c12d179a52fd54b84bc56b81c50d9184ea9ce57bc560964627c044f452
   - path: kubernetes/apps/nextcloud/charts/nextcloud-9.0.6
     chart: nextcloud
     version: 9.0.6
