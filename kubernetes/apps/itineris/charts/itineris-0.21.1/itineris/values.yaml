@@ -76,9 +76,24 @@ admin:
     type: ClusterIP
     port: 80
   containerPort: 8080
-  # Comma-separated e-mail allowlist checked AFTER tinyauth. Empty trusts
-  # tinyauth's own whitelist entirely, which is the usual choice.
+  # Comma-separated e-mail allowlist. EMPTY MEANS ANYONE, which is deliberate:
+  # every gallery carries a "Make my own" button and strangers are expected to
+  # sign in and get their own journal. Set it to keep the server to a few people.
   allowedEmails: ""
+  # Google sign-in. Until 0.21 this service sat behind tinyauth and trusted a
+  # `Remote-Email` header; now it runs Google's authorization-code flow itself.
+  # With `existingSecret` set it STOPS trusting that header -- a deployment is
+  # either "Google" or "behind a trusted proxy", never quietly both -- so the
+  # deployment repo should also drop the forward-auth middleware from the
+  # /creator Ingress, and route /creator instead of /admin (old links redirect).
+  auth:
+    # A Secret in the release namespace with keys `clientId`, `clientSecret`
+    # and optionally `sessionSecret`. Create the OAuth client in Google Cloud
+    # with the authorised redirect URI  <publicUrl>/creator/auth/callback
+    existingSecret: ""
+    # The site's own public address, e.g. https://itineris.taptappers.club.
+    # Derived from the request when empty, which is right behind one proxy.
+    publicUrl: ""
   # Uploads are decoded in memory and re-encoded by sharp. A 48 MP photo is
   # ~200 MB decoded, and two uploads can be in flight at once, so the limit
   # sits far above the request; sharp runs single-threaded with no cache to
