@@ -34,11 +34,11 @@ charts:
     version: 7.8.0
     repo: https://blakeblackshear.github.io/blakeshome-charts
     sha256: 1db32d40b66caf05f74557bd3affa14bb857dddf0ff0f1b0069d6335b51aa9f1
-  - path: kubernetes/apps/itineris/charts/itineris-0.24.0
+  - path: kubernetes/apps/itineris/charts/itineris-0.25.0
     chart: itineris
-    version: 0.24.0
+    version: 0.25.0
     repo: oci://ghcr.io/rounakdatta/charts
-    sha256: 42667a7658789f3013c2be4120be3e66ad21498e63cdc706e9f365b3dfa9558e
+    sha256: 27b8ebf09e6c64b3233506fae5bfcdbd0ed8df01b914c88eafe3876032c24fb7
   - path: kubernetes/apps/nextcloud/charts/nextcloud-9.0.6
     chart: nextcloud
     version: 9.0.6

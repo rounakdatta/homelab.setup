@@ -1,7 +1,7 @@
 apiVersion: v2
-appVersion: 0.24.0
+appVersion: 0.25.0
 description: A travel journal viewed from several angles at once - map, timeline,
   photo wall and story - with a Google sign-in creator app for uploads
 name: itineris
 type: application
-version: 0.24.0
+version: 0.25.0
