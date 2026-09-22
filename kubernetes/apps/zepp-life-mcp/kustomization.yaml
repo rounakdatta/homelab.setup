@@ -4,9 +4,26 @@ kind: Kustomization
 
 namespace: apps
 
-# Bumping is two lines that move together: `version` here and `image.tag` in
-# values.yaml (the chart would default the image from its appVersion anyway;
-# the explicit pin keeps the deployed image visible in this repo).
+# Bumping is two lines AND a re-render -- three things, not two.
+#
+# The lines: `version` here and `image.tag` in values.yaml (the chart would
+# default the image from its appVersion anyway; the explicit pin keeps the
+# deployed image visible in this repo).
+#
+# The re-render is what actually vendors the new chart, and the lock is what
+# records it. Both are easy to forget because the deploy still goes green
+# without them -- deploy-stuff.yml only ::warning::s about a dirty render:
+#
+#   kustomize build --enable-helm kubernetes/ >/dev/null
+#   git rm -r kubernetes/apps/<app>/charts/<name>-<old>/
+#   git add kubernetes/apps/<app>/charts/<name>-<new>/
+#   python3 .github/scripts/charts-lock.py --write
+#
+# Skip the lock and "Vendored charts (offline check)" goes red and stays red
+# on every later commit, because the check compares the whole tree to
+# kubernetes/charts.lock rather than just what this commit touched. That is
+# a run of bumps can ship with the lock still pinned several versions back --
+# which is exactly what happened to itineris, 0.21.0 through 0.23.3.
 helmCharts:
   - name: zepp-life-mcp
     repo: oci://ghcr.io/rounakdatta/charts
