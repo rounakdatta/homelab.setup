@@ -3,7 +3,7 @@ image:
   # Pinned to the same tag as Chart.appVersion so a chart upgrade
   # always corresponds to one specific image. Override at install
   # time if you need to roll forward without bumping the chart.
-  tag: "0.13.1"
+  tag: "0.14.0"
   pullPolicy: IfNotPresent
 
 # Single writer by design — do not scale beyond 1
