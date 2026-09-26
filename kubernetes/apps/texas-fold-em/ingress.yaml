@@ -1,11 +1,19 @@
 ---
 # Tinyauth-protected ingress to texas-fold-em's review UI only.
 #
-# We deliberately scope the ingress to /admin/ui/* paths so the
-# bearer-key-gated JSON endpoints (/admin/firefly/sync, /admin/classify,
-# /admin/push/{uuid}, etc.) stay reachable ONLY via in-cluster Service
-# URL. The UI is sufficient for human review; programmatic admin
-# operations can be invoked via kubectl-port-forward when needed.
+# The UI lives at the root of the host since texas-fold-em 0.19.0: the deck
+# at /, the list at /transactions, the Add form at /new, the deck's JSON at
+# /api, the assets at /static. The ingress routes exactly those paths —
+# texas-fold-em's internal/integration/ui/paths.go has the same list; keep
+# the two in step — plus /admin/ui, whose old URLs the app redirects (308)
+# to their new homes.
+#
+# Everything else on the host is deliberately NOT routed: the bearer-key
+# endpoints (/token, /init, /admin/firefly/sync, /admin/classify,
+# /admin/push/{uuid}, …) and the probes (/livez, /health) stay reachable ONLY
+# via the in-cluster Service URL. That is why "/" is Exact, not Prefix: a
+# Prefix "/" would put all of them on the public host. The UI is sufficient
+# for human review; programmatic admin operations use the Service URL.
 #
 # Auth flow: any request to fold.taptappers.club hits Traefik →
 # tinyauth ForwardAuth → Google OAuth (if not already logged in) →
@@ -30,6 +38,48 @@ spec:
     - host: fold.taptappers.club
       http:
         paths:
+          - path: /
+            pathType: Exact
+            backend:
+              service:
+                name: texas-fold-em
+                port:
+                  number: 8080
+          - path: /transactions
+            pathType: Prefix
+            backend:
+              service:
+                name: texas-fold-em
+                port:
+                  number: 8080
+          - path: /new
+            pathType: Exact
+            backend:
+              service:
+                name: texas-fold-em
+                port:
+                  number: 8080
+          - path: /sync-accounts
+            pathType: Exact
+            backend:
+              service:
+                name: texas-fold-em
+                port:
+                  number: 8080
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: texas-fold-em
+                port:
+                  number: 8080
+          - path: /static
+            pathType: Prefix
+            backend:
+              service:
+                name: texas-fold-em
+                port:
+                  number: 8080
           - path: /admin/ui
             pathType: Prefix
             backend:
