@@ -78,6 +78,10 @@ extraEnv:
   # is worth its latency.
   - name: TEXAS_FOLDEM_LLM_REASONING_EFFORT
     value: ""
+  # The payee picker's suggested places answer while someone types (0.21.0):
+  # a quick model on the same gateway and key, a short reply, no thinking.
+  - name: TEXAS_FOLDEM_LLM_FAST_MODEL
+    value: "claude-haiku-4-5"
   # Parallel model calls in a classify pass (and a re-suggest pass).
   - name: TEXAS_FOLDEM_CLASSIFY_CONCURRENCY
     value: "4"
