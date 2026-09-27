@@ -12,6 +12,12 @@
 # extended /admin/classify's handler budget to 60m so backlog catch-up
 # finishes in one shot. Chart and image tags now move together — the
 # chart default image is "0.5.0", so we don't override here.
+#
+# Chart 0.20.0 moved Tier 3 from DeepSeek to Claude Opus 5.5 through the
+# in-cluster auth2api gateway (the same key auth2api itself uses), taught
+# it to learn from review feedback, and added the re-suggest loop that
+# keeps waiting cards current (off until the shadow evaluation says the
+# new engine beats the old suggestions).
 
 service:
   type: ClusterIP
@@ -49,19 +55,41 @@ extraEnv:
       secretKeyRef:
         name: texas-fold-em-credentials
         key: firefly-pat
+  # Tier 3 runs on Claude Opus 5.5 through auth2api, in-cluster (no TLS,
+  # no ingress, its own rate-limit bucket), with auth2api's own key from
+  # the Bitwarden-synced auth2api-credentials Secret. It spends the Claude
+  # subscription behind auth2api — the same one Claude Code sessions use —
+  # so the re-suggest pace below is deliberately modest. (DeepSeek's key
+  # stays in texas-fold-em-credentials as llm-api-key, unused.)
   - name: TEXAS_FOLDEM_LLM_API_KEY
     valueFrom:
       secretKeyRef:
-        name: texas-fold-em-credentials
-        key: llm-api-key
-  # LLM_MODEL / LLM_BASE_URL default to deepseek-v4-flash on
-  # https://api.deepseek.com/v1 — uncomment to override (e.g. swap to
-  # deepseek-v4-pro for higher accuracy on tricky transactions, or
-  # repoint LLM_BASE_URL at OpenAI / Groq with a matching key).
-  # - name: TEXAS_FOLDEM_LLM_MODEL
-  #   value: "deepseek-v4-pro"
-  # - name: TEXAS_FOLDEM_LLM_BASE_URL
-  #   value: "https://api.openai.com/v1"
+        name: auth2api-credentials
+        key: api-key
+  - name: TEXAS_FOLDEM_LLM_BASE_URL
+    value: "http://auth2api.apps.svc.cluster.local:8317/v1"
+  - name: TEXAS_FOLDEM_LLM_MODEL
+    value: "claude-opus-5-5"
+  # auth2api cuts a buffered answer at 120s; one attempt stops short of it.
+  - name: TEXAS_FOLDEM_LLM_TIMEOUT
+    value: "110s"
+  # No extended thinking: the answer's "reasoning" field comes first, and
+  # the shadow evaluation (POST /api/engine/eval) decides whether "low"
+  # is worth its latency.
+  - name: TEXAS_FOLDEM_LLM_REASONING_EFFORT
+    value: ""
+  # Parallel model calls in a classify pass (and a re-suggest pass).
+  - name: TEXAS_FOLDEM_CLASSIFY_CONCURRENCY
+    value: "4"
+  # Re-suggest waiting cards: siblings of a card you corrected, and cards
+  # an older engine suggested (newest first), never one a person decided.
+  # On since the shadow evaluation (27 Sep, 70 sent rows) showed the new
+  # engine beating the stored suggestions on every field but budget:
+  # 6 cards every 2 minutes works through the ~455-card backlog in ~2.5h.
+  - name: TEXAS_FOLDEM_RESUGGEST_EVERY
+    value: "2m"
+  - name: TEXAS_FOLDEM_RESUGGEST_LIMIT
+    value: "6"
   # Periodic sync enabled at 1h cadence. Each tick fills the gap
   # between firefly's most recent date and now (since_firefly mode),
   # then classifies anything still pending. Self-healing across

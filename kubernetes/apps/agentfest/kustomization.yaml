@@ -18,11 +18,25 @@ resources:
   - ingress.yaml
   - networkpolicy.yaml
 
-# `dshm` is an emptyDir (shared memory for the browser). Its contents cannot
-# outlive the pod, so a file-system backup of it is never meaningful — and
-# Velero logs a "pod is not running" warning for it against every completed or
-# evicted festie pod it finds, which is where most of our backup warnings came
-# from. The chart has no podAnnotations value, hence the patch.
+# Volumes excluded from Velero's file-system backup:
+#
+#   dshm  an emptyDir (browser shared memory). Its contents cannot outlive the
+#         pod, so backing it up is never meaningful — and Velero logs a "pod is
+#         not running" warning for it against every completed/evicted festie pod
+#         it finds, which was the source of most of our backup warnings.
+#
+#   home  the /home/rounak PVC — the whole computer. Deliberately NOT backed up:
+#         it is ~26 GB of regenerable state (git checkouts, npm/nix/go caches,
+#         Claude session data, browser profiles) whose durable parts already
+#         live elsewhere (the pass store is git-synced from gitlab; downloaded
+#         statements are filed in Nextcloud). Backing it up shipped a full copy
+#         of the pass store, ~/.ssh, ~/.claude and the browser profiles to R2
+#         every night for no recovery value. NOTE this does NOT stop the Secret
+#         OBJECTS (festie-secrets = the SSH + GPG keys, plus every app Secret)
+#         from being in the backup — they are API resources, not volume data;
+#         closing that needs a real Kopia repo password (see velero/).
+#
+# The chart has no podAnnotations value, hence the patch.
 patches:
   - patch: |-
       apiVersion: apps/v1
@@ -33,4 +47,4 @@ patches:
         template:
           metadata:
             annotations:
-              backup.velero.io/backup-volumes-excludes: "dshm"
+              backup.velero.io/backup-volumes-excludes: "dshm,home"
