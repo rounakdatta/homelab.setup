@@ -132,8 +132,13 @@ controllers:
             # front of it -- wrong-but-safe, never open.
             admin-auth: false
 
+            # The Claude Code release auth2api presents as. Anthropic serves a
+            # model only to a release new enough for it: at 2.1.88, Opus 5.5
+            # answered "Claude Code 2.1.88 does not support this model;
+            # version 2.1.280 or newer is required". Keep it at a current
+            # release (`claude --version`); older models accept newer ones.
             cloaking:
-              cli-version: "2.1.88"
+              cli-version: "2.1.283"
               entrypoint: "cli"
               codex:
                 originator: "codex_cli_rs"
