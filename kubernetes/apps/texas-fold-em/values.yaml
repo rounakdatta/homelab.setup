@@ -82,10 +82,12 @@ extraEnv:
   - name: TEXAS_FOLDEM_CLASSIFY_CONCURRENCY
     value: "4"
   # Re-suggest waiting cards: siblings of a card you corrected, and cards
-  # the old engine suggested. Off for the first deploy; turned on once the
-  # evaluation is in. Each pass revisits up to RESUGGEST_LIMIT cards.
+  # an older engine suggested (newest first), never one a person decided.
+  # On since the shadow evaluation (27 Sep, 70 sent rows) showed the new
+  # engine beating the stored suggestions on every field but budget:
+  # 6 cards every 2 minutes works through the ~455-card backlog in ~2.5h.
   - name: TEXAS_FOLDEM_RESUGGEST_EVERY
-    value: "0"
+    value: "2m"
   - name: TEXAS_FOLDEM_RESUGGEST_LIMIT
     value: "6"
   # Periodic sync enabled at 1h cadence. Each tick fills the gap
