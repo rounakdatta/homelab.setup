@@ -531,6 +531,30 @@
       failed_when: false
       no_log: true
 
+    # Keep the Bitwarden-synced secrets OUT of the Velero backup. Every secret
+    # in k8s_secrets is reproducible by re-running this play, so shipping them to
+    # R2 nightly duplicates the crown jewels — festie-secrets (the SSH + GPG
+    # keys) and every DB/app credential — under Velero's static default repo
+    # password, for zero recovery value. A DR restore re-runs this play, exactly
+    # as an ordinary deploy already does. cert-manager's auto-generated *-tls
+    # secrets carry no such label and stay backed up, so a restore reuses the
+    # existing cert material instead of re-issuing from Let's Encrypt.
+    #
+    # velero.io/exclude-from-backup is a LABEL, not an annotation (Velero reads
+    # it as a label selector). `kubectl create secret` cannot set labels, so it
+    # is stamped here, after the apply. --overwrite is idempotent; failed_when is
+    # false so a secret skipped above (missing namespace, failed lookup) does not
+    # fail the deploy — it simply is not there to label.
+    - name: Exclude Bitwarden-synced secrets from the Velero backup
+      ansible.builtin.command: >
+        kubectl label secret {{ item.name }} --namespace={{ item.namespace }}
+        velero.io/exclude-from-backup=true --overwrite
+      loop: "{{ k8s_secrets }}"
+      loop_control:
+        label: "{{ item.name }}"
+      changed_when: false
+      failed_when: false
+
     - name: Collect the secrets that were not synced (names and reasons only)
       ansible.builtin.set_fact:
         secret_failures: "{{ secret_failures | default([]) + [item.item.name ~ ' — ' ~ ((item.stdout_lines | default([]) | last) if (item.stdout_lines | default([]) | length > 0) else ((item.stderr_lines | default([]) | first) | default('no output'))) | truncate(240)] }}"
