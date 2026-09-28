@@ -31,12 +31,18 @@ env:
         name: velero-ui-credentials
         key: pass_phrase
 
-# Cluster-admin permissions match what the prior hand-rolled velero-ui.yaml had.
-# Could be scoped tighter later — chart's clusterAdministrator: false would
-# let the per-namespace velero-ui-permissions Role do the work.
+# NOT cluster-admin. A backup dashboard has no business holding write access to
+# every resource in the cluster — including read of every Secret, which is the
+# whole point of the 2026-09 hardening pass. With clusterAdministrator: false the
+# chart binds its own scoped roles instead (velero-ui-permissions +
+# velero-ui-velero-permissions), which cover listing/among the velero resources
+# and the namespaces the UI displays. If the UI later reports it cannot see some
+# resource, widen those chart roles — never flip this back to cluster-admin.
+# (velero-server itself still runs cluster-admin: that is the backup ENGINE and
+# reducing it risks the backups, so it is deliberately out of scope here.)
 rbac:
   create: true
-  clusterAdministrator: true
+  clusterAdministrator: false
 
 service:
   type: ClusterIP
