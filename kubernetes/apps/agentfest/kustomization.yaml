@@ -33,8 +33,9 @@ resources:
 #         of the pass store, ~/.ssh, ~/.claude and the browser profiles to R2
 #         every night for no recovery value. NOTE this does NOT stop the Secret
 #         OBJECTS (festie-secrets = the SSH + GPG keys, plus every app Secret)
-#         from being in the backup — they are API resources, not volume data;
-#         closing that needs a real Kopia repo password (see velero/).
+#         from being in the backup — they are API resources, not volume data.
+#         Those are excluded by the velero.io/exclude-from-backup label the
+#         secrets play now stamps on every Bitwarden-synced Secret.
 #
 # The chart has no podAnnotations value, hence the patch.
 patches:
