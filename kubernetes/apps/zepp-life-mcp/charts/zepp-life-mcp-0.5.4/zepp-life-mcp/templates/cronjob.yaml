@@ -1,0 +1,94 @@
+{{- /*
+One CronJob per sync pass: the regular one, and an optional wider "deep" pass
+that re-reads more days for data uploaded long after it was recorded.
+*/ -}}
+{{- define "zepp-life-mcp.syncCronJob" -}}
+{{- $root := .root -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "zepp-life-mcp.fullname" $root }}-{{ .suffix }}
+  labels:
+    {{- include "zepp-life-mcp.labels" $root | nindent 4 }}
+spec:
+  schedule: {{ .schedule | quote }}
+  {{- if $root.Values.sync.timeZone }}
+  # Without this, Kubernetes reads the schedule in UTC, which silently means a
+  # different wall-clock hour than whoever wrote it intended.
+  timeZone: {{ $root.Values.sync.timeZone | quote }}
+  {{- end }}
+  concurrencyPolicy: {{ $root.Values.sync.concurrencyPolicy }}
+  {{- with $root.Values.sync.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ . }}
+  {{- end }}
+  successfulJobsHistoryLimit: {{ $root.Values.sync.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ $root.Values.sync.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ $root.Values.sync.backoffLimit }}
+      template:
+        metadata:
+          labels:
+            {{- include "zepp-life-mcp.selectorLabels" $root | nindent 12 }}
+            app.kubernetes.io/component: sync
+        spec:
+          restartPolicy: Never
+          {{- with $root.Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            {{- toYaml $root.Values.podSecurityContext | nindent 12 }}
+          # Must match the server: the claim is node-local and both need it.
+          {{- with $root.Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $root.Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: sync
+              image: "{{ $root.Values.image.repository }}:{{ $root.Values.image.tag | default $root.Chart.AppVersion }}"
+              imagePullPolicy: {{ $root.Values.image.pullPolicy }}
+              securityContext:
+                {{- toYaml $root.Values.securityContext | nindent 16 }}
+              args:
+                - sync
+                {{- if $root.Values.sync.startDate }}
+                - --start-date={{ $root.Values.sync.startDate }}
+                {{- end }}
+                {{- with .lookbackDays }}
+                - --lookback-days={{ . }}
+                {{- end }}
+                {{- range $root.Values.sync.dataTypes }}
+                - --type={{ . }}
+                {{- end }}
+              env:
+                {{- include "zepp-life-mcp.commonEnv" $root | nindent 16 }}
+              resources:
+                {{- toYaml $root.Values.sync.resources | nindent 16 }}
+              volumeMounts:
+                - name: data
+                  mountPath: {{ $root.Values.persistence.mountPath }}
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: data
+              {{- if $root.Values.persistence.enabled }}
+              persistentVolumeClaim:
+                claimName: {{ include "zepp-life-mcp.claimName" $root }}
+              {{- else }}
+              emptyDir: {}
+              {{- end }}
+            - name: tmp
+              emptyDir: {}
+{{- end }}
+{{- if .Values.sync.enabled }}
+{{ include "zepp-life-mcp.syncCronJob" (dict "root" . "suffix" "sync" "schedule" .Values.sync.schedule) }}
+{{- if .Values.sync.deep.enabled }}
+---
+{{ include "zepp-life-mcp.syncCronJob" (dict "root" . "suffix" "sync-deep" "schedule" .Values.sync.deep.schedule "lookbackDays" .Values.sync.deep.lookbackDays) }}
+{{- end }}
+{{- end }}

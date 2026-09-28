@@ -46,8 +46,9 @@ service:
 
 sync:
   enabled: true
-  # Nightly. The band uploads on its own schedule, so there is nothing to gain
-  # from syncing more often than the phone does.
+  # Nightly by default. A pass re-reads only the last couple of days and writes
+  # nothing when nothing changed, so a schedule as tight as every few minutes is
+  # fine when you want data soon after the phone uploads it.
   schedule: "17 3 * * *"
   # The IANA zone the schedule is written in. Leave empty and Kubernetes uses
   # UTC, so "03:17" means 03:17 UTC regardless of what the comment beside it
@@ -62,8 +63,22 @@ sync:
   # history on every run, which on a multi-year archive means re-processing
   # hundreds of thousands of heart-rate samples nightly for nothing.
   startDate: ""
-  # Forbid: two syncs must never write this SQLite file at once.
+  # A second, daily pass that re-reads `lookbackDays` before the cursor instead of
+  # the default two. It catches data that reaches Zepp days late -- the phone
+  # offline, or the app not syncing in the background -- which a frequent pass
+  # would already have moved past. It shares the settings above.
+  deep:
+    enabled: false
+    schedule: "47 3 * * *"
+    lookbackDays: 14
+  # Forbid: a sync never overlaps itself. The regular and deep jobs can overlap;
+  # that is safe because SQLite waits out the other writer (busy_timeout) and
+  # every write is an idempotent upsert.
   concurrencyPolicy: Forbid
+  # Skip a run that could not start within this many seconds of its slot rather
+  # than start it late. Worth setting on a frequent schedule: the next run is
+  # minutes away and resumes from the same point, so a skipped one loses nothing.
+  startingDeadlineSeconds: null
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
   backoffLimit: 2
