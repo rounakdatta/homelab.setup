@@ -27,6 +27,10 @@ on:
         description: 'k3s on slow storage: let controllers survive slow etcd (lease 60s / renew 45s / retry 10s) via a config.yaml.d drop-in, then restart k3s once'
         type: boolean
         default: false
+      enable_secrets_encryption:
+        description: 'Encrypt Secrets at rest in etcd: write the config.yaml.d drop-in, restart k3s once, reencrypt existing Secrets. Idempotent — a no-op once enabled.'
+        type: boolean
+        default: false
 
 jobs:
   maintain:
@@ -98,6 +102,70 @@ jobs:
             systemctl is-active k3s
             echo "restart counter: $before -> $(systemctl show k3s -p NRestarts --value) (a manual restart does not count)"
             journalctl -u k3s --since '-2 min' --no-pager | grep -m1 -oE 'Running kube-controller-manager .*leader-elect-lease-duration=[0-9a-z]+' | sed -E 's/--(client-ca-file|authentication-kubeconfig|authorization-kubeconfig|kubeconfig|service-account-private-key-file|root-ca-file|cluster-signing[a-z-]*)=[^ ]+ ?//g' | cut -c1-300
+          EOS
+
+      # Encrypt Secrets at rest in etcd on the RUNNING cluster. Fresh installs
+      # get this from --secrets-encryption in the k3s role; this is the one-time
+      # enablement for the cluster that was installed without it. Guarded and
+      # idempotent: a no-op once encryption reports Enabled; only writes the
+      # drop-in when config.yaml does not already set the key; restarts k3s ONCE,
+      # waits for the API, then reencrypts the existing Secrets. Secrets stay
+      # readable the whole time (k3s keeps an identity reader beside the aescbc
+      # writer) and are also rewritten from Bitwarden on the next deploy, so this
+      # cannot lock anything out. Revert:
+      #   rm /etc/rancher/k3s/config.yaml.d/20-secrets-encryption.yaml && systemctl restart k3s
+      - name: Enable Secrets encryption at rest
+        if: ${{ inputs.enable_secrets_encryption }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS'
+            set -e
+            echo "== current status =="
+            k3s secrets-encrypt status 2>/dev/null || echo "(secrets-encrypt status unavailable -- not yet enabled)"
+            if k3s secrets-encrypt status 2>/dev/null | grep -qiE 'Encryption Status:[[:space:]]*Enabled'; then
+              # Already on (no restart needed). Still run reencrypt so EVERY
+              # existing Secret is rewritten encrypted -- not just the
+              # Bitwarden-synced ones a deploy rewrites, but cert-manager TLS
+              # secrets, service-account tokens, etc. Idempotent and non-fatal.
+              echo "already enabled; reencrypting all existing Secrets to be sure"
+              k3s secrets-encrypt reencrypt --force 2>&1 || echo "reencrypt returned nonzero -- remaining Secrets encrypt on next write"
+              for i in $(seq 1 24); do k3s kubectl get nodes >/dev/null 2>&1 && break; sleep 5; done
+              k3s secrets-encrypt status || true
+              exit 0
+            fi
+            v="$(k3s --version | head -1)"; echo "$v"
+            minor="$(echo "$v" | sed -E 's/.*v1\.([0-9]+)\..*/\1/')"
+            if [ -z "$minor" ] || [ "$minor" -lt 24 ]; then echo "k3s too old for config.yaml.d; aborting"; exit 1; fi
+            if [ -f /etc/rancher/k3s/config.yaml ] && grep -qE '^secrets-encryption' /etc/rancher/k3s/config.yaml; then
+              echo "config.yaml already sets secrets-encryption -- merge by hand instead"; exit 1
+            fi
+            # Do not restart an already-unhealthy k3s.
+            systemctl is-active k3s
+            mkdir -p /etc/rancher/k3s/config.yaml.d
+            {
+              echo "# Added 2026-09-28: encrypt Secrets at rest in etcd (aescbc). k3s manages"
+              echo "# the key at /var/lib/rancher/k3s/server/cred/encryption-config.json."
+              echo "# Delete this file and restart k3s to revert (Secrets stay readable)."
+              echo "secrets-encryption: true"
+            } > /etc/rancher/k3s/config.yaml.d/20-secrets-encryption.yaml
+            echo "drop-in written; restarting k3s once"
+            before="$(systemctl show k3s -p NRestarts --value)"
+            systemctl restart k3s
+            for i in $(seq 1 36); do
+              if k3s kubectl get nodes >/dev/null 2>&1; then echo "API back after ~$((i*5))s"; break; fi
+              sleep 5
+            done
+            systemctl is-active k3s
+            echo "restart counter: $before -> $(systemctl show k3s -p NRestarts --value) (a manual restart does not count)"
+            echo "== status after enable =="
+            k3s secrets-encrypt status
+            echo "== reencrypt existing Secrets (non-fatal; next deploy also rewrites them) =="
+            k3s secrets-encrypt reencrypt --force 2>&1 || echo "reencrypt returned nonzero -- existing Secrets will encrypt on next write/deploy"
+            for i in $(seq 1 24); do
+              if k3s kubectl get nodes >/dev/null 2>&1; then break; fi
+              sleep 5
+            done
+            echo "== final status =="
+            k3s secrets-encrypt status || true
           EOS
 
       - name: Rollout restart
