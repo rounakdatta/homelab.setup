@@ -63,3 +63,15 @@ patches:
               metadata:
                 annotations:
                   backup.velero.io/backup-volumes-excludes: "tmp"
+  - patch: |-
+      apiVersion: batch/v1
+      kind: CronJob
+      metadata:
+        name: zepp-life-mcp-sync-deep
+      spec:
+        jobTemplate:
+          spec:
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes-excludes: "tmp"

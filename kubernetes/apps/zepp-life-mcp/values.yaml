@@ -46,6 +46,13 @@ sync:
   # Only matters for a wall-clock schedule: Kubernetes reads it in UTC unless
   # this is set (the old "03:17 IST" nightly once meant 08:47 IST without it).
   timeZone: "Asia/Kolkata"
+  # Once a day, re-read the last 14 days: catches data that reached Zepp days
+  # late (phone offline, app not syncing in the background), which the 5-minute
+  # pass -- two days of lookback -- has already moved past.
+  deep:
+    enabled: true
+    schedule: "47 3 * * *"
+    lookbackDays: 14
   # Every type, which includes workout_details (GPS tracks and per-second heart
   # rate). That first run fetches ~800 MB from Zepp and stores ~120 MB; every
   # run after it skips what is already archived and fetches only new workouts.
