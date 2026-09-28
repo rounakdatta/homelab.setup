@@ -54,11 +54,11 @@ charts:
     version: 0.2.1
     repo: oci://ghcr.io/rounakdatta/charts
     sha256: 1a6d64d7274500522135db4f02e8537fbd634e9e3e160e054070d61c69c35535
-  - path: kubernetes/apps/texas-fold-em/charts/texas-fold-em-0.24.0
+  - path: kubernetes/apps/texas-fold-em/charts/texas-fold-em-0.24.1
     chart: texas-fold-em
-    version: 0.24.0
+    version: 0.24.1
     repo: oci://ghcr.io/rounakdatta/charts
-    sha256: a9c427dfc86e1791684319dcae496843d1dfd70b4f5418f7a27be4d6950f0044
+    sha256: 34b27e9a6e29ac52a41217658c4ec859ac99c2576da98c6b35d5dcad3c2d26af
   - path: kubernetes/apps/vikunja/charts/vikunja-v2.0.2
     chart: vikunja
     version: v2.0.2
