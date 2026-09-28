@@ -86,6 +86,15 @@ extraEnv:
   # them wrong; Opus 5.5 can't turn thinking off (6–9 s).
   - name: TEXAS_FOLDEM_LLM_FAST_MODEL
     value: "claude-sonnet-5"
+  # A place the picker's model can't place is looked up on the web (0.23.0):
+  # the name and where only, never a person's name. Chosen with POST
+  # /api/engine/lookup on real cards (28 Sep): Fable 5.1 found both branches
+  # of a two-branch tiffin place and named clean neighbourhoods in one search
+  # (7–9 s); Sonnet 5 named a block of one branch as a second branch and an
+  # area as "street / area". As the picker's own model Fable 5.1 was the most
+  # knowing but must think (5–9 s against Sonnet's 2–3 s), so it looks up.
+  - name: TEXAS_FOLDEM_LLM_LOOKUP_MODEL
+    value: "claude-fable-5-1"
   # Parallel model calls in a classify pass (and a re-suggest pass).
   - name: TEXAS_FOLDEM_CLASSIFY_CONCURRENCY
     value: "4"
