@@ -29,3 +29,30 @@ patches:
         value:
           name: APPROVALS
           value: "1"
+
+  # Drop Keel's cluster-wide read of EVERY Secret. Keel reads Secrets only to
+  # resolve imagePullSecrets for private-registry images; every image it polls
+  # (memoet, snibox, audiobookshelf) is a public Docker Hub image with no
+  # imagePullSecrets, so it needs none. This replaces the chart ClusterRole's
+  # rules with the identical set MINUS the secrets rule. ClusterRole rules are
+  # mutable, so `kubectl apply` updates them in place — no binding/roleRef change.
+  # If a private-registry image is ever polled by Keel, grant `get` on that one
+  # pull Secret via a narrow Role in its namespace — never restore cluster-wide
+  # secret read here. (Keel lives in kube-system, which is on festie's
+  # NetworkPolicy allowlist, so a Keel compromise reading all Secrets was a real
+  # path.)
+  - patch: |-
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRole
+      metadata:
+        name: keel
+      rules:
+        - apiGroups: [""]
+          resources: ["namespaces"]
+          verbs: ["watch", "list"]
+        - apiGroups: ["", "extensions", "apps", "batch"]
+          resources: ["pods", "replicasets", "replicationcontrollers", "statefulsets", "deployments", "daemonsets", "jobs", "cronjobs"]
+          verbs: ["get", "delete", "watch", "list", "update"]
+        - apiGroups: [""]
+          resources: ["configmaps", "pods/portforward"]
+          verbs: ["get", "create", "update"]
