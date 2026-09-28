@@ -46,13 +46,19 @@ sync:
   # Only matters for a wall-clock schedule: Kubernetes reads it in UTC unless
   # this is set (the old "03:17 IST" nightly once meant 08:47 IST without it).
   timeZone: "Asia/Kolkata"
-  # Once a day, re-read the last 14 days: catches data that reached Zepp days
-  # late (phone offline, app not syncing in the background), which the 5-minute
-  # pass -- two days of lookback -- has already moved past.
+  # Every 6 hours, re-read the last 14 days. The 5-minute pass already catches
+  # up after the phone was offline (it resumes from the last day that has data);
+  # this is the net under that, for days that arrive out of order or that Zepp
+  # reprocesses later. When it adds rows at all, the 5-minute pass missed them.
   deep:
     enabled: true
-    schedule: "47 3 * * *"
+    schedule: "47 */6 * * *"
     lookbackDays: 14
+  # No in-Job retries: the next run is five minutes away and resumes from the
+  # same point, so retrying inside the Job only repeats the same work sooner.
+  backoffLimit: 0
+  # And a run that could not start on time is skipped, not started late.
+  startingDeadlineSeconds: 240
   # Every type, which includes workout_details (GPS tracks and per-second heart
   # rate). That first run fetches ~800 MB from Zepp and stores ~120 MB; every
   # run after it skips what is already archived and fetches only new workouts.

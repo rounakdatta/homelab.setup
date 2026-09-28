@@ -51,6 +51,15 @@ patches:
           metadata:
             annotations:
               backup.velero.io/backup-volumes-excludes: "tmp"
+              # Snapshot the archive right before Velero copies the volume. The
+              # sync writes every 5 minutes, and a file-level copy of a live
+              # SQLite file can be torn by a write landing mid-copy; the
+              # snapshot is one consistent file, so /data/snapshot/zepp_life.db
+              # is the copy to restore. On error the backup still proceeds.
+              pre.hook.backup.velero.io/container: server
+              pre.hook.backup.velero.io/command: '["zepp-life-mcp", "snapshot", "--to", "/data/snapshot/zepp_life.db"]'
+              pre.hook.backup.velero.io/timeout: 5m
+              pre.hook.backup.velero.io/on-error: Continue
   - patch: |-
       apiVersion: batch/v1
       kind: CronJob
@@ -62,7 +71,9 @@ patches:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes-excludes: "tmp"
+                  # data too: the volume is backed up once, through the server
+                  # pod, so its pre-backup snapshot always runs first.
+                  backup.velero.io/backup-volumes-excludes: "tmp,data"
   - patch: |-
       apiVersion: batch/v1
       kind: CronJob
@@ -74,4 +85,6 @@ patches:
             template:
               metadata:
                 annotations:
-                  backup.velero.io/backup-volumes-excludes: "tmp"
+                  # data too: the volume is backed up once, through the server
+                  # pod, so its pre-backup snapshot always runs first.
+                  backup.velero.io/backup-volumes-excludes: "tmp,data"
