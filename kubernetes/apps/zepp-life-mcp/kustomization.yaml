@@ -27,7 +27,7 @@ namespace: apps
 helmCharts:
   - name: zepp-life-mcp
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.5.3
+    version: 0.5.4
     releaseName: zepp-life-mcp
     namespace: apps
     valuesFile: values.yaml
