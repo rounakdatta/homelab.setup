@@ -69,11 +69,11 @@ charts:
     version: 2.2.23
     repo: https://djjudas21.github.io/charts
     sha256: f3c4b2fa4cbcdffeacdd8d6f38b0c496890a6bab84f9fe72898303ad811e14ad
-  - path: kubernetes/apps/zepp-life-mcp/charts/zepp-life-mcp-0.5.3
+  - path: kubernetes/apps/zepp-life-mcp/charts/zepp-life-mcp-0.5.4
     chart: zepp-life-mcp
-    version: 0.5.3
+    version: 0.5.4
     repo: oci://ghcr.io/rounakdatta/charts
-    sha256: 7a216f91e0d120d936dea86e2e33b8a26e4ef7b52eb421022f8611c5ca557886
+    sha256: 7dda3a493b8e6d1fa5216eca0eaa74f2fdfa6db831f74b690e962dbfbe0f0eab
   - path: kubernetes/infrastructure/cert-manager/charts/cert-manager-v1.15.1
     chart: cert-manager
     version: v1.15.1
