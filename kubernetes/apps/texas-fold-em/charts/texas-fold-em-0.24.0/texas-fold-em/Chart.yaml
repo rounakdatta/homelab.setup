@@ -1,6 +1,6 @@
 apiVersion: v2
-appVersion: 0.23.3
+appVersion: 0.24.0
 description: Fold refresh-token broker
 name: texas-fold-em
 type: application
-version: 0.23.3
+version: 0.24.0
