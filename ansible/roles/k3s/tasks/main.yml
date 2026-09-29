@@ -13,6 +13,17 @@
 # local-path PV (immutable nodeAffinity) -- the 2026-07-29 outage. Note this only
 # takes effect on a fresh install (see the `when` below); the running cluster is
 # untouched. Read roles/k3s/defaults/main.yml before changing the value.
+# --secrets-encryption turns on at-rest encryption of Secrets in etcd from the
+# very first boot, so on a FRESH machine every Secret the Bitwarden sync then
+# creates is written encrypted -- no reencrypt step is ever needed here. k3s
+# generates and manages the key at
+# /var/lib/rancher/k3s/server/cred/encryption-config.json. This flag only takes
+# effect on a fresh install (the `when` below); the ALREADY-running cluster is
+# enabled separately and idempotently by node-maintenance.yml
+# (enable_secrets_encryption), which writes the equivalent config.yaml.d drop-in,
+# restarts k3s once, and reencrypts the existing Secrets. We do not depend on
+# carrying the key to a new machine: every Secret is reproducible from Bitwarden,
+# so a fresh install encrypts them from scratch under its own new key.
 - name: Install K3s with Tailscale configuration
   ansible.builtin.shell: |
     curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server \
@@ -22,6 +33,7 @@
       --bind-address={{ host_tailscale_ip }} \
       --advertise-address={{ host_tailscale_ip }} \
       --flannel-iface=tailscale0 \
+      --secrets-encryption \
       --write-kubeconfig-mode=644" sh -
   args:
     executable: /bin/bash
