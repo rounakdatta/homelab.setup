@@ -211,6 +211,12 @@ jobs:
             $K get bsl -o custom-columns=NAME:.metadata.name,PHASE:.status.phase,DEFAULT:.spec.default,PREFIX:.spec.objectStorage.prefix,VALIDATED:.status.lastValidationTime
             echo "== backup repositories =="
             $K get backuprepositories -o custom-columns=NAMESPACE:.spec.volumeNamespace,TYPE:.spec.repositoryType,PHASE:.status.phase,MESSAGE:.status.message
+            # A BSL change (bucket/prefix/config) makes Velero mark every
+            # repository NotReady and re-establish it at the new location, so a
+            # recent status time here is how you tell "re-established" from
+            # "stale Ready".
+            echo "-- when each repository was last written (manager: time) --"
+            $K get backuprepositories -o jsonpath='{range .items[*]}{.spec.volumeNamespace}{":"}{range .metadata.managedFields[*]}{"  "}{.manager}{"@"}{.time}{end}{"\n"}{end}'
             echo "== last 6 backups (oldest first) =="
             $K get backups --sort-by=.metadata.creationTimestamp --no-headers -o custom-columns=NAME:.metadata.name,PHASE:.status.phase,ERRORS:.status.errors,WARNINGS:.status.warnings,STARTED:.status.startTimestamp | tail -n 6
           EOS
