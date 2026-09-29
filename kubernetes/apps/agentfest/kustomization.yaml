@@ -37,7 +37,20 @@ resources:
 #         Those are excluded by the velero.io/exclude-from-backup label the
 #         secrets play now stamps on every Bitwarden-synced Secret.
 #
-# The chart has no podAnnotations value, hence the patch.
+# DNS: ndots:1 instead of the cluster default ndots:5.
+#
+# Under ndots:5 every name with fewer than five dots -- i.e. every external
+# host -- is first tried against all five search domains the pod inherits
+# (apps/svc/cluster.local, plus the node's pig-universe.ts.net and
+# cs1cloud.internal, which answer slowly upstream and are never cached). Measured
+# on festie 2026-09-29, cold getaddrinfo: 1.0-2.1 s per relative external name
+# vs 0.10-0.19 s for the same kind of name as absolute; curl to npmjs.com spent
+# 3.1 s of 3.2 s in DNS. Every new API connection, git/gh call, npm/uvx lookup
+# and MCP connect paid that. ndots:1 sends any dotted name to the real resolver
+# first; single-label names (a Service like `festie`) still walk the search list,
+# and full `*.svc.cluster.local` names resolve exactly as before.
+#
+# The chart has neither podAnnotations nor dnsConfig values, hence the patch.
 patches:
   - patch: |-
       apiVersion: apps/v1
@@ -49,3 +62,8 @@ patches:
           metadata:
             annotations:
               backup.velero.io/backup-volumes-excludes: "dshm,home"
+          spec:
+            dnsConfig:
+              options:
+                - name: ndots
+                  value: "1"
