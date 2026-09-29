@@ -69,6 +69,9 @@ jobs:
             # Facts the memory plan rests on: swap/zram support, what the kubelet
             # reserves and enforces, cgroup limits and weights, and who holds memory
             # outside the pods. Still read-only.
+            #
+            # This repository is public, and so are these logs. Nothing here may
+            # print listening ports, package versions or addresses.
             echo "== memory plan: swap, zram, vm sysctls =="
             swapon --show 2>/dev/null; echo "swap devices: $(tail -n +2 /proc/swaps | wc -l)"
             echo "zram module: $(modinfo -F filename zram 2>/dev/null || echo MISSING)"
@@ -92,14 +95,6 @@ jobs:
               m=$(systemctl show -p MemoryCurrent --value "$u" 2>/dev/null); case "$m" in ''|*[!0-9]*) continue;; esac
               echo "$(( m / 1048576 )) $u"
             done | sort -rn | head -18
-            echo "== memory plan: web-hosting panel / antivirus footprint =="
-            [ -d /usr/local/hestia ] && echo "/usr/local/hestia present" || echo "no /usr/local/hestia"
-            for s in hestia nginx apache2 php8.3-fpm php8.2-fpm exim4 dovecot clamav-daemon clamav-freshclam spamd spamassassin fail2ban mariadb mysql bind9 named vsftpd proftpd; do
-              st=$(systemctl is-active "$s" 2>/dev/null); [ "$st" = active ] || [ "$st" = failed ] || [ "$st" = activating ] || continue
-              echo "$s: $st, enabled=$(systemctl is-enabled "$s" 2>/dev/null)"
-            done
-            ss -ltnpH 2>/dev/null | grep -vE 'k3s|containerd|tailscaled|kube' | awk '{print $4, $6}' | sort -u | head -20
-            zgrep -hE ' install (clamav|hestia|exim4|dovecot|nginx|apache2)[: ]' /var/log/dpkg.log* 2>/dev/null | sort | head -6
             echo "== memory plan: pods by memory, and the node's requests =="
             timeout 20 k3s kubectl top pods -A --sort-by=memory 2>/dev/null | head -22
             timeout 20 k3s kubectl describe node "$(hostname)" 2>/dev/null | sed -n '/^Capacity:/,/^System Info:/p' | grep -E '^[A-Z]|memory|cpu:'

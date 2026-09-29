@@ -18,11 +18,15 @@
   become: yes
 
   pre_tasks:
+    # no_log: homelab.setup is a public repository, so its Actions logs are
+    # public, and `-v` would print the full `tailscale status` (every device,
+    # hostname and address on the tailnet). Only the return code is used.
     - name: Verify Tailscale is installed and running
       ansible.builtin.command: tailscale status
       register: tailscale_check
       changed_when: false
       failed_when: false
+      no_log: true
       tags: [always]
 
     - name: Fail if Tailscale is not running
@@ -74,11 +78,15 @@
   become: yes
 
   pre_tasks:
+    # no_log: homelab.setup is a public repository, so its Actions logs are
+    # public, and `-v` would print the full `tailscale status` (every device,
+    # hostname and address on the tailnet). Only the return code is used.
     - name: Verify Tailscale is installed and running
       ansible.builtin.command: tailscale status
       register: tailscale_check
       changed_when: false
       failed_when: false
+      no_log: true
       tags: [always]
 
     - name: Fail if Tailscale is not running
