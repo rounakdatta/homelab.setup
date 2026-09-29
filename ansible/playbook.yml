@@ -55,6 +55,11 @@
       tags: [always]
 
   roles:
+    # Memory and CPU tuning (zram, reclaim, control-plane CPU priority). First,
+    # so a fresh machine has it before k3s starts; applies live, no restarts.
+    - role: node-tuning
+      tags: [node-tuning, infra]
+
     # Install and configure K3s with Tailscale binding
     - role: k3s
       tags: [k3s, infra]
