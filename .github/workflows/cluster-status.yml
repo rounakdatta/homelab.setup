@@ -66,6 +66,44 @@ jobs:
             top -bn1 -o %MEM 2>/dev/null | sed -n '7,18p'
             echo "== top processes by cpu =="
             top -bn1 -o %CPU 2>/dev/null | sed -n '7,14p'
+            # Facts the memory plan rests on: swap/zram support, what the kubelet
+            # reserves and enforces, cgroup limits and weights, and who holds memory
+            # outside the pods. Still read-only.
+            echo "== memory plan: swap, zram, vm sysctls =="
+            swapon --show 2>/dev/null; echo "swap devices: $(tail -n +2 /proc/swaps | wc -l)"
+            echo "zram module: $(modinfo -F filename zram 2>/dev/null || echo MISSING)"
+            dpkg-query -W -f='${Package} ${Status} ${Version}\n' systemd-zram-generator zram-tools 2>/dev/null
+            apt-cache policy systemd-zram-generator zram-tools 2>/dev/null | grep -E '^[a-z]|Candidate'
+            sysctl vm.swappiness vm.overcommit_memory vm.min_free_kbytes vm.watermark_scale_factor vm.page-cluster 2>/dev/null
+            grep -E 'MemTotal|MemAvailable|SReclaimable|SUnreclaim|PageTables|Committed_AS' /proc/meminfo
+            echo "== memory plan: k3s and kubelet =="
+            k3s --version 2>/dev/null | head -1
+            systemctl show k3s -p MemoryCurrent -p MemoryPeak -p CPUWeight -p Slice 2>/dev/null
+            grep -hvE 'token|secret|password|key' /etc/rancher/k3s/config.yaml /etc/rancher/k3s/config.yaml.d/*.yaml 2>/dev/null | grep -v '^\s*$'
+            ls /var/lib/rancher/k3s/agent/etc/kubelet.conf.d/ 2>/dev/null | sed 's/^/kubelet.conf.d: /'
+            timeout 20 k3s kubectl get --raw "/api/v1/nodes/$(hostname)/proxy/configz" 2>/dev/null \
+              | jq -c '.kubeletconfig | {failSwapOn, memorySwap, systemReserved, kubeReserved, evictionHard, evictionSoft, evictionSoftGracePeriod, enforceNodeAllocatable, cgroupDriver, singleProcessOOMKill, memoryThrottlingFactor, featureGates}' 2>/dev/null
+            for c in /sys/fs/cgroup/kubepods.slice /sys/fs/cgroup/kubepods /sys/fs/cgroup/system.slice /sys/fs/cgroup/system.slice/k3s.service /sys/fs/cgroup/user.slice; do
+              [ -d "$c" ] && echo "$c: memory.max=$(cat $c/memory.max) current=$(( $(cat $c/memory.current) / 1048576 ))MB swap.max=$(cat $c/memory.swap.max 2>/dev/null) cpu.weight=$(cat $c/cpu.weight 2>/dev/null)"
+            done
+            ls -la /var/lib/rancher/k3s/server/db/etcd/member/snap/db 2>/dev/null | awk '{printf "etcd db file: %.0f MB\n", $5/1048576}'
+            echo "== memory plan: host services outside the pods, by memory (MB, incl. page cache) =="
+            for u in $(systemctl list-units --type=service --state=running --no-legend --plain 2>/dev/null | awk '{print $1}'); do
+              m=$(systemctl show -p MemoryCurrent --value "$u" 2>/dev/null); case "$m" in ''|*[!0-9]*) continue;; esac
+              echo "$(( m / 1048576 )) $u"
+            done | sort -rn | head -18
+            echo "== memory plan: web-hosting panel / antivirus footprint =="
+            [ -d /usr/local/hestia ] && echo "/usr/local/hestia present" || echo "no /usr/local/hestia"
+            for s in hestia nginx apache2 php8.3-fpm php8.2-fpm exim4 dovecot clamav-daemon clamav-freshclam spamd spamassassin fail2ban mariadb mysql bind9 named vsftpd proftpd; do
+              st=$(systemctl is-active "$s" 2>/dev/null); [ "$st" = active ] || [ "$st" = failed ] || [ "$st" = activating ] || continue
+              echo "$s: $st, enabled=$(systemctl is-enabled "$s" 2>/dev/null)"
+            done
+            ss -ltnpH 2>/dev/null | grep -vE 'k3s|containerd|tailscaled|kube' | awk '{print $4, $6}' | sort -u | head -20
+            zgrep -hE ' install (clamav|hestia|exim4|dovecot|nginx|apache2)[: ]' /var/log/dpkg.log* 2>/dev/null | sort | head -6
+            echo "== memory plan: pods by memory, and the node's requests =="
+            timeout 20 k3s kubectl top pods -A --sort-by=memory 2>/dev/null | head -22
+            timeout 20 k3s kubectl describe node "$(hostname)" 2>/dev/null | sed -n '/^Capacity:/,/^System Info:/p' | grep -E '^[A-Z]|memory|cpu:'
+            timeout 20 k3s kubectl describe node "$(hostname)" 2>/dev/null | sed -n '/Allocated resources:/,/Events:/p' | head -10
             echo "== cpus ==";                 nproc
             echo "== where the disk went (GB, depth 1; capped at 2 min each) =="
             timeout 120 du -xBG -d1 /var/lib/rancher/k3s 2>/dev/null | sort -n | tail -6
