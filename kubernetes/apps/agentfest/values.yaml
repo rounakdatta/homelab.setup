@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.1.38"
+  tag: "0.1.39"
 
 # Codeman rejects unknown Host headers before any handler runs — it is a
 # DNS-rebinding guard. Tailscale's .ts.net is allowed out of the box; this
@@ -55,15 +55,27 @@ ssh:
   enabled: true
   existingSecret: festie-secrets
 
-# Sized for real work — compiles, container builds, language servers. The
-# memory limit is deliberately far above the request: an agent left running
-# overnight should be able to burst without being OOM-killed mid-task.
+# Sized for real work — compiles, container builds, language servers — but
+# the memory limit MUST stay well under the node. kanmani has 16 GB and no
+# swap, and it also runs k3s (the API server + etcd), every other app and the
+# host's own services. The old 24Gi was larger than the machine itself, so it
+# never bounded anything: a runaway festie could take the whole node down with
+# it.
+#
+# With 10Gi, festie can never starve the rest of the node. On 2026-09-29 the
+# rest of the node used about 3.5–5.5 GiB, and festie peaked at 6.9 GiB with
+# three sessions.
+#
+# If festie does hit the cap, the kernel kills only festie's single largest
+# process: a runaway session, a browser or a build. It does not kill Codeman
+# or the rest of the pod, because the pod's memory.oom.group is 0 and every
+# process shares one oom_score_adj. Anything else on the node is untouched.
 resources:
   requests:
     cpu: "2"
     memory: 4Gi
   limits:
-    memory: 24Gi
+    memory: 10Gi
 
 # Deliberately unpinned, matching every app except frigate/ntfy: those two
 # carry homelab.setup/city=rishra because they belong to that physical
