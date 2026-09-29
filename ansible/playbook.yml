@@ -354,6 +354,27 @@
         data:
           pass_phrase: velero-ui/pass_phrase
 
+      # Velero's Kopia repository password: it encrypts every file-system
+      # backup in R2. Left unset, Velero falls back to its hardcoded and
+      # publicly known default (static-passw0rd), which made the backups only
+      # as private as the R2 credentials.
+      #
+      # Velero cannot change the password of a repository that already exists
+      # (it must be in place before the first backup to that repository), so
+      # adopting this one also moved the BSL to a fresh prefix -- see
+      # kubernetes/infrastructure/velero/backup-storage-location.yaml. NEVER
+      # rotate this value in place: a new password needs a new prefix.
+      #
+      # Living in Bitwarden is what makes disaster recovery possible: a rebuilt
+      # cluster needs this exact value to read the backups. Velero creates this
+      # Secret itself with the default when it is missing; this sync overwrites
+      # it. Bitwarden item `velero/repository_password` (password = the value),
+      # minted by create-bitwarden-secret.yml.
+      - name: velero-repo-credentials
+        namespace: velero
+        data:
+          repository-password: velero/repository_password
+
       # Keel credentials (image update UI)
       # Keys must match the env var names Keel reads, since the chart's
       # Deployment uses envFrom against this Secret.
