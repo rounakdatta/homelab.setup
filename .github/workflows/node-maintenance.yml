@@ -31,6 +31,14 @@ on:
         description: 'Encrypt Secrets at rest in etcd: write the config.yaml.d drop-in, restart k3s once, reencrypt existing Secrets. Idempotent — a no-op once enabled.'
         type: boolean
         default: false
+      velero_status:
+        description: 'Read-only Velero report: server + node-agent, repository password strength (never printed), BSLs, backup repositories, last backups'
+        type: boolean
+        default: false
+      backup_restore_drill:
+        description: 'Prove backups restore: back up a throwaway canary pod, delete it, restore it from R2, compare a random token. Touches nothing else.'
+        type: boolean
+        default: false
 
 jobs:
   maintain:
@@ -179,6 +187,91 @@ jobs:
           esac
           ns="${TARGET%%/*}"; name="${TARGET#*/}"
           tailscale ssh "root@${CONTROL}" "k3s kubectl -n '$ns' rollout restart deployment/'$name' && k3s kubectl -n '$ns' rollout status deployment/'$name' --timeout=240s"
+
+      # Read-only: everything an "are the backups healthy?" question needs. The
+      # repository password is reported only as its length and whether it is
+      # Velero's public default -- the value itself never leaves the node.
+      # Runs after Rollout restart, so one dispatch can restart velero and then
+      # report on it.
+      - name: Velero status
+        if: ${{ inputs.velero_status }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS'
+            K="k3s kubectl -n velero"
+            echo "== velero server / node-agent =="
+            $K get deploy velero --no-headers -o custom-columns=NAME:.metadata.name,READY:.status.readyReplicas,WANT:.spec.replicas
+            $K get ds node-agent --no-headers -o custom-columns=NAME:.metadata.name,READY:.status.numberReady,WANT:.status.desiredNumberScheduled
+            echo "== repository password (length only; never printed) =="
+            p="$($K get secret velero-repo-credentials -o jsonpath='{.data.repository-password}' 2>/dev/null | base64 -d 2>/dev/null)"
+            if [ -z "$p" ]; then echo "MISSING"
+            elif [ "$p" = "static-passw0rd" ]; then echo "DEFAULT (static-passw0rd) -- the public default, NOT safe"
+            else echo "custom (${#p} chars)"; fi
+            unset p
+            echo "== backup storage locations =="
+            $K get bsl -o custom-columns=NAME:.metadata.name,PHASE:.status.phase,DEFAULT:.spec.default,PREFIX:.spec.objectStorage.prefix,VALIDATED:.status.lastValidationTime
+            echo "== backup repositories =="
+            $K get backuprepositories -o custom-columns=NAMESPACE:.spec.volumeNamespace,TYPE:.spec.repositoryType,PHASE:.status.phase,MESSAGE:.status.message
+            echo "== last 6 backups (oldest first) =="
+            $K get backups --sort-by=.metadata.creationTimestamp --no-headers -o custom-columns=NAME:.metadata.name,PHASE:.status.phase,ERRORS:.status.errors,WARNINGS:.status.warnings,STARTED:.status.startTimestamp | tail -n 6
+          EOS
+
+      # Proves the backups can actually be RESTORED -- the only test of a backup
+      # that counts. A throwaway pod writes a random token to an emptyDir (no
+      # PVC, so nothing is left behind); it is backed up, its namespace is
+      # deleted, and it is restored from R2 through the same BSL and Kopia
+      # repository password as every real backup; then the token is compared.
+      # Touches nothing but the velero-drill namespace, and the drill backup
+      # expires itself after an hour.
+      - name: Backup/restore drill
+        if: ${{ inputs.backup_restore_drill }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS'
+            set -eu
+            K="k3s kubectl"
+            NS=velero-drill
+            STAMP="$(date -u +%Y%m%d%H%M%S)"
+            B="drill-$STAMP"; R="drill-$STAMP-restore"
+            TOKEN="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+            cleanup() {
+              $K delete ns "$NS" --ignore-not-found --wait=false >/dev/null 2>&1 || true
+              $K -n velero delete restore "$R" --ignore-not-found >/dev/null 2>&1 || true
+            }
+            trap cleanup EXIT
+            final_phase() {
+              for _ in $(seq 1 90); do
+                ph="$($K -n velero get "$1" "$2" -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+                case "$ph" in Completed|PartiallyFailed|Failed|FailedValidation) echo "$ph"; return 0;; esac
+                sleep 10
+              done
+              echo "TIMEOUT(${ph:-none})"
+            }
+            echo "== 1. canary pod: a random token on an emptyDir =="
+            $K delete ns "$NS" --ignore-not-found --wait=true --timeout=180s
+            $K create ns "$NS"
+            echo '{"apiVersion":"v1","kind":"Pod","metadata":{"name":"canary","namespace":"velero-drill"},"spec":{"nodeSelector":{"node-role.kubernetes.io/control-plane":"true"},"terminationGracePeriodSeconds":1,"containers":[{"name":"c","image":"busybox:1.36","command":["sh","-c","sleep 3600"],"volumeMounts":[{"name":"data","mountPath":"/data"}]}],"volumes":[{"name":"data","emptyDir":{}}]}}' | $K apply -f -
+            $K -n "$NS" wait --for=condition=Ready pod/canary --timeout=180s
+            $K -n "$NS" exec canary -- sh -c "echo $TOKEN > /data/canary.txt"
+            echo "== 2. back it up: $B =="
+            printf '{"apiVersion":"velero.io/v1","kind":"Backup","metadata":{"name":"%s","namespace":"velero"},"spec":{"includedNamespaces":["%s"],"defaultVolumesToFsBackup":true,"storageLocation":"default","ttl":"1h0m0s"}}' "$B" "$NS" | $K create -f -
+            bp="$(final_phase backup "$B")"; echo "backup: $bp"
+            $K -n velero get podvolumebackups -l velero.io/backup-name="$B" -o custom-columns=VOLUME:.spec.volume,PHASE:.status.phase,BYTES:.status.progress.totalBytes,MESSAGE:.status.message
+            if [ "$bp" != "Completed" ]; then $K -n velero get backup "$B" -o jsonpath='{.status.failureReason}{"\n"}' || true; echo "DRILL FAILED at backup"; exit 1; fi
+            echo "== 3. delete the namespace =="
+            $K delete ns "$NS" --wait=true --timeout=180s
+            echo "== 4. restore it from R2: $R =="
+            printf '{"apiVersion":"velero.io/v1","kind":"Restore","metadata":{"name":"%s","namespace":"velero"},"spec":{"backupName":"%s"}}' "$R" "$B" | $K create -f -
+            rp="$(final_phase restore "$R")"; echo "restore: $rp"
+            $K -n velero get restore "$R" --no-headers -o custom-columns=PHASE:.status.phase,ERRORS:.status.errors,WARNINGS:.status.warnings
+            $K -n velero get podvolumerestores -l velero.io/restore-name="$R" -o custom-columns=VOLUME:.spec.volume,PHASE:.status.phase,BYTES:.status.progress.totalBytes,MESSAGE:.status.message
+            case "$rp" in Completed|PartiallyFailed) ;; *) $K -n velero get restore "$R" -o jsonpath='{.status.failureReason}{"\n"}' || true; echo "DRILL FAILED at restore"; exit 1;; esac
+            $K -n "$NS" wait --for=condition=Ready pod/canary --timeout=300s
+            got="$($K -n "$NS" exec canary -- cat /data/canary.txt | tr -d '\r\n')"
+            echo "== 5. verdict =="
+            if [ "$got" = "$TOKEN" ]; then echo "DRILL PASSED: the restored token matches the one written before the backup"
+            else echo "DRILL FAILED: the restored token does not match"; exit 1; fi
+            echo "== backup repositories now =="
+            $K -n velero get backuprepositories -o custom-columns=NAMESPACE:.spec.volumeNamespace,PHASE:.status.phase,MESSAGE:.status.message
+          EOS
 
       - name: After
         run: |
