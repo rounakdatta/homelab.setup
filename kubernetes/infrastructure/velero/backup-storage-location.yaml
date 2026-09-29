@@ -15,7 +15,26 @@ spec:
   default: true
   objectStorage:
     bucket: homelab-sweet-homelab
-    prefix: velero
+    # `velero-enc`, not the original `velero`, since 2026-09-29.
+    #
+    # Kopia encrypts every repository with the password in
+    # velero-repo-credentials (Bitwarden velero/repository_password), and
+    # Velero cannot change the password of a repository that already exists.
+    # The repositories under `velero/` were created with Velero's public
+    # default (static-passw0rd), so adopting a real password meant fresh
+    # repositories under a new prefix. NEVER change the password again without
+    # also moving to a new prefix -- the old repositories would stop opening.
+    #
+    # Everything before 2026-09-29 is still in the bucket under `velero/`
+    # (Velero no longer tracks or expires it). To restore from it in an
+    # emergency: add a second, accessMode: ReadOnly BSL pointing at prefix
+    # `velero` (its backups re-sync into the cluster), temporarily set
+    # velero-repo-credentials back to static-passw0rd -- the password is global
+    # to Velero, so this briefly breaks the new repositories -- restore, then
+    # re-run the secrets sync to put the Bitwarden password back. Purge
+    # `velero/` once it is no longer needed: it is exactly the weakly protected
+    # data this change retired.
+    prefix: velero-enc
   config:
     region: auto
     s3ForcePathStyle: "true"
