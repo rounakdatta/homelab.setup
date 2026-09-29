@@ -11,6 +11,15 @@ name: Deploy infrastructure
 
 on:
   workflow_dispatch:
+    inputs:
+      tags:
+        description: 'Ansible tags to run (infra = everything; e.g. node-tuning for just that role)'
+        type: string
+        default: 'infra'
+      limit:
+        description: 'Ansible host limit (all, control or worker)'
+        type: string
+        default: 'all'
 
 jobs:
   setup:
@@ -139,6 +148,8 @@ jobs:
           CONTROL_MACHINE_NAME: ${{ secrets.CONTROL_MACHINE_NAME }}
           WORKER_MACHINE_NAME: ${{ secrets.WORKER_MACHINE_NAME }}
           K3S_NODE_TOKEN: ${{ env.K3S_NODE_TOKEN }}
+          TAGS: ${{ inputs.tags }}
+          LIMIT: ${{ inputs.limit }}
         run: |
           cat > /tmp/inventory << EOF
           [control]
@@ -148,7 +159,7 @@ jobs:
           ${WORKER_MACHINE_NAME} ansible_user=root node_labels="{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}"
           EOF
 
-          ANSIBLE_CONFIG=~/.ansible.cfg ansible-playbook ansible/playbook.yml -i /tmp/inventory --tags infra -v
+          ANSIBLE_CONFIG=~/.ansible.cfg ansible-playbook ansible/playbook.yml -i /tmp/inventory --tags "${TAGS}" --limit "${LIMIT}" -v
 
       - name: Verify infrastructure
         env:

@@ -1,0 +1,109 @@
+---
+# Memory and CPU tuning for the control-plane host: 6 CPUs, 16 GB, no disk
+# swap, running k3s (API server + etcd) beside every app. Every task takes
+# effect live, restarts neither k3s nor any pod, and is idempotent. That makes
+# it safe to run at any time, and on a fresh machine it runs before k3s is
+# installed.
+#
+# Why (2026-09-29): with CPU pressure at 70-90% the node had no headroom. k3s
+# crash-looped with "apiserver panic: context deadline exceeded" (etcd
+# starved) and the host rebooted. The facts behind each number are in the
+# "memory plan" sections of cluster-status.yml's node doctor.
+
+# Compressed swap in RAM. The kernel moves only cold anonymous pages there
+# (idle processes, data loaded once and never touched again), compressed about
+# 3:1 with zstd. Hot memory stays in RAM, and a burst finds free RAM instead of
+# pushing the node into thrashing, which is what starves etcd.
+#
+# Pods keep memory.swap.max=0 (the kubelet's default NoSwap) until the kubelet
+# is set to LimitedSwap. Host services, k3s included, use the swap right away.
+# k3s already runs the kubelet with failSwapOn=false, so the kubelet keeps
+# starting with swap on.
+- name: Install the zram generator
+  ansible.builtin.apt:
+    name: systemd-zram-generator
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: One zram swap device, half the size of RAM, zstd
+  ansible.builtin.copy:
+    dest: /etc/systemd/zram-generator.conf
+    mode: "0644"
+    content: |
+      # Managed by homelab.setup (ansible/roles/node-tuning).
+      # Half of RAM is the uncompressed ceiling: at ~3:1 a full device holds
+      # ~8 GB of cold pages in ~2.7 GB of RAM, and an empty one costs nothing.
+      [zram0]
+      zram-size = ram / 2
+      compression-algorithm = zstd
+      swap-priority = 100
+
+- name: Activate the zram swap device
+  ansible.builtin.systemd:
+    name: dev-zram0.swap
+    state: started
+    daemon_reload: true
+
+# Swap this cheap changes how reclaim should behave:
+# - swappiness 100 weighs anonymous pages the same as file cache.
+# - page-cluster 0 reads single pages; zram has no seek cost to amortise.
+# - watermark_scale_factor 125 wakes kswapd at ~1.25% free instead of ~0.1%.
+#   Reclaim then runs in the background ahead of a burst, rather than
+#   stalling whichever process is allocating.
+- name: Kernel memory settings
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/90-homelab-memory.conf
+    mode: "0644"
+    content: |
+      # Managed by homelab.setup (ansible/roles/node-tuning).
+      vm.swappiness = 100
+      vm.page-cluster = 0
+      vm.watermark_scale_factor = 125
+  register: memory_sysctl
+
+- name: Apply the kernel memory settings
+  ansible.builtin.command: sysctl --load /etc/sysctl.d/90-homelab-memory.conf
+  when: memory_sysctl.changed
+
+# Under CPU contention, the control plane comes first. cgroup v2 splits a busy
+# CPU between siblings by weight:
+# - The kubelet gives kubepods.slice a weight of 235 (for 6 CPUs).
+# - system.slice, which holds k3s and so both the API server and etcd, has
+#   the default weight of 100.
+# So pods could take 70% of a busy CPU and starve etcd. That is what happened
+# on 2026-09-29.
+#
+# At 400, the host gets up to ~63%, but only while both sides want the CPU.
+# An idle k3s leaves every cycle to the pods.
+- name: system.slice drop-in directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/system.slice.d
+    state: directory
+    mode: "0755"
+
+- name: CPU priority for host services (k3s, etcd) over pods
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/system.slice.d/50-cpu-weight.conf
+    mode: "0644"
+    content: |
+      # Managed by homelab.setup (ansible/roles/node-tuning).
+      [Slice]
+      CPUWeight=400
+  register: slice_weight
+
+- name: Apply the CPU priority live
+  ansible.builtin.shell: systemctl daemon-reload && systemctl set-property --runtime system.slice CPUWeight=400
+  when: slice_weight.changed
+
+- name: Report swap, memory settings and CPU weights
+  ansible.builtin.shell: |
+    swapon --show
+    sysctl vm.swappiness vm.page-cluster vm.watermark_scale_factor
+    echo "system.slice cpu.weight=$(cat /sys/fs/cgroup/system.slice/cpu.weight) kubepods.slice cpu.weight=$(cat /sys/fs/cgroup/kubepods.slice/cpu.weight 2>/dev/null)"
+  register: node_tuning_report
+  changed_when: false
+
+- name: Show the report
+  ansible.builtin.debug:
+    var: node_tuning_report.stdout_lines

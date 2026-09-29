@@ -18,11 +18,15 @@
   become: yes
 
   pre_tasks:
+    # no_log: homelab.setup is a public repository, so its Actions logs are
+    # public, and `-v` would print the full `tailscale status` (every device,
+    # hostname and address on the tailnet). Only the return code is used.
     - name: Verify Tailscale is installed and running
       ansible.builtin.command: tailscale status
       register: tailscale_check
       changed_when: false
       failed_when: false
+      no_log: true
       tags: [always]
 
     - name: Fail if Tailscale is not running
@@ -55,6 +59,11 @@
       tags: [always]
 
   roles:
+    # Memory and CPU tuning (zram, reclaim, control-plane CPU priority). First,
+    # so a fresh machine has it before k3s starts; applies live, no restarts.
+    - role: node-tuning
+      tags: [node-tuning, infra]
+
     # Install and configure K3s with Tailscale binding
     - role: k3s
       tags: [k3s, infra]
@@ -69,11 +78,15 @@
   become: yes
 
   pre_tasks:
+    # no_log: homelab.setup is a public repository, so its Actions logs are
+    # public, and `-v` would print the full `tailscale status` (every device,
+    # hostname and address on the tailnet). Only the return code is used.
     - name: Verify Tailscale is installed and running
       ansible.builtin.command: tailscale status
       register: tailscale_check
       changed_when: false
       failed_when: false
+      no_log: true
       tags: [always]
 
     - name: Fail if Tailscale is not running
