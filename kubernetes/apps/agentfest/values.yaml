@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.2.0"
+  tag: "0.2.1"
 
 # Pin the self-updating components to exact versions rather than tracking
 # "latest", so upgrades are deliberate and reproducible. Bump after reviewing
@@ -24,6 +24,14 @@ paseo:
 
   relay:
     enabled: true
+
+  # The mode new Claude agents start in, in every client. Bypass for the
+  # reason festie's Codeman runs it (dotfiles hosts/festie, claudePermissionMode):
+  # this machine exists for work that finishes while nobody is watching, and a
+  # prompt waiting for an answer is the one failure that costs the whole
+  # session. The rest of "Opus 5.5 at max, bypass" — model, thinking level,
+  # the profile, the projects — is declared in dotfiles (configs/paseo).
+  claudeDefaultMode: bypassPermissions
 
   # Synced from Bitwarden `agentfest/paseo_password` by the secrets play. The
   # same value goes into the Paseo app when pairing.

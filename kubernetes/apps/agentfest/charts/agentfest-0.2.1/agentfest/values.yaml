@@ -3,7 +3,7 @@ image:
   # Pinned to the same tag as Chart.appVersion so a chart upgrade always
   # corresponds to one specific image. Override at install time if you need
   # to roll forward without bumping the chart.
-  tag: "0.2.0"
+  tag: "0.2.1"
   pullPolicy: IfNotPresent
 
 # One deployment is one computer. Scaling this is meaningless: the whole
@@ -67,6 +67,15 @@ paseo:
   # need it.
   webUi:
     enabled: false
+
+  # The mode new Claude agents start in, in every client: one of plan,
+  # default, acceptEdits, auto, bypassPermissions. Paseo's config has no key
+  # for it (it hardcodes "auto"), so the launcher patches that default at each
+  # start (paseoDefaults in flake.nix); "auto" is upstream behaviour. The rest
+  # of what a new agent starts with — model, thinking level, profiles,
+  # projects — is the machine's Paseo config, declared in dotfiles
+  # (configs/paseo).
+  claudeDefaultMode: "auto"
 
 service:
   # Nothing needs an inbound path to use the relay. Enable this only for
