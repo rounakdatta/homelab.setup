@@ -375,9 +375,13 @@ jobs:
                         # (owner-only); the public log gets error kinds and counts.
                         cat /tmp/create.err /tmp/extract.err > /dst/.agentfest-migration-errors.txt
                         chmod 600 /dst/.agentfest-migration-errors.txt
-                        echo "error kinds:"
-                        grep -v '^Total bytes' /tmp/create.err /tmp/extract.err \
-                          | awk -F': ' '{print "  " $(NF-1) ": " $NF}' | sort | uniq -c || true
+                        # The message only, never the path: a tar line is
+                        # "tar: <path>: [Cannot <verb>: ]<reason>", so keep the
+                        # reason and, when present, the "Cannot <verb>" before it.
+                        echo "error kinds (paths are in ~/.agentfest-migration-errors.txt on agentfest):"
+                        grep -hv '^Total bytes' /tmp/create.err /tmp/extract.err \
+                          | awk -F': ' '{k=$NF; if (NF >= 3 && $(NF-1) ~ /^Cannot /) k=$(NF-1) ": " k; print "  " k}' \
+                          | sort | uniq -c || true
                         stripped=0
                         while IFS= read -r -d '' f; do
                           grep -qi codeman "$f" || continue
