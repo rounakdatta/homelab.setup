@@ -371,6 +371,13 @@ jobs:
                         echo "tar create exit ${rc[0]} (1 = files changed while being read), extract exit ${rc[1]}"
                         echo "warnings: create $(grep -vc '^Total bytes' /tmp/create.err || true), extract $(grep -c . /tmp/extract.err || true)"
                         grep '^Total bytes' /tmp/create.err || true
+                        # The full list, with paths, stays on agentfest's own volume
+                        # (owner-only); the public log gets error kinds and counts.
+                        cat /tmp/create.err /tmp/extract.err > /dst/.agentfest-migration-errors.txt
+                        chmod 600 /dst/.agentfest-migration-errors.txt
+                        echo "error kinds:"
+                        grep -v '^Total bytes' /tmp/create.err /tmp/extract.err \
+                          | awk -F': ' '{print "  " $(NF-1) ": " $NF}' | sort | uniq -c || true
                         stripped=0
                         while IFS= read -r -d '' f; do
                           grep -qi codeman "$f" || continue
