@@ -65,6 +65,8 @@ spec:
               value: {{ .Values.paseo.voice.enabled | quote }}
             - name: PASEO_WEB_UI_ENABLED
               value: {{ .Values.paseo.webUi.enabled | quote }}
+            - name: AGENTFEST_PASEO_CLAUDE_DEFAULT_MODE
+              value: {{ .Values.paseo.claudeDefaultMode | quote }}
             {{- if .Values.ssh.enabled }}
             - name: AGENTFEST_SSH_DIR
               value: {{ .Values.ssh.mountPath | quote }}
