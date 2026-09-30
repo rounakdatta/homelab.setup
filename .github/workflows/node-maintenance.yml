@@ -39,6 +39,10 @@ on:
         description: 'Prove backups restore: back up a throwaway canary pod, delete it, restore it from R2, compare a random token. Touches nothing else.'
         type: boolean
         default: false
+      migrate_festie_home:
+        description: 'One-off Codeman -> Paseo move: copy festie''s home into agentfest''s. Adds only what agentfest lacks, never overwrites; skips caches and machine-local state. Prints counts only.'
+        type: boolean
+        default: false
 
 jobs:
   maintain:
@@ -277,6 +281,134 @@ jobs:
             else echo "DRILL FAILED: the restored token does not match"; exit 1; fi
             echo "== backup repositories now =="
             $K -n velero get backuprepositories -o custom-columns=NAMESPACE:.spec.volumeNamespace,PHASE:.status.phase,MESSAGE:.status.message
+          EOS
+
+      # One-off, for the Codeman -> Paseo move. festie's home holds everything
+      # accumulated by hand over months — repos with uncommitted work, kube
+      # contexts, cloud CLI logins, mic, browser sessions, Claude history and
+      # memory — none of it in any repo, so agentfest's fresh volume started
+      # without it. A Job on the control plane mounts both local-path PVCs
+      # (same node) and tars one into the other:
+      #   - it adds only what agentfest lacks (--skip-old-files): nothing
+      #     agentfest already has is replaced, including its own Claude login
+      #     and every file home-manager wrote;
+      #   - it skips caches, package-manager prefixes, and machine-local state
+      #     agentfest must own itself: gpg, ssh, the pass clone, Paseo's and
+      #     Codeman's state, and Chrome's Singleton* locks, which would
+      #     otherwise make Chrome refuse a profile as in use on another computer;
+      #   - it strips Codeman's hooks and statusline from the copied
+      #     settings.local.json files, which would otherwise run on every tool
+      #     call against a Codeman that is not there.
+      # festie's volume is mounted read-only and festie keeps running. A re-run
+      # adds only what appeared since. This repo is public: the step prints
+      # counts and exit codes, never a path.
+      - name: Migrate festie's home into agentfest
+        if: ${{ inputs.migrate_festie_home }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS'
+            set -euo pipefail
+            K="k3s kubectl -n apps"
+            $K delete job agentfest-migrate-from-festie --ignore-not-found --wait=true >/dev/null
+            $K apply -f - >/dev/null <<'YAML'
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: agentfest-migrate-from-festie
+            namespace: apps
+          spec:
+            backoffLimit: 0
+            ttlSecondsAfterFinished: 3600
+            template:
+              metadata:
+                annotations:
+                  backup.velero.io/backup-volumes-excludes: "src,dst"
+              spec:
+                restartPolicy: Never
+                nodeSelector:
+                  node-role.kubernetes.io/control-plane: "true"
+                securityContext:
+                  runAsUser: 1000
+                  runAsGroup: 100
+                  fsGroup: 100
+                  fsGroupChangePolicy: OnRootMismatch
+                  seccompProfile:
+                    type: RuntimeDefault
+                containers:
+                  - name: copy
+                    # The agentfest image is already on the node, and its
+                    # home-manager generation carries jq and find.
+                    image: ghcr.io/rounakdatta/agentfest:0.2.1
+                    imagePullPolicy: IfNotPresent
+                    securityContext:
+                      allowPrivilegeEscalation: false
+                      capabilities:
+                        drop: [ALL]
+                    resources:
+                      requests:
+                        memory: 256Mi
+                      limits:
+                        memory: 2Gi
+                    command: ["/bin/bash", "-c"]
+                    args:
+                      - |
+                        set -uo pipefail
+                        HP="$AGENTFEST_HOME_ACTIVATION/home-path/bin"
+                        cd /src || exit 1
+                        nice -n 19 tar -cf - --totals \
+                          --anchored \
+                          --exclude=./.cache --exclude=./.npm --exclude=./.bun --exclude=./go/pkg \
+                          --exclude=./.homebrew --exclude=./.npm-global --exclude=./.npm-packages \
+                          --exclude=./.nix-profile --exclude=./.nix-defexpr --exclude=./.local/state \
+                          --exclude=./.paseo --exclude=./.paseo-app --exclude=./.codeman \
+                          --exclude=./.password-store --exclude=./.gnupg --exclude=./.ssh --exclude=./.secrets \
+                          --exclude=./agentfest-pairing-link.txt --exclude=./agentfest-pairing-qr.txt \
+                          --exclude=./.claude/.credentials.json --exclude=./.claude/plugins --exclude=./.claude/skills \
+                          --exclude=./.claude/shell-snapshots --exclude=./.claude/session-env --exclude=./.claude/sessions \
+                          --exclude=./.claude/cache --exclude=./.claude/paste-cache \
+                          --no-anchored --exclude=SingletonLock --exclude=SingletonSocket --exclude=SingletonCookie \
+                          . 2>/tmp/create.err | nice -n 19 tar -C /dst -xf - --skip-old-files 2>/tmp/extract.err
+                        rc=("${PIPESTATUS[@]}")
+                        echo "tar create exit ${rc[0]} (1 = files changed while being read), extract exit ${rc[1]}"
+                        echo "warnings: create $(grep -vc '^Total bytes' /tmp/create.err || true), extract $(grep -c . /tmp/extract.err || true)"
+                        grep '^Total bytes' /tmp/create.err || true
+                        stripped=0
+                        while IFS= read -r -d '' f; do
+                          grep -qi codeman "$f" || continue
+                          "$HP/jq" '(.hooks // {}) as $h
+                            | .hooks = ($h
+                                | with_entries(.value |= (map(.hooks |= map(select(tostring | test("CODEMAN") | not)))
+                                                          | map(select((.hooks | length) > 0))))
+                                | with_entries(select((.value | length) > 0)))
+                            | if (.hooks | length) == 0 then del(.hooks) else . end
+                            | if ((.statusLine // "") | tostring | test("codeman"; "i")) then del(.statusLine) else . end' \
+                            "$f" > "$f.agentfest-tmp" && mv "$f.agentfest-tmp" "$f" && stripped=$((stripped + 1))
+                        done < <("$HP/find" /dst/personal /dst/work /dst/codeman-cases -maxdepth 4 \
+                                   -path '*/.claude/settings.local.json' -print0 2>/dev/null)
+                        echo "Codeman hooks stripped from ${stripped} settings file(s)"
+                        date -u +%FT%TZ > /dst/.agentfest-migrated-from-festie
+                        [ "${rc[1]}" = 0 ] && [ "${rc[0]}" -le 1 ]
+                    volumeMounts:
+                      - name: src
+                        mountPath: /src
+                        readOnly: true
+                      - name: dst
+                        mountPath: /dst
+                volumes:
+                  - name: src
+                    persistentVolumeClaim:
+                      claimName: festie-home
+                      readOnly: true
+                  - name: dst
+                    persistentVolumeClaim:
+                      claimName: agentfest-home
+          YAML
+            for i in $(seq 1 180); do
+              s="$($K get job agentfest-migrate-from-festie -o jsonpath='{.status.succeeded}/{.status.failed}')"
+              case "$s" in 1/*) echo "migration job succeeded after ~$((i * 10))s"; break ;; */1) echo "migration job FAILED"; break ;; esac
+              sleep 10
+            done
+            $K logs job/agentfest-migrate-from-festie --tail=20 || true
+            [ "$($K get job agentfest-migrate-from-festie -o jsonpath='{.status.succeeded}')" = "1" ]
           EOS
 
       - name: After
