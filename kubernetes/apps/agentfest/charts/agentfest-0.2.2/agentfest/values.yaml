@@ -3,7 +3,7 @@ image:
   # Pinned to the same tag as Chart.appVersion so a chart upgrade always
   # corresponds to one specific image. Override at install time if you need
   # to roll forward without bumping the chart.
-  tag: "0.2.1"
+  tag: "0.2.2"
   pullPolicy: IfNotPresent
 
 # One deployment is one computer. Scaling this is meaningless: the whole
@@ -57,9 +57,12 @@ paseo:
   # connects by a DNS name, such as the Service below.
   hostnames: []
 
-  # Local dictation and voice mode run speech models on the daemon's CPU and
-  # download about 800 MB of them on first boot. Off by default: the phone
-  # keyboard's own dictation works in the composer regardless.
+  # Local dictation and voice mode: speech models (Parakeet STT, Kokoro TTS)
+  # that run on the daemon's CPU, about 800 MB fetched once into ~/.paseo on
+  # the volume. The voice conversation itself is a hidden Claude session, so
+  # it draws on the same plan. Off by default in the chart because the first
+  # boot's download and every utterance cost CPU; the phone keyboard's own
+  # dictation works in the composer regardless.
   voice:
     enabled: false
 

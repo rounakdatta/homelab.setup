@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.2.1"
+  tag: "0.2.2"
 
 # Pin the self-updating components to exact versions rather than tracking
 # "latest", so upgrades are deliberate and reproducible. Bump after reviewing
@@ -38,6 +38,12 @@ paseo:
   password:
     existingSecret: agentfest-auth
 
+  # Dictation and voice mode, on: Rounak asked for them (30 Sep). Local
+  # models, so no audio leaves the machine; the first boot fetches ~800 MB
+  # into ~/.paseo on the volume, once.
+  voice:
+    enabled: true
+
   # The names festie connects by. Paseo's DNS-rebinding guard answers only to
   # localhost and IP literals otherwise.
   hostnames:
@@ -62,10 +68,13 @@ ssh:
   enabled: true
   existingSecret: festie-secrets
 
-# Sized to share the 16 GB node with festie while both exist. With the rest of
-# the node at 3.5–5.5 GiB and festie capped at 10Gi, a cap here beyond ~6Gi
-# would only let the two together push the node into swap. Move festie's
-# budget over when it goes (10Gi, the same as festie's cap).
+# Sized to share the 16 GB node with festie while both exist. 8Gi from 30
+# Sep, when voice mode put ~1–1.5 GiB of speech models in the daemon: at 6Gi
+# a busy afternoon could reach the cap, and the kernel would kill the largest
+# process, which with the models loaded is Paseo's worker, and with it every
+# running turn. The headroom comes from festie shrinking as work moves here
+# (5.9 GiB with six sessions on 30 Sep); zram covers a brief overlap. Move to
+# festie's 10Gi when festie goes.
 #
 # The CPU request fits: the node's requests sat at 3805m of 6000m on 29 Sep.
 resources:
@@ -73,7 +82,7 @@ resources:
     cpu: "1"
     memory: 2Gi
   limits:
-    memory: 6Gi
+    memory: 8Gi
 
 # Same reasons as festie (see ../festie/kustomization.yaml): dshm cannot
 # outlive the pod, and home is regenerable state whose durable parts live
