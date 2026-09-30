@@ -9,11 +9,11 @@
 # come from the sibling kustomization.yaml and say where it came from.
 
 charts:
-  - path: kubernetes/apps/agentfest/charts/agentfest-0.1.39
+  - path: kubernetes/apps/agentfest/charts/agentfest-0.2.0
     chart: agentfest
-    version: 0.1.39
+    version: 0.2.0
     repo: oci://ghcr.io/rounakdatta/charts
-    sha256: eb15e6af5e73dae821b6bfde7593f0ac04a0240431acf0ed4f4a9a38fa80beb4
+    sha256: ff570eca9276efc4103df531c0f5df8c80a5693c2fd2c4455f5d9b57c7499c35
   - path: kubernetes/apps/auth2api/charts/app-template-5.1.0
     chart: app-template
     version: 5.1.0
@@ -24,6 +24,11 @@ charts:
     version: 0.20.0
     repo: https://charts.gabe565.com
     sha256: 7094963cec1cf87590265d1dcedcc7037a7b5746b24315fc5747b372ff321011
+  - path: kubernetes/apps/festie/charts/agentfest-0.1.39
+    chart: agentfest
+    version: 0.1.39
+    repo: oci://ghcr.io/rounakdatta/charts
+    sha256: eb15e6af5e73dae821b6bfde7593f0ac04a0240431acf0ed4f4a9a38fa80beb4
   - path: kubernetes/apps/firefly/charts/firefly-iii-1.9.13
     chart: firefly-iii
     version: 1.9.13

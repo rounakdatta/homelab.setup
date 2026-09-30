@@ -1,0 +1,61 @@
+---
+# Restrict ingress to festie's HTTP port to the Traefik ingress controller
+# (which runs in kube-system on k3s); no other workload needs to reach it
+# directly.
+#
+# NOTE: k3s must be running its NetworkPolicy controller (the default; disabled
+# only with --disable-network-policy). A policy with no enforcer has no effect,
+# so confirm that before relying on this.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: festie-netpol
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: agentfest
+      app.kubernetes.io/instance: festie
+  policyTypes:
+    - Ingress
+  ingress:
+    # Traefik (kube-system) -> festie:3000.
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: TCP
+          port: 3000
+
+# ---------------------------------------------------------------------------
+# Egress is intentionally left at the default (allow-all) for now: this host
+# legitimately reaches many external endpoints, so outbound rules are staged
+# below as ready-to-apply options rather than enabled blind. To use one, pick a
+# tier, uncomment it, AND add "Egress" to policyTypes above.
+#
+# ---- Tier 1: keep the internet open, restrict in-cluster reach ----
+# Leaves internet egress intact while limiting reach to other in-cluster
+# workloads. DNS runs in kube-system, so allow it explicitly.
+#
+#   policyTypes: [Ingress, Egress]
+#   egress:
+#     - to:                                     # DNS
+#         - namespaceSelector:
+#             matchLabels: { kubernetes.io/metadata.name: kube-system }
+#       ports:
+#         - { protocol: UDP, port: 53 }
+#         - { protocol: TCP, port: 53 }
+#     - to:                                     # internet, minus the cluster CIDRs
+#         - ipBlock:
+#             cidr: 0.0.0.0/0
+#             except:
+#               - 10.42.0.0/16                  # k3s pod CIDR
+#               - 10.43.0.0/16                  # k3s service CIDR
+#     # If you still reach specific in-cluster services, add a narrow allow for
+#     # just those instead of opening the whole CIDR.
+#
+# ---- Tier 2: explicit outbound allowlist ----
+# Allow only known egress destinations. More upkeep (CDN IP churn) -- pair with
+# an egress proxy, or resolve/pin the CIDRs actually needed.
+# ---------------------------------------------------------------------------

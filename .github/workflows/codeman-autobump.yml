@@ -28,7 +28,7 @@ jobs:
       - name: Resolve current vs latest
         id: v
         run: |
-          FILE=kubernetes/apps/agentfest/values.yaml
+          FILE=kubernetes/apps/festie/values.yaml
           CURRENT=$(sed -n '/^codeman:/,/^[^[:space:]#]/ s/^[[:space:]]*version:[[:space:]]*"\([^"]*\)".*/\1/p' "$FILE" | head -1)
           LATEST=$(npm view aicodeman version)
           echo "current=$CURRENT  latest=$LATEST"
@@ -48,7 +48,7 @@ jobs:
           CURRENT: ${{ steps.v.outputs.current }}
           LATEST: ${{ steps.v.outputs.latest }}
         run: |
-          FILE=kubernetes/apps/agentfest/values.yaml
+          FILE=kubernetes/apps/festie/values.yaml
           sed -i -E "/^codeman:/,/^[^[:space:]#]/ s/^([[:space:]]*version:[[:space:]]*\")[^\"]+(\")/\1${LATEST}\2/" "$FILE"
           grep -A2 '^codeman:' "$FILE"
 

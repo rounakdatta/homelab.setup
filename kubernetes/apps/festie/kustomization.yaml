@@ -1,0 +1,72 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apps
+
+# One release is one computer. `festie` is the first, and the last one driven
+# by Codeman: it stays pinned to agentfest 0.1.39 while its Paseo successor,
+# ../agentfest, proves itself, and goes when that one carries the daily work.
+# This directory was kubernetes/apps/agentfest until then; only the path moved,
+# so every rendered object (release `festie`, PVC `festie-home`) is unchanged.
+helmCharts:
+  - name: agentfest
+    repo: oci://ghcr.io/rounakdatta/charts
+    version: 0.1.39
+    releaseName: festie
+    namespace: apps
+    valuesFile: values.yaml
+
+resources:
+  - ingress.yaml
+  - networkpolicy.yaml
+
+# Volumes excluded from Velero's file-system backup:
+#
+#   dshm  an emptyDir (browser shared memory). Its contents cannot outlive the
+#         pod, so backing it up is never meaningful — and Velero logs a "pod is
+#         not running" warning for it against every completed/evicted festie pod
+#         it finds, which was the source of most of our backup warnings.
+#
+#   home  the /home/rounak PVC — the whole computer. Deliberately NOT backed up:
+#         it is ~26 GB of regenerable state (git checkouts, npm/nix/go caches,
+#         Claude session data, browser profiles) whose durable parts already
+#         live elsewhere (the pass store is git-synced from gitlab; downloaded
+#         statements are filed in Nextcloud). Backing it up shipped a full copy
+#         of the pass store, ~/.ssh, ~/.claude and the browser profiles to R2
+#         every night for no recovery value. NOTE this does NOT stop the Secret
+#         OBJECTS (festie-secrets = the SSH + GPG keys, plus every app Secret)
+#         from being in the backup — they are API resources, not volume data.
+#         Those are excluded by the velero.io/exclude-from-backup label the
+#         secrets play now stamps on every Bitwarden-synced Secret.
+#
+# DNS: ndots:1 instead of the cluster default ndots:5.
+#
+# Under ndots:5 every name with fewer than five dots -- i.e. every external
+# host -- is first tried against all five search domains the pod inherits
+# (apps/svc/cluster.local, plus the node's pig-universe.ts.net and
+# cs1cloud.internal, which answer slowly upstream and are never cached). Measured
+# on festie 2026-09-29, cold getaddrinfo: 1.0-2.1 s per relative external name
+# vs 0.10-0.19 s for the same kind of name as absolute; curl to npmjs.com spent
+# 3.1 s of 3.2 s in DNS. Every new API connection, git/gh call, npm/uvx lookup
+# and MCP connect paid that. ndots:1 sends any dotted name to the real resolver
+# first; single-label names (a Service like `festie`) still walk the search list,
+# and full `*.svc.cluster.local` names resolve exactly as before.
+#
+# The chart has neither podAnnotations nor dnsConfig values, hence the patch.
+patches:
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: festie
+      spec:
+        template:
+          metadata:
+            annotations:
+              backup.velero.io/backup-volumes-excludes: "dshm,home"
+          spec:
+            dnsConfig:
+              options:
+                - name: ndots
+                  value: "1"
