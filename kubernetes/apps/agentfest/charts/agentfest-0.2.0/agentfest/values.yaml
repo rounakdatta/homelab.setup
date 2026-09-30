@@ -1,0 +1,187 @@
+image:
+  repository: ghcr.io/rounakdatta/agentfest
+  # Pinned to the same tag as Chart.appVersion so a chart upgrade always
+  # corresponds to one specific image. Override at install time if you need
+  # to roll forward without bumping the chart.
+  tag: "0.2.0"
+  pullPolicy: IfNotPresent
+
+# One deployment is one computer. Scaling this is meaningless: the whole
+# machine — home directory, agent state, Claude Code state — is a single
+# ReadWriteOnce volume with a single writer.
+replicaCount: 1
+
+# Claude Code is installed from npm into the persistent volume rather than
+# baked in from nixpkgs. The client version gates which models it can see —
+# nixpkgs' 2.1.86 predates Opus 5 and silently falls back to Opus 4.6, and
+# Opus 5.5 needs 2.1.280 or newer — and a read-only Nix store cannot
+# self-update out of that.
+#
+# Pinned to an exact version so upgrades are deliberate and reproducible. The
+# entrypoint compares the pin with the version actually installed, so an
+# install that drifted out of band is brought back to the pin on the next boot.
+claudeCode:
+  version: "2.1.285"
+
+# Paseo: the daemon that runs the agents, and that every client — the phone
+# app, the desktop app, the CLI — talks to.
+paseo:
+  # Installed into the persistent volume at boot, like Claude Code, so a bump
+  # is a values edit and a pod restart, not an image rebuild. The app's own
+  # update button is inert by design (see paseoPrefix in flake.nix), so this
+  # pin is what runs.
+  version: "0.10.2"
+  port: 6767
+
+  # Where the daemon listens. Loopback is enough for the relay, which dials
+  # out. Anything wider exists only for in-cluster clients; the password
+  # guards it, and a NetworkPolicy should say who may connect.
+  listenHost: "127.0.0.1"
+
+  relay:
+    # Paseo's end-to-end encrypted relay, reached outbound from the pod. The
+    # relay never learns the daemon's key, so it can carry traffic but cannot
+    # read it or connect by itself.
+    enabled: true
+
+  # REQUIRED: a Secret holding the daemon password. Every client must present
+  # it — relay clients included, which upstream would otherwise admit on the
+  # pairing link alone (see paseoHarden in flake.nix). The chart refuses to
+  # render without it.
+  password:
+    existingSecret: ""
+    key: paseo-password
+
+  # Extra Host names the daemon answers to. Its DNS-rebinding guard only
+  # knows localhost and IP literals, so this is needed only when something
+  # connects by a DNS name, such as the Service below.
+  hostnames: []
+
+  # Local dictation and voice mode run speech models on the daemon's CPU and
+  # download about 800 MB of them on first boot. Off by default: the phone
+  # keyboard's own dictation works in the composer regardless.
+  voice:
+    enabled: false
+
+  # The web UI the daemon can serve itself. The phone and desktop apps do not
+  # need it.
+  webUi:
+    enabled: false
+
+service:
+  # Nothing needs an inbound path to use the relay. Enable this only for
+  # in-cluster clients, and pair it with paseo.listenHost and a NetworkPolicy.
+  enabled: false
+  port: 6767
+
+persistence:
+  # The computer itself. /home/rounak holds the workspace, ~/.claude session
+  # state, ~/.paseo (agent history, schedules, the daemon's key),
+  # ~/.paseo-app and ~/.npm-global (Paseo and Claude Code), git checkouts and
+  # build artifacts — so size this for real work, not for config.
+  enabled: true
+  # local-path is the homelab's only storage class, and it is node-local:
+  # this PVC pins the pod to whichever node first schedules it.
+  storageClass: ""
+  size: 200Gi
+  accessMode: ReadWriteOnce
+  mountPath: /home/rounak
+  # Reuse a pre-existing PVC instead of letting the chart create one.
+  existingClaim: ""
+
+# Credentials the machine needs to be *itself*, mounted at runtime rather than
+# baked into the image. Two keys, both stored in Bitwarden as secure notes
+# because they are multi-line armored blocks:
+#
+#   personal.pem  RSA private key. configs/ssh points github.com and gitlab.com
+#                 at ~/.ssh/keys/personal.pem, so this is what makes git work —
+#                 including claude-skills' agent-smith clone during activation.
+#   private.key   PGP private key. configs/gnupg imports it during activation,
+#                 which is what lets pass/gopass decrypt — and therefore what
+#                 the pass-backed MCP servers depend on.
+#
+# The SSH key is not optional in practice: dotfiles' claude-skills module
+# clones agent-smith during home-manager activation with no fault tolerance.
+# Without a key that can read that repo, activation fails — the entrypoint
+# deliberately continues so you can still reach a terminal and fix it, but the
+# environment will be incomplete until you do.
+#
+# The entrypoint copies both to the paths dotfiles expects; they cannot be
+# mounted there directly because a Secret volume is read-only and both
+# destinations need to stay writable.
+ssh:
+  enabled: false
+  existingSecret: ""
+  mountPath: /run/secrets/agentfest
+  defaultMode: 256
+
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 100
+  # Makes the PVC group-writable so the non-root user actually owns its home.
+  fsGroup: 100
+  # Apply the container runtime's default seccomp profile.
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level securityContext, applied per-container in the Deployment.
+# Distinct from the pod securityContext above: capabilities and privilege
+# escalation are container properties, not pod ones.
+containerSecurityContext:
+  # The entrypoint never needs to gain privileges.
+  allowPrivilegeEscalation: false
+  capabilities:
+    # Drop every Linux capability. Nothing here needs one: the process is
+    # non-root and Paseo listens on 6767 (no bind below 1024).
+    drop:
+      - ALL
+  # Left false on purpose: the entrypoint's mktemp and a few tools write to
+  # /tmp and /var/tmp, which live on the image rootfs. To enable it, also mount
+  # emptyDir volumes at /tmp and /var/tmp, then flip this to true.
+  readOnlyRootFilesystem: false
+
+# A real /dev/shm. The container runtime's default is 64Mi, which is where
+# Chrome puts renderer shared memory — and Google's sign-in page exhausts it
+# (reCAPTCHA in an iframe). The renderer then wedges rather than crashing: the
+# browser stays up and reports the right URL while every page-level CDP call
+# times out, which reads as the automation being broken rather than the page
+# being dead.
+#
+# Memory-backed, so it counts against the container's memory limit rather than
+# the node's disk.
+dshm:
+  enabled: true
+  size: 1Gi
+
+resources:
+  requests:
+    cpu: "1"
+    memory: 2Gi
+  limits:
+    memory: 8Gi
+
+# Readiness only: it gates nothing but the pod's Ready condition, so a slow
+# first boot (home-manager activation plus npm installs, minutes on a cold
+# volume) cannot restart-loop the pod the way a liveness probe would. It runs
+# inside the container because the daemon listens on loopback.
+readinessProbe:
+  enabled: true
+  periodSeconds: 15
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Agents run for hours; never let a slow shutdown truncate a long build.
+terminationGracePeriodSeconds: 60
+
+podAnnotations: {}
+
+# Merged into the pod spec verbatim, e.g. to lower ndots.
+dnsConfig: {}
+
+nodeSelector: {}
+tolerations: []
+
+# Appended verbatim to the container's env. Use for AWS/GCP profile hints,
+# CLAUDE_REAL_BINARY overrides, other PASEO_* settings, or anything sourced
+# from another Secret.
+extraEnv: []

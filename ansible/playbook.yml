@@ -424,6 +424,16 @@
           personal.pem: agentfest/ssh_private_key
           private.key: agentfest/gpg_private_key
 
+      # agentfest — the Paseo computer (kubernetes/apps/agentfest). The daemon
+      # password every Paseo client must present, relay clients included: with
+      # agentfest's patch it is what makes the pairing link alone insufficient.
+      # The same value is typed into the Paseo app when pairing. Minted by
+      # create-bitwarden-secret.yml (24 random bytes, base64).
+      - name: agentfest-auth
+        namespace: apps
+        data:
+          paseo-password: agentfest/paseo_password
+
       # auth2api — the OAuth-to-API gateway. This single key is the only thing
       # standing between the cluster network and the paid Claude/ChatGPT
       # accounts whose OAuth tokens the gateway holds, which is why it is

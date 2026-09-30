@@ -1,0 +1,147 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "agentfest.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    # Recreate, not RollingUpdate: the home directory is ReadWriteOnce and
+    # single-writer, so two pods must never overlap.
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "agentfest.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agentfest.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      {{- with .Values.dnsConfig }}
+      dnsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: agentfest
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: AGENTFEST_PASEO_VERSION
+              value: {{ .Values.paseo.version | quote }}
+            - name: AGENTFEST_CLAUDE_CODE_VERSION
+              value: {{ .Values.claudeCode.version | quote }}
+            - name: PASEO_LISTEN
+              value: "{{ .Values.paseo.listenHost }}:{{ .Values.paseo.port }}"
+            - name: PASEO_RELAY_ENABLED
+              value: {{ .Values.paseo.relay.enabled | quote }}
+            {{- /*
+              Required rather than optional: without it the pairing link is a
+              complete login, and the entrypoint can only warn about that.
+            */}}
+            - name: PASEO_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "paseo.password.existingSecret must name a Secret holding the Paseo daemon password" .Values.paseo.password.existingSecret }}
+                  key: {{ .Values.paseo.password.key }}
+            {{- with .Values.paseo.hostnames }}
+            - name: PASEO_HOSTNAMES
+              value: {{ join "," . | quote }}
+            {{- end }}
+            - name: PASEO_DICTATION_ENABLED
+              value: {{ .Values.paseo.voice.enabled | quote }}
+            - name: PASEO_VOICE_MODE_ENABLED
+              value: {{ .Values.paseo.voice.enabled | quote }}
+            - name: PASEO_WEB_UI_ENABLED
+              value: {{ .Values.paseo.webUi.enabled | quote }}
+            {{- if .Values.ssh.enabled }}
+            - name: AGENTFEST_SSH_DIR
+              value: {{ .Values.ssh.mountPath | quote }}
+            {{- end }}
+            {{/*
+              extraEnv accepts the full Kubernetes env-entry shape, so callers
+              can supply secretKeyRef / configMapKeyRef / fieldRef entries.
+            */}}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: paseo
+              containerPort: {{ .Values.paseo.port }}
+              protocol: TCP
+          {{- if .Values.readinessProbe.enabled }}
+          {{- /*
+            An exec probe, because the daemon usually listens on loopback where
+            the kubelet cannot reach it. /api/health is the one endpoint Paseo
+            serves without the password. There is deliberately no liveness
+            probe: restarting the container ends every agent turn, which is a
+            far worse outcome than a pod that reports not-ready.
+          */}}
+          readinessProbe:
+            exec:
+              command:
+                - curl
+                - --fail
+                - --silent
+                - --output
+                - /dev/null
+                - --max-time
+                - "4"
+                - "http://127.0.0.1:{{ .Values.paseo.port }}/api/health"
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: home
+              mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+            {{- if .Values.ssh.enabled }}
+            - name: ssh
+              mountPath: {{ .Values.ssh.mountPath }}
+              readOnly: true
+            {{- end }}
+            {{- if .Values.dshm.enabled }}
+            - name: dshm
+              mountPath: /dev/shm
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: home
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-home" .Release.Name) }}
+        {{- end }}
+        {{- if .Values.ssh.enabled }}
+        - name: ssh
+          secret:
+            secretName: {{ .Values.ssh.existingSecret }}
+            defaultMode: {{ .Values.ssh.defaultMode }}
+        {{- end }}
+        {{- if .Values.dshm.enabled }}
+        - name: dshm
+          emptyDir:
+            medium: Memory
+            sizeLimit: {{ .Values.dshm.size }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -1,83 +1,87 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.1.39"
+  tag: "0.2.0"
 
-# Codeman rejects unknown Host headers before any handler runs — it is a
-# DNS-rebinding guard. Tailscale's .ts.net is allowed out of the box; this
-# Traefik hostname is not, and every request returns `403 host not allowed`
-# until it is listed here.
 # Pin the self-updating components to exact versions rather than tracking
 # "latest", so upgrades are deliberate and reproducible. Bump after reviewing
-# the release notes, then restart the pod.
+# the release notes, then restart the pod. Both pins are compared with what is
+# actually installed on the volume, so a drifted install is put back.
+#
+# 2.1.280 is the floor for Opus 5.5.
 claudeCode:
-  version: "2.1.233"
+  version: "2.1.285"
 
-codeman:
-  version: "1.33.2"
-  allowedHosts: "festie.taptappers.club"
+paseo:
+  version: "0.10.2"
+
+  # The pod network, not just loopback, for one reason: festie. While festie
+  # still runs, its sessions (and the Claude in them) reach this daemon over
+  # the cluster network to print the pairing link and to check a deploy — the
+  # NetworkPolicy next door admits festie's pod and nothing else, and the
+  # password is required on that path as on every other. Back to "127.0.0.1",
+  # with the Service off, when festie goes.
+  listenHost: "0.0.0.0"
+
+  relay:
+    enabled: true
+
+  # Synced from Bitwarden `agentfest/paseo_password` by the secrets play. The
+  # same value goes into the Paseo app when pairing.
+  password:
+    existingSecret: agentfest-auth
+
+  # The names festie connects by. Paseo's DNS-rebinding guard answers only to
+  # localhost and IP literals otherwise.
+  hostnames:
+    - agentfest
+    - agentfest.apps
+    - agentfest.apps.svc
+    - agentfest.apps.svc.cluster.local
+
+service:
+  enabled: true
 
 persistence:
   enabled: true
-  # Advisory only: local-path does not enforce quotas, it just provisions a
-  # directory on the node. The real limit is the node's free disk, so treat
-  # this as documentation of intent and adjust it to whatever is actually
-  # spare. It is also node-local — this PVC pins the pod to whichever node
-  # first schedules it, permanently.
+  # Advisory only: local-path does not enforce quotas. It is also node-local,
+  # which is why nodeSelector below has to be right from the first deploy —
+  # the claim binds wherever the pod first lands, permanently.
   size: 100Gi
 
-# Codeman's own Basic auth is OFF here, so tinyauth (Google OAuth + the email
-# whitelist) is the only thing between the internet and a shell on this box.
-# That is a deliberate reduction, not an oversight — the chart's values.yaml
-# carries the full reasoning. The short version: Codeman only implements HTTP
-# Basic, and its hardcoded brute-force limiter is hostile behind an ingress,
-# because it builds Fastify without trustProxy so every device shares one bucket
-# of ten failures. The 429 it returns carries no WWW-Authenticate header, so the
-# browser stops offering the password dialog and the correct password can no
-# longer be presented at all.
-#
-# Worth re-reading before the next hostname change: festie.taptappers.club
-# resolves to a PUBLIC IP (cert-manager's HTTP-01 solver needs port 80
-# reachable), so "it's on the tailnet" is not a layer here.
-#
-# existingSecret is left pointing at festie-auth on purpose. The secret still
-# syncs from Bitwarden and is simply unused, which makes flipping this back a
-# one-line change rather than a secrets round-trip.
-auth:
-  enabled: false
-  create: false
-  existingSecret: festie-auth
-
-# Not optional in practice: dotfiles' claude-skills module clones agent-smith
-# during home-manager activation, and that clone is not fault tolerant. The
-# entrypoint copies this key into ~/.ssh (it cannot be mounted there directly —
-# ~/.ssh must stay writable for home-manager's ssh config and known_hosts).
+# The same machine identity as festie: the deploy key and the GPG key that
+# dotfiles reads during activation.
 ssh:
   enabled: true
   existingSecret: festie-secrets
 
-# Sized for real work — compiles, container builds, language servers — but
-# the memory limit MUST stay well under the node. kanmani has 16 GB and no
-# swap, and it also runs k3s (the API server + etcd), every other app and the
-# host's own services. The old 24Gi was larger than the machine itself, so it
-# never bounded anything: a runaway festie could take the whole node down with
-# it.
+# Sized to share the 16 GB node with festie while both exist. With the rest of
+# the node at 3.5–5.5 GiB and festie capped at 10Gi, a cap here beyond ~6Gi
+# would only let the two together push the node into swap. Move festie's
+# budget over when it goes (10Gi, the same as festie's cap).
 #
-# With 10Gi, festie can never starve the rest of the node. On 2026-09-29 the
-# rest of the node used about 3.5–5.5 GiB, and festie peaked at 6.9 GiB with
-# three sessions.
-#
-# If festie does hit the cap, the kernel kills only festie's single largest
-# process: a runaway session, a browser or a build. It does not kill Codeman
-# or the rest of the pod, because the pod's memory.oom.group is 0 and every
-# process shares one oom_score_adj. Anything else on the node is untouched.
+# The CPU request fits: the node's requests sat at 3805m of 6000m on 29 Sep.
 resources:
   requests:
-    cpu: "2"
-    memory: 4Gi
+    cpu: "1"
+    memory: 2Gi
   limits:
-    memory: 10Gi
+    memory: 6Gi
 
-# Deliberately unpinned, matching every app except frigate/ntfy: those two
-# carry homelab.setup/city=rishra because they belong to that physical
-# location. This is general compute and belongs on the main node.
-nodeSelector: {}
+# Same reasons as festie (see ../festie/kustomization.yaml): dshm cannot
+# outlive the pod, and home is regenerable state whose durable parts live
+# elsewhere, so neither belongs in the nightly backup. ndots:1 because every
+# external lookup otherwise walks five search domains first.
+podAnnotations:
+  backup.velero.io/backup-volumes-excludes: "dshm,home"
+
+dnsConfig:
+  options:
+    - name: ndots
+      value: "1"
+
+# Pinned to the control plane from the very first deploy. nodeSelector {} does
+# NOT mean "the main node": the scheduler once put itineris on the Rishra
+# worker, its local-path claim bound there, and the site went down with that
+# node.
+nodeSelector:
+  node-role.kubernetes.io/control-plane: "true"
