@@ -227,6 +227,28 @@ jobs:
           # recur. Idempotent: --ignore-not-found.
           kubectl -n apps delete deployment auth2api-main auth2api-login --ignore-not-found
 
+          # One-time (2026-10-01): nifty50 was only ever deployed from its
+          # branch (`--ref add-nifty50`, four runs on 19-21 Aug), and PR #145
+          # was then closed unmerged. kubectl apply does not prune, so all of it
+          # stayed live -- including a public Ingress, the one app here not
+          # behind tinyauth. The app is retired, so this removes everything
+          # those runs created, data included: its PV is switched to Delete so
+          # local-path-provisioner erases the directory as well. If that does
+          # not finish, the Retain step puts the PV back on the next deploy and
+          # this loop tries again. Idempotent: --ignore-not-found, and the loop
+          # finds nothing once the volume is gone.
+          kubectl -n apps delete ingress nifty50-ingress --ignore-not-found
+          kubectl -n apps delete certificates.cert-manager.io nifty50-tls-secret --ignore-not-found
+          kubectl -n apps delete deployment nifty50 --ignore-not-found
+          kubectl -n apps delete service nifty50 --ignore-not-found
+          kubectl -n apps delete secret nifty50-credentials nifty50-tls-secret --ignore-not-found
+          for pv in $(kubectl get pv -o json | jq -r '.items[] | select(.spec.claimRef.namespace == "apps" and .spec.claimRef.name == "nifty50-data") | .metadata.name'); do
+            kubectl patch pv "$pv" -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}'
+            kubectl -n apps delete pvc nifty50-data --ignore-not-found --wait=false
+            kubectl wait --for=delete "pv/$pv" --timeout=180s \
+              || echo "::warning::nifty50's volume $pv is still there; local-path-provisioner did not remove it"
+          done
+
           # This render carries 31 custom resources -- ServiceMonitor,
           # Middleware, Certificate, Issuer, ClusterIssuer, Schedule,
           # BackupStorageLocation, VolumeSnapshotLocation -- whose CRDs ship in
