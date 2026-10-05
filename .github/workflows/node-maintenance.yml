@@ -439,7 +439,9 @@ jobs:
             if [ -n "$pv" ]; then
               k3s kubectl patch pv "$pv" -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}' >/dev/null
             fi
-            $K delete pvc festie-home --ignore-not-found --wait=true >/dev/null
+            # A finished Job that mounted festie-home still holds it, until its TTL.
+            $K delete job agentfest-sweep-festie agentfest-migrate-from-festie --ignore-not-found --wait=true >/dev/null
+            $K delete pvc festie-home --ignore-not-found --wait=true --timeout=300s >/dev/null
             if [ -n "$pv" ]; then
               if ! k3s kubectl wait --for=delete "pv/$pv" --timeout=300s >/dev/null 2>&1; then
                 echo "local-path did not remove the volume in 5 min; removing it by hand"
