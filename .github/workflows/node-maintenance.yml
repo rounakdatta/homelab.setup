@@ -39,8 +39,12 @@ on:
         description: 'Prove backups restore: back up a throwaway canary pod, delete it, restore it from R2, compare a random token. Touches nothing else.'
         type: boolean
         default: false
-      migrate_festie_home:
-        description: 'One-off Codeman -> Paseo move: copy festie''s home into agentfest''s. Adds only what agentfest lacks, never overwrites; skips caches and machine-local state. Prints counts only.'
+      festie_final_sweep:
+        description: 'Before retiring festie: copy into agentfest''s ~/festie-final everything festie''s home has that agentfest may lack (changed since the 30 Sep copy, the folders that copy skipped, the one it failed on) and bundle repos with unpushed work. Read-only on festie. Prints counts only.'
+        type: boolean
+        default: false
+      retire_festie:
+        description: 'Delete festie for good: its Deployment, Service, Ingress, NetworkPolicy, TLS and Codeman Secrets, and its volume with the data on disk. Keeps festie-secrets, which agentfest uses. Prints counts only.'
         type: boolean
         default: false
 
@@ -283,37 +287,28 @@ jobs:
             $K -n velero get backuprepositories -o custom-columns=NAMESPACE:.spec.volumeNamespace,PHASE:.status.phase,MESSAGE:.status.message
           EOS
 
-      # One-off, for the Codeman -> Paseo move. festie's home holds everything
-      # accumulated by hand over months — repos with uncommitted work, kube
-      # contexts, cloud CLI logins, mic, browser sessions, Claude history and
-      # memory — none of it in any repo, so agentfest's fresh volume started
-      # without it. A Job on the control plane mounts both local-path PVCs
-      # (same node) and tars one into the other:
-      #   - it adds only what agentfest lacks (--skip-old-files): nothing
-      #     agentfest already has is replaced, including its own Claude login
-      #     and every file home-manager wrote;
-      #   - it skips caches, package-manager prefixes, and machine-local state
-      #     agentfest must own itself: gpg, ssh, the pass clone, Paseo's and
-      #     Codeman's state, and Chrome's Singleton* locks, which would
-      #     otherwise make Chrome refuse a profile as in use on another computer;
-      #   - it strips Codeman's hooks and statusline from the copied
-      #     settings.local.json files, which would otherwise run on every tool
-      #     call against a Codeman that is not there.
-      # festie's volume is mounted read-only and festie keeps running. A re-run
-      # adds only what appeared since. This repo is public: the step prints
-      # counts and exit codes, never a path.
-      - name: Migrate festie's home into agentfest
-        if: ${{ inputs.migrate_festie_home }}
+      # festie (Codeman) retires in two one-offs. Its home was copied into
+      # agentfest on 30 Sep by a tar that added only what agentfest lacked, so
+      # three things could still exist on festie alone: files changed there
+      # after that copy, the folders it skipped on purpose (gpg, ssh, the pass
+      # clone, ~/.secrets, Codeman's state), and the one folder it failed on
+      # (~/work/.claude/skills). The sweep copies all three into agentfest's
+      # ~/festie-final (owner-only), bundles every repo with commits on no
+      # remote or a stash, and writes the list to ~/festie-final/REPORT.txt.
+      # festie's volume is mounted read-only. This repo is public: the log
+      # gets counts, never a path.
+      - name: Final sweep of festie's home into agentfest
+        if: ${{ inputs.festie_final_sweep }}
         run: |
           tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS'
             set -euo pipefail
             K="k3s kubectl -n apps"
-            $K delete job agentfest-migrate-from-festie --ignore-not-found --wait=true >/dev/null
+            $K delete job agentfest-sweep-festie --ignore-not-found --wait=true >/dev/null
             $K apply -f - >/dev/null <<'YAML'
           apiVersion: batch/v1
           kind: Job
           metadata:
-            name: agentfest-migrate-from-festie
+            name: agentfest-sweep-festie
             namespace: apps
           spec:
             backoffLimit: 0
@@ -334,10 +329,10 @@ jobs:
                   seccompProfile:
                     type: RuntimeDefault
                 containers:
-                  - name: copy
-                    # The agentfest image is already on the node, and its
-                    # home-manager generation carries jq and find.
-                    image: ghcr.io/rounakdatta/agentfest:0.2.1
+                  - name: sweep
+                    # Already on the node; its home-manager generation carries
+                    # find, tar and git.
+                    image: ghcr.io/rounakdatta/agentfest:0.2.3
                     imagePullPolicy: IfNotPresent
                     securityContext:
                       allowPrivilegeEscalation: false
@@ -352,52 +347,50 @@ jobs:
                     args:
                       - |
                         set -uo pipefail
-                        HP="$AGENTFEST_HOME_ACTIVATION/home-path/bin"
+                        export PATH="$AGENTFEST_HOME_ACTIVATION/home-path/bin:$PATH"
+                        OUT=/dst/festie-final
+                        mkdir -p "$OUT/files" "$OUT/bundles" && chmod 700 "$OUT"
+                        SINCE="$(cat /dst/.agentfest-migrated-from-festie)"
                         cd /src || exit 1
-                        nice -n 19 tar -cf - --totals \
-                          --anchored \
-                          --exclude=./.cache --exclude=./.npm --exclude=./.bun --exclude=./go/pkg \
-                          --exclude=./.homebrew --exclude=./.npm-global --exclude=./.npm-packages \
-                          --exclude=./.nix-profile --exclude=./.nix-defexpr --exclude=./.local/state \
-                          --exclude=./.paseo --exclude=./.paseo-app --exclude=./.codeman \
-                          --exclude=./.password-store --exclude=./.gnupg --exclude=./.ssh --exclude=./.secrets \
-                          --exclude=./agentfest-pairing-link.txt --exclude=./agentfest-pairing-qr.txt \
-                          --exclude=./.claude/.credentials.json --exclude=./.claude/plugins --exclude=./.claude/skills \
-                          --exclude=./.claude/shell-snapshots --exclude=./.claude/session-env --exclude=./.claude/sessions \
-                          --exclude=./.claude/cache --exclude=./.claude/paste-cache \
-                          --no-anchored --exclude=SingletonLock --exclude=SingletonSocket --exclude=SingletonCookie \
-                          . 2>/tmp/create.err | nice -n 19 tar -C /dst -xf - --skip-old-files 2>/tmp/extract.err
+                        find . \( -path ./.cache -o -path ./.npm -o -path ./.bun -o -path ./go/pkg \
+                               -o -path ./.homebrew -o -path ./.npm-global -o -path ./.npm-packages \
+                               -o -path ./.nix-profile -o -path ./.nix-defexpr -o -path ./.local/state \
+                               -o -path ./.claude/shell-snapshots -o -path ./.claude/session-env \
+                               -o -path ./.claude/cache -o -path ./.claude/paste-cache -o -name node_modules \) -prune \
+                          -o -type f -newermt "$SINCE" -print0 > /tmp/changed
+                        for d in .password-store .gnupg .ssh .secrets .codeman; do
+                          [ -e "$d" ] && find "$d" -type f -print0
+                        done > /tmp/skipped
+                        find ./work/.claude/skills -type f -print0 > /tmp/failed 2>/dev/null
+                        cat /tmp/changed /tmp/skipped /tmp/failed \
+                          | nice -n 19 tar --null -T - -cf - 2>/tmp/tar.err \
+                          | nice -n 19 tar -C "$OUT/files" -xf - 2>>/tmp/tar.err
                         rc=("${PIPESTATUS[@]}")
-                        echo "tar create exit ${rc[0]} (1 = files changed while being read), extract exit ${rc[1]}"
-                        echo "warnings: create $(grep -vc '^Total bytes' /tmp/create.err || true), extract $(grep -c . /tmp/extract.err || true)"
-                        grep '^Total bytes' /tmp/create.err || true
-                        # The full list, with paths, stays on agentfest's own volume
-                        # (owner-only); the public log gets error kinds and counts.
-                        cat /tmp/create.err /tmp/extract.err > /dst/.agentfest-migration-errors.txt
-                        chmod 600 /dst/.agentfest-migration-errors.txt
-                        # The message only, never the path: a tar line is
-                        # "tar: <path>: [Cannot <verb>: ]<reason>", so keep the
-                        # reason and, when present, the "Cannot <verb>" before it.
-                        echo "error kinds (paths are in ~/.agentfest-migration-errors.txt on agentfest):"
-                        grep -hv '^Total bytes' /tmp/create.err /tmp/extract.err \
-                          | awk -F': ' '{k=$NF; if (NF >= 3 && $(NF-1) ~ /^Cannot /) k=$(NF-1) ": " k; print "  " k}' \
-                          | sort | uniq -c || true
-                        stripped=0
-                        while IFS= read -r -d '' f; do
-                          grep -qi codeman "$f" || continue
-                          "$HP/jq" '(.hooks // {}) as $h
-                            | .hooks = ($h
-                                | with_entries(.value |= (map(.hooks |= map(select(tostring | test("CODEMAN") | not)))
-                                                          | map(select((.hooks | length) > 0))))
-                                | with_entries(select((.value | length) > 0)))
-                            | if (.hooks | length) == 0 then del(.hooks) else . end
-                            | if ((.statusLine // "") | tostring | test("codeman"; "i")) then del(.statusLine) else . end' \
-                            "$f" > "$f.agentfest-tmp" && mv "$f.agentfest-tmp" "$f" && stripped=$((stripped + 1))
-                        done < <("$HP/find" /dst/personal /dst/work /dst/codeman-cases -maxdepth 4 \
-                                   -path '*/.claude/settings.local.json' -print0 2>/dev/null)
-                        echo "Codeman hooks stripped from ${stripped} settings file(s)"
-                        date -u +%FT%TZ > /dst/.agentfest-migrated-from-festie
-                        [ "${rc[1]}" = 0 ] && [ "${rc[0]}" -le 1 ]
+                        : > "$OUT/repos.txt"
+                        find ./personal ./work -maxdepth 4 -name .git -prune -print 2>/dev/null | while IFS= read -r g; do
+                          repo="${g%/.git}"
+                          ahead=$(GIT_OPTIONAL_LOCKS=0 git -C "$repo" log --branches --not --remotes --oneline 2>/dev/null | wc -l)
+                          stash=$(GIT_OPTIONAL_LOCKS=0 git -C "$repo" stash list 2>/dev/null | wc -l)
+                          dirty=$(GIT_OPTIONAL_LOCKS=0 git -C "$repo" status --porcelain 2>/dev/null | wc -l)
+                          echo "$repo ahead=$ahead stash=$stash dirty=$dirty" >> "$OUT/repos.txt"
+                          if [ "$ahead" -gt 0 ] || [ "$stash" -gt 0 ]; then
+                            git -C "$repo" bundle create "$OUT/bundles/$(printf '%s' "${repo#./}" | tr '/' '_').bundle" --all >/dev/null 2>&1 || true
+                          fi
+                        done
+                        {
+                          echo "festie final sweep, $(date -u +%FT%TZ). The home was copied into agentfest at $SINCE."
+                          echo "== changed or created on festie after that"; tr '\0' '\n' < /tmp/changed
+                          echo "== skipped on purpose by that copy (files per folder)"; tr '\0' '\n' < /tmp/skipped | cut -d/ -f1-2 | sort | uniq -c
+                          echo "== the folder that copy failed on"; tr '\0' '\n' < /tmp/failed
+                          echo "== repos (ahead = commits on no remote; bundled when ahead or stash > 0)"; cat "$OUT/repos.txt"
+                          echo "== tar warnings"; cat /tmp/tar.err
+                        } > "$OUT/REPORT.txt"
+                        chmod -R go-rwx "$OUT"
+                        n() { tr -cd '\0' < "$1" | wc -c; }
+                        echo "changed since the copy: $(n /tmp/changed) files; skipped folders: $(n /tmp/skipped); failed folder: $(n /tmp/failed)"
+                        echo "repos: $(wc -l < "$OUT/repos.txt"); with commits on no remote: $(grep -vc ' ahead=0 ' "$OUT/repos.txt"); with a stash: $(grep -vc ' stash=0 ' "$OUT/repos.txt"); bundles: $(ls "$OUT/bundles" | wc -l)"
+                        echo "swept: $(du -sh "$OUT" | cut -f1); tar exits ${rc[1]}/${rc[2]}; warnings: $(grep -c . /tmp/tar.err)"
+                        [ "${rc[2]}" = 0 ]
                     volumeMounts:
                       - name: src
                         mountPath: /src
@@ -414,12 +407,51 @@ jobs:
                       claimName: agentfest-home
           YAML
             for i in $(seq 1 180); do
-              s="$($K get job agentfest-migrate-from-festie -o jsonpath='{.status.succeeded}/{.status.failed}')"
-              case "$s" in 1/*) echo "migration job succeeded after ~$((i * 10))s"; break ;; */1) echo "migration job FAILED"; break ;; esac
+              s="$($K get job agentfest-sweep-festie -o jsonpath='{.status.succeeded}/{.status.failed}')"
+              case "$s" in 1/*) echo "sweep job succeeded after ~$((i * 10))s"; break ;; */1) echo "sweep job FAILED"; break ;; esac
               sleep 10
             done
-            $K logs job/agentfest-migrate-from-festie --tail=20 || true
-            [ "$($K get job agentfest-migrate-from-festie -o jsonpath='{.status.succeeded}')" = "1" ]
+            $K logs job/agentfest-sweep-festie --tail=20 || true
+            [ "$($K get job agentfest-sweep-festie -o jsonpath='{.status.succeeded}')" = "1" ]
+          EOS
+
+      # Deletes festie and its data for good, after the sweep above. Its PV is
+      # switched to Delete first, so local-path removes the directory on disk
+      # (deploy-stuff otherwise holds every volume at Retain); if that has not
+      # happened in 5 minutes the directory goes by hand. festie-secrets
+      # stays: agentfest mounts the same SSH and GPG keys.
+      - name: Retire festie
+        if: ${{ inputs.retire_festie }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS'
+            set -euo pipefail
+            K="k3s kubectl -n apps"
+            pv="$($K get pvc festie-home -o jsonpath='{.spec.volumeName}' 2>/dev/null || true)"
+            $K delete deployment festie --ignore-not-found >/dev/null
+            $K wait --for=delete pod -l app.kubernetes.io/instance=festie --timeout=600s >/dev/null 2>&1 || true
+            $K delete ingress festie-ingress --ignore-not-found >/dev/null
+            $K delete service festie --ignore-not-found >/dev/null
+            $K delete networkpolicy festie-netpol --ignore-not-found >/dev/null
+            $K delete certificate festie-tls-secret --ignore-not-found >/dev/null 2>&1 || true
+            $K delete secret festie-tls-secret festie-auth --ignore-not-found >/dev/null
+            if [ -n "$pv" ]; then
+              k3s kubectl patch pv "$pv" -p '{"spec":{"persistentVolumeReclaimPolicy":"Delete"}}' >/dev/null
+            fi
+            $K delete pvc festie-home --ignore-not-found --wait=true >/dev/null
+            if [ -n "$pv" ]; then
+              if ! k3s kubectl wait --for=delete "pv/$pv" --timeout=300s >/dev/null 2>&1; then
+                echo "local-path did not remove the volume in 5 min; removing it by hand"
+                case "$pv" in pvc-*) ;; *) echo "unexpected volume name; not deleting"; exit 1 ;; esac
+                d="/var/lib/rancher/k3s/storage/${pv}_apps_festie-home"
+                if [ -d "$d" ]; then rm -rf -- "$d"; fi
+                k3s kubectl delete pv "$pv" --ignore-not-found >/dev/null
+              fi
+              echo "festie volume directories left on disk: $(ls -d /var/lib/rancher/k3s/storage/"${pv}"_* 2>/dev/null | wc -l)"
+            else
+              echo "festie-home was already gone"
+            fi
+            echo "festie objects left: $($K get deploy,svc,ingress,netpol,pvc -o name 2>/dev/null | grep -c '/festie' || true)"
+            echo "festie-secrets kept for agentfest: $($K get secret festie-secrets -o name >/dev/null 2>&1 && echo yes || echo NO)"
           EOS
 
       - name: After
