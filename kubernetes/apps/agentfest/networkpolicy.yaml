@@ -1,10 +1,8 @@
 ---
-# Inbound to the Paseo computer: festie's pod on the daemon port, and nothing
-# else. There is no ingress: phones and laptops come in through Paseo's relay,
-# which the daemon dials out to, so no inbound rule is needed for them at all.
-#
-# The festie rule is transitional (see values.yaml, paseo.listenHost). When
-# festie goes, delete it and leave `ingress: []`, which denies everything.
+# Inbound to the Paseo computer: nothing. There is no ingress and no Service,
+# and the daemon listens on loopback only (values.yaml, paseo.listenHost):
+# phones and laptops come in through Paseo's relay, which the daemon dials out
+# to. festie's pod was the one exception, until festie was retired.
 #
 # Egress stays at the default (allow-all): the relay, npm, GitHub and the
 # model APIs are all outbound.
@@ -23,12 +21,4 @@ spec:
       app.kubernetes.io/instance: agentfest
   policyTypes:
     - Ingress
-  ingress:
-    - from:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/name: agentfest
-              app.kubernetes.io/instance: festie
-      ports:
-        - protocol: TCP
-          port: 6767
+  ingress: []

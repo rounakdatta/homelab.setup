@@ -432,6 +432,8 @@ jobs:
             $K delete ingress festie-ingress --ignore-not-found >/dev/null
             $K delete service festie --ignore-not-found >/dev/null
             $K delete networkpolicy festie-netpol --ignore-not-found >/dev/null
+            # agentfest's Service existed only for festie; its chart value is off now.
+            $K delete service agentfest --ignore-not-found >/dev/null
             $K delete certificate festie-tls-secret --ignore-not-found >/dev/null 2>&1 || true
             $K delete secret festie-tls-secret festie-auth --ignore-not-found >/dev/null
             if [ -n "$pv" ]; then

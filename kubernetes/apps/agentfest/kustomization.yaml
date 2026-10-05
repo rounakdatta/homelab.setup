@@ -4,14 +4,14 @@ kind: Kustomization
 
 namespace: apps
 
-# The Paseo computer. A release of the same chart as festie (../festie), from
-# 0.2.0 on: same image lineage, same dotfiles environment, but its own home
+# The Paseo computer: the agentfest chart from 0.2.0 on (0.1.x was festie,
+# the Codeman computer it replaced, retired on 5 Oct 2026). Its own home
 # volume and no ingress at all. It is reached through Paseo's end-to-end
 # encrypted relay, which the daemon dials out to.
 helmCharts:
   - name: agentfest
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.2.3
+    version: 0.2.4
     releaseName: agentfest
     namespace: apps
     valuesFile: values.yaml

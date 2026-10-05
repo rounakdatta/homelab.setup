@@ -38,8 +38,8 @@ patches:
   # mutable, so `kubectl apply` updates them in place — no binding/roleRef change.
   # If a private-registry image is ever polled by Keel, grant `get` on that one
   # pull Secret via a narrow Role in its namespace — never restore cluster-wide
-  # secret read here. (Keel lives in kube-system, which is on festie's
-  # NetworkPolicy allowlist, so a Keel compromise reading all Secrets was a real
+  # secret read here. (Keel lives in kube-system, which the retired
+  # festie's NetworkPolicy let in, so a Keel compromise reading all Secrets was a real
   # path.)
   - patch: |-
       apiVersion: rbac.authorization.k8s.io/v1

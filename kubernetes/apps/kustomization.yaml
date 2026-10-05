@@ -18,7 +18,6 @@ resources:
   - home-assistant/
   - synt/
   - texas-fold-em/
-  - festie/
   - agentfest/
   - itineris/
   - auth2api/
