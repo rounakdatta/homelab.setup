@@ -1,6 +1,0 @@
-apiVersion: v2
-appVersion: 0.1.39
-description: A persistent remote computer whose primary UI is Claude Code
-name: agentfest
-type: application
-version: 0.1.39

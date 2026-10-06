@@ -397,13 +397,9 @@
           BASIC_AUTH_USER: keel/username
           BASIC_AUTH_PASSWORD: keel/password
 
-      # agentfest / festie — the remote computer running Claude Code.
-      # Codeman's own login, sitting behind tinyauth rather than instead of it.
-      - name: festie-auth
-        namespace: apps
-        data:
-          codeman-password: agentfest/codeman_password
-
+      # agentfest — the remote computer running Claude Code. Its Secret keeps
+      # the name of festie, the Codeman computer it replaced.
+      #
       # SSH identity for the machine. Needed at container start, not just for
       # convenience: dotfiles' claude-skills module clones agent-smith during
       # home-manager activation, so without this the environment comes up

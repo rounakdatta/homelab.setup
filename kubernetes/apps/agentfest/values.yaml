@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.2.3"
+  tag: "0.2.4"
 
 # Pin the self-updating components to exact versions rather than tracking
 # "latest", so upgrades are deliberate and reproducible. Bump after reviewing
@@ -14,19 +14,16 @@ claudeCode:
 paseo:
   version: "0.10.2"
 
-  # The pod network, not just loopback, for one reason: festie. While festie
-  # still runs, its sessions (and the Claude in them) reach this daemon over
-  # the cluster network to print the pairing link and to check a deploy — the
-  # NetworkPolicy next door admits festie's pod and nothing else, and the
-  # password is required on that path as on every other. Back to "127.0.0.1",
-  # with the Service off, when festie goes.
-  listenHost: "0.0.0.0"
+  # Loopback only. Phones and laptops come in through Paseo's relay, which
+  # the daemon dials out to, so nothing in the cluster connects to it (festie
+  # did, until it was retired on 5 Oct 2026).
+  listenHost: "127.0.0.1"
 
   relay:
     enabled: true
 
   # The mode new Claude agents start in, in every client. Bypass for the
-  # reason festie's Codeman runs it (dotfiles hosts/festie, claudePermissionMode):
+  # reason festie's Codeman ran it (dotfiles hosts/festie, claudePermissionMode):
   # this machine exists for work that finishes while nobody is watching, and a
   # prompt waiting for an answer is the one failure that costs the whole
   # session. The rest of "Opus 5.5 at max, bypass" — model, thinking level,
@@ -44,16 +41,9 @@ paseo:
   voice:
     enabled: true
 
-  # The names festie connects by. Paseo's DNS-rebinding guard answers only to
-  # localhost and IP literals otherwise.
-  hostnames:
-    - agentfest
-    - agentfest.apps
-    - agentfest.apps.svc
-    - agentfest.apps.svc.cluster.local
-
+# No Service: nothing in the cluster connects to the daemon.
 service:
-  enabled: true
+  enabled: false
 
 persistence:
   enabled: true
@@ -62,19 +52,16 @@ persistence:
   # the claim binds wherever the pod first lands, permanently.
   size: 100Gi
 
-# The same machine identity as festie: the deploy key and the GPG key that
-# dotfiles reads during activation.
+# The machine identity festie had, still under festie's name: the deploy key
+# and the GPG key that dotfiles reads during activation.
 ssh:
   enabled: true
   existingSecret: festie-secrets
 
-# Sized to share the 16 GB node with festie while both exist. 8Gi from 30
-# Sep, when voice mode put ~1–1.5 GiB of speech models in the daemon: at 6Gi
-# a busy afternoon could reach the cap, and the kernel would kill the largest
-# process, which with the models loaded is Paseo's worker, and with it every
-# running turn. The headroom comes from festie shrinking as work moves here
-# (5.9 GiB with six sessions on 30 Sep); zram covers a brief overlap. Move to
-# festie's 10Gi when festie goes.
+# festie's 10Gi, on the 16 GB node it no longer shares (festie was retired
+# on 5 Oct 2026). Reaching the cap kills the whole container, every agent and
+# terminal with it, not only the largest process: kubelet sets
+# memory.oom.group on cgroup v2, and the pod cannot swap.
 #
 # The CPU request fits: the node's requests sat at 3805m of 6000m on 29 Sep.
 resources:
@@ -82,10 +69,9 @@ resources:
     cpu: "1"
     memory: 2Gi
   limits:
-    memory: 8Gi
+    memory: 10Gi
 
-# Same reasons as festie (see ../festie/kustomization.yaml): dshm cannot
-# outlive the pod, and home is regenerable state whose durable parts live
+# dshm cannot outlive the pod, and home is regenerable state whose durable parts live
 # elsewhere, so neither belongs in the nightly backup. ndots:1 because every
 # external lookup otherwise walks five search domains first.
 podAnnotations:
