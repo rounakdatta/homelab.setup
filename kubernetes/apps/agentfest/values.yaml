@@ -12,7 +12,7 @@ claudeCode:
   version: "2.1.285"
 
 paseo:
-  version: "0.10.2"
+  version: "0.10.3"
 
   # Loopback only. Phones and laptops come in through Paseo's relay, which
   # the daemon dials out to, so nothing in the cluster connects to it (festie
