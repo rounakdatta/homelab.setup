@@ -1,6 +1,6 @@
 apiVersion: v2
-appVersion: 0.2.4
+appVersion: 0.2.5
 description: A persistent remote computer that runs coding agents, driven from Paseo
 name: agentfest
 type: application
-version: 0.2.4
+version: 0.2.5

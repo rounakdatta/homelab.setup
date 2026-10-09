@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.2.4"
+  tag: "0.2.5"
 
 # Pin the self-updating components to exact versions rather than tracking
 # "latest", so upgrades are deliberate and reproducible. Bump after reviewing
@@ -12,7 +12,7 @@ claudeCode:
   version: "2.1.285"
 
 paseo:
-  version: "0.10.2"
+  version: "0.10.3"
 
   # Loopback only. Phones and laptops come in through Paseo's relay, which
   # the daemon dials out to, so nothing in the cluster connects to it (festie
@@ -88,3 +88,12 @@ dnsConfig:
 # node.
 nodeSelector:
   node-role.kubernetes.io/control-plane: "true"
+
+# The chart's fsGroup with Kubernetes' default fsGroupChangePolicy (Always)
+# makes the kubelet chown and chmod every file on the home volume at every
+# start, before the container exists: 567k files on 7 Oct, and the 6 Oct
+# rollout sat in ContainerCreating for about 12 minutes. The volume's root
+# already carries group 100 with setgid, so OnRootMismatch skips the walk.
+# Helm merges this into the chart's securityContext.
+securityContext:
+  fsGroupChangePolicy: OnRootMismatch
