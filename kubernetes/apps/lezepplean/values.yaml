@@ -5,11 +5,11 @@
 # The watch hears music, its phone relays short recordings here; this names the
 # song, says exactly where in it the recording started, and sends lyrics timed
 # word by word. Word timings are computed here on the CPU the first time a song
-# is heard (~35 s of CPU, ~1 GB peak, in a nice-10 worker process that exits when
+# is heard (~35 s of CPU, ~1.15 GB peak, in a nice-10 worker process that exits when
 # idle), then kept. Idle, the pod holds ~130 MB.
 image:
   repository: ghcr.io/rounakdatta/le-zepp-lean
-  tag: "0.2.1"
+  tag: "0.2.2"
 
 # The bearer token the phone-side relay sends, synced from Bitwarden
 # (lezepplean/token) by ansible/playbook.yml.
