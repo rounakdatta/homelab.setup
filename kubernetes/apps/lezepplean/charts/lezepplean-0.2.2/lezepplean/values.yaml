@@ -2,7 +2,7 @@ image:
   repository: ghcr.io/rounakdatta/le-zepp-lean
   # Pinned to the same tag as Chart.appVersion so a chart upgrade always
   # corresponds to one specific image.
-  tag: "0.2.1"
+  tag: "0.2.2"
   pullPolicy: IfNotPresent
 
 # Single writer by design: the song store on /data and the word-timing worker
@@ -48,7 +48,7 @@ podAnnotations: {}
 
 nodeSelector: {}
 
-# Idle, the server holds ~130 MB. A new song's word timing peaks near 1 GB in the
+# Idle, the server holds ~130 MB. A new song's word timing peaks at ~1.15 GB in the
 # worker process (separation one 12 s block at a time, the speech model 20 s at a
 # time), which exits after 5 idle minutes. No CPU request: the pod idles between
 # songs, and its worker runs at nice 10.
