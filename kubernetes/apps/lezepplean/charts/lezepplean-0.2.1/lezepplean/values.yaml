@@ -1,0 +1,59 @@
+image:
+  repository: ghcr.io/rounakdatta/le-zepp-lean
+  # Pinned to the same tag as Chart.appVersion so a chart upgrade always
+  # corresponds to one specific image.
+  tag: "0.2.1"
+  pullPolicy: IfNotPresent
+
+# Single writer by design: the song store on /data and the word-timing worker
+# process are per pod. Do not scale beyond 1.
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 8787
+
+persistence:
+  # /data holds everything the server learns: per song its reference audio
+  # (~4 MB), re-sync features, word timings and model outputs (~7 MB a song),
+  # plus the two models it downloads on first use (~170 MB). All of it can be
+  # rebuilt, just slowly (~35 s of CPU a song).
+  enabled: true
+  storageClass: ""
+  size: 10Gi
+  accessMode: ReadWriteOnce
+  existingClaim: ""
+
+# The bearer token the watch's phone-side relay sends. Either supply it inline
+# (secret.create: true) or bring your own Secret with a `token` key.
+secret:
+  create: true
+  token: ""
+  existingSecret: ""
+  key: token
+
+env:
+  # Threads for vocal separation and the speech model. The worker also runs at
+  # nice 10, so a new song's ~35 s of work yields to everything else.
+  LEZEPPLEAN_THREADS: "2"
+  # Captures are the user's room audio: on a shared server keep only the JSON
+  # summaries (what the watch's diagnostics said, what the server decided).
+  LEZEPPLEAN_CAPTURE_AUDIO: "0"
+  LEZEPPLEAN_KEEP_CAPTURES: "50"
+
+# Arbitrary extra env entries, including valueFrom.
+extraEnv: []
+
+podAnnotations: {}
+
+nodeSelector: {}
+
+# Idle, the server holds ~130 MB. A new song's word timing peaks near 1 GB in the
+# worker process (separation one 12 s block at a time, the speech model 20 s at a
+# time), which exits after 5 idle minutes. No CPU request: the pod idles between
+# songs, and its worker runs at nice 10.
+resources:
+  requests:
+    memory: 256Mi
+  limits:
+    memory: 2Gi
