@@ -9,7 +9,7 @@
 # idle), then kept. Idle, the pod holds ~130 MB.
 image:
   repository: ghcr.io/rounakdatta/le-zepp-lean
-  tag: "0.2.5"
+  tag: "0.2.6"
 
 # The bearer token the phone-side relay sends, synced from Bitwarden
 # (lezepplean/token) by ansible/playbook.yml.
@@ -39,3 +39,13 @@ nodeSelector:
 
 # resources: the chart's defaults (256Mi request, 2Gi limit, no CPU request,
 # which the control plane needs: its CPU *requests* are full, its usage isn't).
+
+# Lyrics in a script the watch can't draw (Hindi, Bengali, Tamil, Telugu, ...) are written in
+# English letters by Claude through auth2api, in-cluster; its key is already a Secret in this
+# namespace (ansible/playbook.yml: auth2api-credentials).
+extraEnv:
+  - name: LEZEPPLEAN_LLM_KEY
+    valueFrom:
+      secretKeyRef:
+        name: auth2api-credentials
+        key: api-key
