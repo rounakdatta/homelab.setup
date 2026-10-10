@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "lezepplean.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    # One writer to the song store: the old pod must be gone before the new one starts.
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "lezepplean.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "lezepplean.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: LEZEPPLEAN_DATA
+              value: /data
+            - name: LEZEPPLEAN_MODELS
+              value: /data/models
+            - name: LEZEPPLEAN_CAPTURES
+              value: /data/captures
+            - name: LEZEPPLEAN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secret.existingSecret | default .Release.Name }}
+                  key: {{ .Values.secret.key }}
+            {{- range $key, $value := .Values.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8787
+              protocol: TCP
+          # /livez needs no token and says only "ok"; /health needs the token.
+          readinessProbe:
+            httpGet:
+              path: /livez
+              port: 8787
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: 8787
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            # A busy event loop must not get the pod killed in the middle of a song.
+            timeoutSeconds: 5
+            failureThreshold: 4
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.persistence.enabled }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+      volumes:
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim | default (printf "%s-data" .Release.Name) }}
+        {{- else }}
+        - name: data
+          emptyDir: {}
+        {{- end }}

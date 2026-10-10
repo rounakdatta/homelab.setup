@@ -1,0 +1,41 @@
+---
+# Values for the rounakdatta/le-zepp-lean chart.
+# Chart source: oci://ghcr.io/rounakdatta/charts/lezepplean
+#
+# The watch hears music, its phone relays short recordings here; this names the
+# song, says exactly where in it the recording started, and sends lyrics timed
+# word by word. Word timings are computed here on the CPU the first time a song
+# is heard (~35 s of CPU, ~1 GB peak, in a nice-10 worker process that exits when
+# idle), then kept. Idle, the pod holds ~130 MB.
+image:
+  repository: ghcr.io/rounakdatta/le-zepp-lean
+  tag: "0.2.1"
+
+# The bearer token the phone-side relay sends, synced from Bitwarden
+# (lezepplean/token) by ansible/playbook.yml.
+secret:
+  create: false
+  existingSecret: lezepplean-credentials
+  key: token
+
+persistence:
+  enabled: true
+  storageClass: local-path
+  # Per song ~7 MB (its audio, re-sync features, word timings), plus ~170 MB of
+  # models downloaded on first use. 10Gi is ~1,400 songs.
+  size: 10Gi
+
+podAnnotations:
+  # Everything on /data can be rebuilt (songs re-prepare on their next play,
+  # models re-download), and none of it is the user's own: keep it out of the
+  # nightly backup rather than ship gigabytes of cache to R2.
+  backup.velero.io/backup-volumes-excludes: "data"
+
+# local-path is node-local, and a public app must not land on the rishra worker
+# (it drops offline): pinned to the control plane from the first deploy, as
+# zepp-life-mcp and itineris are.
+nodeSelector:
+  node-role.kubernetes.io/control-plane: "true"
+
+# resources: the chart's defaults (256Mi request, 2Gi limit, no CPU request,
+# which the control plane needs: its CPU *requests* are full, its usage isn't).
