@@ -16,7 +16,7 @@ namespace: apps
 helmCharts:
   - name: lezepplean
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.2.2
+    version: 0.2.4
     releaseName: lezepplean
     namespace: apps
     valuesFile: values.yaml

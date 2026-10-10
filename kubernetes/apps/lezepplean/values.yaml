@@ -9,7 +9,7 @@
 # idle), then kept. Idle, the pod holds ~130 MB.
 image:
   repository: ghcr.io/rounakdatta/le-zepp-lean
-  tag: "0.2.2"
+  tag: "0.2.4"
 
 # The bearer token the phone-side relay sends, synced from Bitwarden
 # (lezepplean/token) by ansible/playbook.yml.
