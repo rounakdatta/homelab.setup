@@ -24,6 +24,7 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | Synt           | LLM chat archiving                                         | https://github.com/rounakdatta/synt      |
 | texas-fold-em  | fold.money refresh-token broker (in-cluster API)           | https://github.com/rounakdatta/texas-fold-em |
 | Hugo sites     | Personal static sites (rounak2018 / rounak2020 / rounak2025) | https://gohugo.io/                       |
+| eie            | Everything is Everything podcast archive, set as a newspaper (static, served from a tag of its repo) | https://github.com/rounakdatta/eie |
 | itineris       | Travel journal: map, timeline, photo wall, stories (public); tinyauth-gated /admin for uploads | https://github.com/rounakdatta/itineris |
 | auth2api       | Local AI gateway                                           | https://github.com/AmazingAng/auth2api   |
 
