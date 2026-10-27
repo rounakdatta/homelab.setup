@@ -1,0 +1,80 @@
+# Everything is Everything, the podcast archive, set as a newspaper: eie.taptappers.club.
+# The site lives in rounakdatta/eie and this serves a tag of it. Unlike the Hugo sites, which
+# follow a branch, it is pinned: to publish a new version, tag eie site-vX.Y.Z and set BRANCH below.
+# The fetch is a blobless sparse clone of site/ only (a few MB; the whole repo is ~230 MB of
+# transcripts), and eie's own site/publish.sh gathers what is served, as it does for GitHub Pages.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - nginx-config.yaml
+
+namespace: sites
+namePrefix: eie-
+
+patches:
+  # Set site-specific labels and env vars, the fetch, and its own nginx config. Keep it on the control plane, the node
+  # that is always there, with no CPU request: the control plane's CPU requests are full (its
+  # CPU isn't), and a CPU limit left alone would be copied into the request.
+  - target:
+      kind: Deployment
+      name: static-site
+    patch: |-
+      - op: replace
+        path: /spec/selector/matchLabels/app
+        value: eie
+      - op: replace
+        path: /spec/template/metadata/labels/app
+        value: eie
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/0/value
+        value: https://github.com/rounakdatta/eie
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/1/value
+        value: site-v0.1.0
+      - op: replace
+        path: /spec/template/spec/initContainers/0/env/2/value
+        value: site
+      - op: replace
+        path: /spec/template/spec/initContainers/0/args/0
+        value: |
+          set -e
+          git clone --depth 1 --filter=blob:none --sparse --branch "${BRANCH}" "${REPO}" /repo
+          git -C /repo sparse-checkout set "${SERVE_DIR}"
+          sh "/repo/${SERVE_DIR}/publish.sh" /output
+      - op: replace
+        path: /spec/template/spec/volumes/1/configMap/name
+        value: nginx
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          node-role.kubernetes.io/control-plane: "true"
+      - op: remove
+        path: /spec/template/spec/containers/0/resources/requests/cpu
+      - op: remove
+        path: /spec/template/spec/containers/0/resources/limits/cpu
+
+  # Set site-specific selector
+  - target:
+      kind: Service
+      name: static-site
+    patch: |-
+      - op: replace
+        path: /spec/selector/app
+        value: eie
+
+  # Set hostname and TLS
+  - target:
+      kind: Ingress
+      name: static-site
+    patch: |-
+      - op: replace
+        path: /spec/rules/0/host
+        value: eie.taptappers.club
+      - op: replace
+        path: /spec/tls/0/hosts/0
+        value: eie.taptappers.club
+      - op: replace
+        path: /spec/tls/0/secretName
+        value: eie-tls

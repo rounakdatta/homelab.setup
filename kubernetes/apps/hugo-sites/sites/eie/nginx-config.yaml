@@ -1,0 +1,23 @@
+# eie's own nginx config, in place of the shared one: namePrefix makes it eie-nginx, and the
+# Deployment is pointed at it in kustomization.yaml. (Named nginx-config like the shared one,
+# kustomize would point every site at it.) The shared config's GitHub Pages-style try_files
+# serves /paper as /paper/index.html without redirecting, and the paper's relative links then miss;
+# here a folder asked for without its slash is redirected to it. Text is gzipped: the paper reads
+# 650 KB of transcript JSON. Its pictures, films and fonts are compressed already.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx
+  namespace: sites
+data:
+  default.conf: |
+    server {
+        listen 80;
+        root /usr/share/nginx/html;
+        index index.html;
+        absolute_redirect off;
+
+        gzip on;
+        gzip_vary on;
+        gzip_types text/css text/javascript application/javascript application/json image/svg+xml;
+    }
