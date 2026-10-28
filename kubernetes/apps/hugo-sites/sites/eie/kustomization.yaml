@@ -10,6 +10,7 @@ kind: Kustomization
 resources:
   - ../../base
   - nginx-config.yaml
+  - desk.yaml
 
 namespace: sites
 namePrefix: eie-
@@ -33,7 +34,7 @@ patches:
         value: https://github.com/rounakdatta/eie
       - op: replace
         path: /spec/template/spec/initContainers/0/env/1/value
-        value: site-v0.2.1
+        value: site-v0.3.0
       - op: replace
         path: /spec/template/spec/initContainers/0/env/2/value
         value: site
@@ -44,6 +45,8 @@ patches:
           git clone --depth 1 --filter=blob:none --sparse --branch "${BRANCH}" "${REPO}" /repo
           git -C /repo sparse-checkout set "${SERVE_DIR}"
           sh "/repo/${SERVE_DIR}/publish.sh" /output
+          # the search's own files, where the tag has them (an older tag, rolled back to, has none)
+          if [ -d "/repo/${SERVE_DIR}/search" ]; then cp -r "/repo/${SERVE_DIR}/search/." /desk/; fi
       - op: replace
         path: /spec/template/spec/volumes/1/configMap/name
         value: nginx
@@ -55,6 +58,56 @@ patches:
         path: /spec/template/spec/containers/0/resources/requests/cpu
       - op: remove
         path: /spec/template/spec/containers/0/resources/limits/cpu
+      # Lost & Found, the archive's search: eie's site/search/server.py beside nginx, on the files nginx
+      # serves (read-only) and the search's own files (copied by the fetch above). Standard library only,
+      # so a stock Python image. The key is auth2api's, copied into this namespace by the Bitwarden sync
+      # (ansible/playbook.yml: eie-search-credentials); without it the desk answers by words alone. No
+      # readiness probe: the desk is a guest in the pod, and a desk that fails must not take the paper
+      # down with it.
+      - op: add
+        path: /spec/template/spec/volumes/-
+        value:
+          name: desk
+          emptyDir: {}
+      - op: add
+        path: /spec/template/spec/initContainers/0/volumeMounts/-
+        value:
+          name: desk
+          mountPath: /desk
+      - op: add
+        path: /spec/template/spec/containers/-
+        value:
+          name: desk
+          image: python:3.13-alpine
+          # never exits: a pod is Ready only when all its containers are, so a desk that crashed (or a tag
+          # without one) would take the paper out of service. The loop restarts it instead; meanwhile
+          # nginx answers /api/ with a 502 and the page says the desk is closed.
+          command: ["sh", "-c", "while :; do [ -f /desk/server.py ] && python3 -u /desk/server.py; echo 'the desk is closed; again in 30 s'; sleep 30; done"]
+          env:
+            - name: SITE
+              value: /site
+            - name: HOOKS
+              value: /desk/hooks
+            - name: AUTH2API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: eie-search-credentials
+                  key: api-key
+                  optional: true
+          ports:
+            - containerPort: 8090
+          volumeMounts:
+            - name: content
+              mountPath: /site
+              readOnly: true
+            - name: desk
+              mountPath: /desk
+              readOnly: true
+          resources:
+            requests:
+              memory: "96Mi"
+            limits:
+              memory: "256Mi"
 
   # Set site-specific selector
   - target:

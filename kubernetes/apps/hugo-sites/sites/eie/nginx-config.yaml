@@ -3,7 +3,8 @@
 # kustomize would point every site at it.) The shared config's GitHub Pages-style try_files
 # serves /paper as /paper/index.html without redirecting, and the paper's relative links then miss;
 # here a folder asked for without its slash is redirected to it. Text is gzipped: the paper reads
-# 650 KB of transcript JSON. Its pictures, films and fonts are compressed already.
+# 650 KB of transcript JSON. Its pictures, films and fonts are compressed already. /api/ goes to the
+# archive's search, a sidecar in the same pod (see kustomization.yaml).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -20,4 +21,13 @@ data:
         gzip on;
         gzip_vary on;
         gzip_types text/css text/javascript application/javascript application/json image/svg+xml;
+
+        # Lost & Found, the archive's search: eie's site/search/server.py, a sidecar in this pod. Traefik's
+        # X-Real-Ip and X-Forwarded-For pass through untouched, so the desk can tell readers apart.
+        location /api/ {
+            proxy_pass http://127.0.0.1:8090;
+            proxy_http_version 1.1;
+            proxy_read_timeout 30s;
+            proxy_buffering off;
+        }
     }

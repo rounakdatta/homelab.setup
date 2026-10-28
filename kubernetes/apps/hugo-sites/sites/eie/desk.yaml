@@ -1,0 +1,40 @@
+# Lost & Found, the archive's search (eie's site/search/server.py, a sidecar in this pod; nginx sends
+# /api/ to it). It spends Rounak's Claude subscription through auth2api, so its path gets its own
+# Ingress with a rate limit per reader at the edge, where Traefik sees who is asking: a burst of 6, then
+# one a second. The desk keeps its own limits too (Claude reads 8 searches a minute per reader, 900 an
+# hour in all; past that the words alone answer). No cert-manager annotation here: the site's own
+# Ingress already makes eie-tls, and two owners of one Certificate would fight over it.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: desk-ratelimit
+  namespace: sites
+spec:
+  rateLimit:
+    average: 1
+    burst: 6
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: desk
+  namespace: sites
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: sites-eie-desk-ratelimit@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - eie.taptappers.club
+      secretName: eie-tls
+  rules:
+    - host: eie.taptappers.club
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: static-site
+                port:
+                  number: 80
