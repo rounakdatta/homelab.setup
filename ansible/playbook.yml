@@ -463,6 +463,14 @@
           api-key: auth2api/api_key
           claude-oauth-token: auth2api/claude_oauth_token
 
+      # eie's archive search (eie.taptappers.club/api/search, "Lost & Found"): a sidecar in the eie pod
+      # (kubernetes/apps/hugo-sites/sites/eie) asks auth2api in-cluster. The same key as above, copied
+      # into the sites namespace, where auth2api-credentials can't be read.
+      - name: eie-search-credentials
+        namespace: sites
+        data:
+          api-key: auth2api/api_key
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:
