@@ -1,8 +1,9 @@
 # Everything is Everything, the podcast archive, set as a newspaper: eie.taptappers.club.
 # The site lives in rounakdatta/eie and this serves a tag of it. Unlike the Hugo sites, which
 # follow a branch, it is pinned: to publish a new version, tag eie site-vX.Y.Z and set BRANCH below.
-# The fetch is a blobless sparse clone of site/ only (a few MB; the whole repo is ~230 MB of
-# transcripts), and eie's own site/publish.sh gathers what is served, as it does for GitHub Pages.
+# The fetch is a blobless sparse clone of site/ only (~230 MB: 128 editions with their pictures and
+# films; the rest of the repo is transcripts), and eie's own site/publish.sh gathers what is served, as
+# it does for GitHub Pages.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -32,7 +33,7 @@ patches:
         value: https://github.com/rounakdatta/eie
       - op: replace
         path: /spec/template/spec/initContainers/0/env/1/value
-        value: site-v0.1.0
+        value: site-v0.2.0
       - op: replace
         path: /spec/template/spec/initContainers/0/env/2/value
         value: site
