@@ -34,7 +34,7 @@ patches:
         value: https://github.com/rounakdatta/eie
       - op: replace
         path: /spec/template/spec/initContainers/0/env/1/value
-        value: site-v0.3.0
+        value: site-v0.3.1
       - op: replace
         path: /spec/template/spec/initContainers/0/env/2/value
         value: site
@@ -70,6 +70,12 @@ patches:
           name: desk
           emptyDir: {}
       - op: add
+        path: /spec/template/spec/volumes/-
+        value:
+          name: desk-data
+          persistentVolumeClaim:
+            claimName: eie-desk-data
+      - op: add
         path: /spec/template/spec/initContainers/0/volumeMounts/-
         value:
           name: desk
@@ -88,6 +94,8 @@ patches:
               value: /site
             - name: HOOKS
               value: /desk/hooks
+            - name: DATA
+              value: /data
             - name: AUTH2API_KEY
               valueFrom:
                 secretKeyRef:
@@ -103,6 +111,8 @@ patches:
             - name: desk
               mountPath: /desk
               readOnly: true
+            - name: desk-data
+              mountPath: /data
           resources:
             requests:
               memory: "96Mi"
