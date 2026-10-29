@@ -38,3 +38,19 @@ spec:
                 name: static-site
                 port:
                   number: 80
+---
+# The desk writes every search down (when, the question, where it led; never who asked) and floats the
+# questions it judged fit to show along the search bar. The log lives here, across rollouts. local-path is
+# node-local: the eie pod is pinned to the control plane, so the claim binds there.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: desk-data
+  namespace: sites
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi
