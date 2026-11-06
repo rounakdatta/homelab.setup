@@ -1,4 +1,6 @@
 ---
+# PUBLIC on purpose (websecure): these are websites, for anyone. Every site
+# built on this base inherits it.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
