@@ -78,5 +78,4 @@
   ansible.builtin.debug:
     msg:
       - "K3s installed successfully"
-      - "Tailscale IP: {{ host_tailscale_ip }}"
       - "Kubeconfig saved to: {{ playbook_dir }}/../.k3s-kubeconfig.yaml"
