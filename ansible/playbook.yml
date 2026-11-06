@@ -280,9 +280,9 @@
       # expired token breaks syncing, not reading.
       #
       # `bearerToken` is what MCP clients must send as `Authorization: Bearer`
-      # to zepp.taptappers.club. It is the only thing standing between the
-      # internet and a complete personal health archive, so it should be long
-      # and random. Rotating it needs a rollout restart: the server reads it
+      # to zepp.taptappers.club. That host is tailnet-only, but the token is still
+      # the only thing standing between every tailnet device (and every pod) and
+      # a complete personal health archive, so it should be long and random. Rotating it needs a rollout restart: the server reads it
       # from the environment at startup.
       #
       # Bitwarden items `zepp-life-mcp/apptoken` and `zepp-life-mcp/bearer_token`,

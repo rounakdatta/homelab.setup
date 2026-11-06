@@ -1,4 +1,6 @@
 ---
+# PUBLIC on purpose (websecure): the Audiobookshelf apps sign in with its own
+# accounts and must reach it from anywhere, not only from the tailnet.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
