@@ -13,7 +13,7 @@
 # middleware or moving it to the tailnet door -- that would lock out every
 # person the link was shared with.
 #
-# Mirrors the other public ingresses (audiobookshelf, ntfy): cert-manager TLS
+# Mirrors the other public ingresses (audiobookshelf, nextcloud): cert-manager TLS
 # on the websecure entrypoint, nothing else.
 #
 # TWO HOSTS, one service. itineris.world is the shareable public address;

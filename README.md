@@ -19,7 +19,6 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | Audiobookshelf | Audiobook server (Audible alternative)                     | https://www.audiobookshelf.org/          |
 | Snibox         | Snippets organizer                                         | https://github.com/MohamedElashri/Snibox |
 | Memoet         | Spaced-repetition system                                   | https://github.com/memoetapp/memoet      |
-| ntfy           | Push notifications                                         | https://ntfy.sh/                         |
 | Frigate        | NVR with realtime object detection for IP cameras          | https://frigate.video/                   |
 | Synt           | LLM chat archiving                                         | https://github.com/rounakdatta/synt      |
 | texas-fold-em  | fold.money refresh-token broker (in-cluster API)           | https://github.com/rounakdatta/texas-fold-em |

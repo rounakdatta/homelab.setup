@@ -49,11 +49,6 @@ charts:
     version: 9.0.6
     repo: https://nextcloud.github.io/helm/
     sha256: 5bc7a911a298229f205e8eaf23c6943d5527a5b1db4d54d6699b1027f03ead42
-  - path: kubernetes/apps/ntfy/charts/ntfy-0.1.1
-    chart: ntfy
-    version: 0.1.1
-    repo: https://helm-charts.rm3l.org
-    sha256: c587686c31dc6fd0b8b99edd2d0b37240788291c7522ef81887eea1589ac0429
   - path: kubernetes/apps/synt/charts/synt-0.2.1
     chart: synt
     version: 0.2.1
