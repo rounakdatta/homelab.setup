@@ -1,0 +1,4 @@
+---
+# k3s's documented customisation point for its packaged Traefik: a
+# HelmChartConfig in the auto-deploy directory, applied within seconds.
+traefik_config_path: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
