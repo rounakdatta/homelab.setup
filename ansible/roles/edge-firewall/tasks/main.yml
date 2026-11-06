@@ -1,0 +1,113 @@
+---
+# Default-deny for NEW connections arriving on the control plane's public
+# interface: only Traefik's public door (80/443) and tailscaled's WireGuard
+# port stay open (defaults/main.yml). It is the second lock behind the
+# traefik role, not the first: private hosts have no router on the public door
+# at all, so this mostly closes everything else that listens on the box --
+# sshd, the k3s API and kubelet, and HestiaCP's services.
+#
+# Once it is live, Tailscale is the only way in. Before the first run: make sure
+# the provider's console works with a local root password, and that this
+# machine's Tailscale key never expires.
+#
+# Safe to apply live: the deploy reaches the host over Tailscale SSH, which
+# never touches the public interface's filter, and established flows survive.
+# The control plane only -- the worker sits behind a home NAT, and Home
+# Assistant there needs its LAN.
+#
+# The rules name the interface that held the default route at the last run. If
+# it is ever renamed, the table stops matching (it fails open) until the next
+# run re-reads it.
+
+- name: Find the public interface (the one with the default route)
+  ansible.builtin.set_fact:
+    edge_firewall_interface: "{{ ansible_default_ipv4.interface | default('') }}"
+  no_log: true
+
+- name: Refuse to filter an interface that is not the public one
+  ansible.builtin.assert:
+    that:
+      - edge_firewall_interface | length > 0
+      - edge_firewall_interface not in ['lo', 'tailscale0', 'cni0', 'flannel.1']
+    fail_msg: "No usable default-route interface; not touching the firewall"
+    quiet: true
+  no_log: true
+
+# The nft tool only: the package never enables nftables.service
+# (dh_installsystemd --no-enable --no-start).
+- name: Install nft
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# Its /etc/nftables.conf starts with `flush ruleset`: started or restarted at
+# any point, it wipes this table and k3s's and tailscale's rules with it.
+- name: Refuse while nftables.service is enabled
+  ansible.builtin.command: systemctl is-enabled nftables.service
+  register: edge_firewall_nftables_service
+  changed_when: false
+  failed_when: edge_firewall_nftables_service.stdout is match('enabled')
+
+- name: Rules directory
+  ansible.builtin.file:
+    path: /etc/homelab
+    state: directory
+    mode: "0700"
+
+- name: Edge firewall rules (checked by nft before they replace the old ones)
+  ansible.builtin.template:
+    src: edge-firewall.nft.j2
+    dest: /etc/homelab/edge-firewall.nft
+    mode: "0600"
+    validate: nft -c -f %s
+  register: edge_firewall_rules
+  no_log: true
+
+- name: Edge firewall unit
+  ansible.builtin.copy:
+    src: homelab-edge-firewall.service
+    dest: /etc/systemd/system/homelab-edge-firewall.service
+    mode: "0644"
+  register: edge_firewall_unit
+
+- name: Load the edge firewall at every boot
+  ansible.builtin.systemd:
+    name: homelab-edge-firewall
+    enabled: true
+    daemon_reload: "{{ edge_firewall_unit.changed }}"
+
+# Every run, not only when the rules changed: a run that wrote the file but
+# died before loading it, or a table deleted by hand, would otherwise stay
+# wrong until a reboot. `reloaded` starts the unit when it is inactive and
+# reloads it otherwise -- never `restarted`, which runs ExecStop first and
+# leaves the interface open until the start. A reload swaps the whole table in
+# one transaction, so it is harmless when nothing changed.
+- name: Load the rules now
+  ansible.builtin.systemd:
+    name: homelab-edge-firewall
+    state: reloaded
+  changed_when: edge_firewall_rules.changed
+
+# Yes/no only: the Actions logs of this repo are public.
+- name: Check the table is loaded
+  ansible.builtin.command: nft list table inet homelab_edge
+  register: edge_firewall_loaded
+  changed_when: false
+  failed_when: edge_firewall_loaded.rc != 0
+  no_log: true
+
+# Peers reach tailscaled directly on an allowed port; on any other they fall
+# back to DERP relays -- slower, never locked out. So a warning, not a failure.
+- name: Check tailscaled listens on an allowed UDP port
+  ansible.builtin.shell: >-
+    ss -Hulnp | grep -F '"tailscaled"' | grep -Eq ':({{ edge_firewall_udp_ports | join('|') }})\b'
+  register: edge_firewall_tailscaled_port
+  changed_when: false
+  failed_when: false
+
+- name: Warn when tailscaled is on another port
+  ansible.builtin.debug:
+    msg: "tailscaled is not on an allowed UDP port: direct connections will relay through DERP"
+  when: edge_firewall_tailscaled_port.rc != 0

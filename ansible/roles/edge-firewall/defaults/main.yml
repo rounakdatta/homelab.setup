@@ -1,0 +1,17 @@
+---
+# What the public internet may open a NEW connection to. Everything else on the
+# public interface is dropped: SSH, the k3s API and kubelet, and every
+# HestiaCP service (panel, FTP, mail, DNS). All of those stay reachable over
+# the tailnet.
+#
+#   80/443   Traefik's public door (ansible/roles/traefik); only the hosts that
+#            are public on purpose have a router behind it.
+#   41641    tailscaled's WireGuard port, for direct (not DERP-relayed) peers.
+edge_firewall_tcp_ports: [80, 443]
+edge_firewall_udp_ports: [41641]
+
+# Anything else that must face the internet goes here, with a comment saying
+# why -- e.g. HestiaCP mail, if a domain's MX points at this host
+# (25, 465, 587, 993).
+edge_firewall_extra_tcp_ports: []
+edge_firewall_extra_udp_ports: []

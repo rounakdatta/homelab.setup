@@ -1,0 +1,64 @@
+#!/usr/sbin/nft -f
+# Managed by homelab.setup (ansible/roles/edge-firewall). Edit the template
+# there, never this file: the next deploy-infra run overwrites it.
+#
+# Filters only NEW connections arriving on the public interface. Replies to
+# anything this host started, the tailnet, the pod network and loopback pass
+# untouched. Loading it replaces this one table and nothing else: k3s's,
+# tailscale's and Hestia's rules live in their own tables.
+{% set tcp = edge_firewall_tcp_ports + edge_firewall_extra_tcp_ports %}
+{% set udp = edge_firewall_udp_ports + edge_firewall_extra_udp_ports %}
+
+table inet homelab_edge
+delete table inet homelab_edge
+
+table inet homelab_edge {
+	chain prerouting {
+		# mangle (-150): after conntrack (-200), so `ct state` works, and
+		# before k3s's DNAT (-100), so this sees the address a packet was sent
+		# to. A drop here also binds traffic that DNAT would hand to a pod --
+		# traffic an INPUT rule (ufw, Hestia's firewall) never sees.
+		type filter hook prerouting priority mangle; policy accept;
+
+		iifname != "{{ edge_firewall_interface }}" accept
+
+		# First, even before established traffic: only an address this
+		# interface owns. Never the Tailscale address, the pod or Service
+		# ranges, or anything else this host routes -- a neighbour on the
+		# provider's network could otherwise aim packets straight at the
+		# tailnet door or a pod. Every legitimate packet here passes it.
+		fib daddr . iif type != { local, broadcast, multicast } drop
+
+		ct state established,related accept
+		ct state invalid drop
+
+		# Neighbour discovery, router adverts, path MTU.
+		meta l4proto icmpv6 accept
+		# A DHCP reply can match no conntrack entry (the request went to a
+		# broadcast or multicast address). Losing the lease would take the box
+		# off the network, so both are let in explicitly -- even though most
+		# DHCPv4 clients read raw packets, beneath netfilter, anyway.
+		udp sport 67 udp dport 68 accept
+		ip6 daddr fe80::/10 udp sport 547 udp dport 546 accept
+
+		icmp type echo-request limit rate 10/second accept
+		tcp dport { {{ tcp | join(', ') }} } accept
+{% if udp %}
+		udp dport { {{ udp | join(', ') }} } accept
+{% endif %}
+
+		counter drop
+	}
+
+	# 80/443 are open above only so k3s's DNAT can hand them to Traefik's pod.
+	# One that no DNAT rule caught is headed for a host process instead --
+	# HestiaCP's nginx listens on 80/443 too -- which happens at boot before k3s
+	# is up, while Traefik's Service is being recreated, or on another address
+	# of this interface. DNATed packets take the forward path, never input, so
+	# this cannot touch Traefik. The extra ports above are for host processes,
+	# so they are not in it.
+	chain input {
+		type filter hook input priority filter; policy accept;
+		iifname "{{ edge_firewall_interface }}" ct state new tcp dport { {{ edge_firewall_tcp_ports | join(', ') }} } counter drop
+	}
+}

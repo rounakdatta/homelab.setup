@@ -1,0 +1,28 @@
+# Managed by homelab.setup (ansible/roles/edge-firewall).
+#
+# Loads before the network comes up, so there is no window at boot with the
+# public interface open. Not nftables.service: its /etc/nftables.conf starts
+# with `flush ruleset`, which would wipe k3s's, tailscale's and Hestia's rules.
+# The role refuses to run while that service is enabled; After= covers a boot
+# where someone enabled it anyway, so its flush cannot land after this.
+#
+# Break-glass from the provider's console: `systemctl stop homelab-edge-firewall`
+# removes the table (and only it).
+[Unit]
+Description=homelab.setup edge firewall (public interface)
+Wants=network-pre.target
+Before=network-pre.target shutdown.target
+After=nftables.service
+Conflicts=shutdown.target
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+StandardInput=null
+ExecStart=/usr/sbin/nft -f /etc/homelab/edge-firewall.nft
+ExecReload=/usr/sbin/nft -f /etc/homelab/edge-firewall.nft
+ExecStop=/usr/sbin/nft delete table inet homelab_edge
+
+[Install]
+WantedBy=sysinit.target

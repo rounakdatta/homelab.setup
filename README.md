@@ -46,7 +46,7 @@ Traefik has two front doors (`ansible/roles/traefik`):
 - **tailnet** answers only on the control plane's Tailscale address. It is the default: every app is private unless it says otherwise, and an Ingress that names no entrypoint lands here. Its DNS records hold the Tailscale address, so the names stay the same and simply do not answer off the tailnet.
 - **websecure** is the public internet, for the few hosts strangers must reach: itineris, eie and the static sites, Nextcloud, Audiobookshelf and lezepplean. Each says so, and why, on its Ingress.
 
-DNS only says which door a name is behind; the lock is that the public address leads to websecure alone. In-cluster callers use Service DNS (`<app>.<namespace>.svc.cluster.local`) where they can; one that uses a public name still reaches the right door, because kube-proxy answers for both addresses on every node.
+DNS only says which door a name is behind; the lock is that the public address leads to websecure alone. The second lock is the control plane's edge firewall (`ansible/roles/edge-firewall`): on the public interface it accepts new connections only on 80/443 and tailscaled's port, so SSH, the k3s API and everything else on the box answer over the tailnet only. In-cluster callers use Service DNS (`<app>.<namespace>.svc.cluster.local`) where they can; one that uses a public name still reaches the right door, because kube-proxy answers for both addresses on every node.
 
 Most third-party apps are inflated from upstream Helm charts via Kustomize's `helmCharts` block (with values overridden in-tree), so version bumps stay a one-line change. Apps with no chart of their own use bjw-s `app-template`, a generic chart that takes any image — `auth2api` is the first. Manifests are organized using Kustomize and secrets are managed through Bitwarden — synced into Kubernetes Secrets by an Ansible play. The setup is fully declarative — adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
 
@@ -58,7 +58,7 @@ The project was born as a hobby idea to organize knowledge. The core idea is to 
 
 ## Deployment mechanism
 
-Deployments happen whenever a PR gets merged to the `main` branch. GitHub Actions is used for all deployments and secrets are kept in Bitwarden. Whenever there's code merged, the CI runner:
+Deployments happen whenever a PR gets merged to the `main` branch. Host-level changes (k3s, Traefik's doors, the edge firewall) are Ansible roles instead, applied by dispatching `deploy-infra.yml` with their tag. GitHub Actions is used for all deployments and secrets are kept in Bitwarden. Whenever there's code merged, the CI runner:
 
 1. Joins my Tailscale network
 2. SSHs into the homelab via Tailscale SSH (no keys needed!)

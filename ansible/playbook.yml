@@ -76,6 +76,11 @@
     - role: traefik
       tags: [traefik, infra]
 
+    # Default-deny for new connections on the public interface: Traefik's
+    # public door and tailscaled only. Applies live.
+    - role: edge-firewall
+      tags: [edge-firewall, infra]
+
 # Worker node setup (K3s agent)
 - name: Setup K3s worker nodes
   hosts: worker
