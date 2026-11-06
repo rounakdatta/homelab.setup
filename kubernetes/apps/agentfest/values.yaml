@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.2.5"
+  tag: "0.2.6"
 
 # Pin the self-updating components to exact versions rather than tracking
 # "latest", so upgrades are deliberate and reproducible. Bump after reviewing
@@ -9,10 +9,10 @@ image:
 #
 # 2.1.280 is the floor for Opus 5.5.
 claudeCode:
-  version: "2.1.285"
+  version: "2.1.318"
 
 paseo:
-  version: "0.10.3"
+  version: "0.15.3"
 
   # Loopback only. Phones and laptops come in through Paseo's relay, which
   # the daemon dials out to, so nothing in the cluster connects to it (festie
