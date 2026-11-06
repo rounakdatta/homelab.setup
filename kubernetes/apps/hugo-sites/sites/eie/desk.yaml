@@ -21,6 +21,7 @@ metadata:
   namespace: sites
   annotations:
     traefik.ingress.kubernetes.io/router.middlewares: sites-eie-desk-ratelimit@kubernetescrd
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
 spec:
   ingressClassName: traefik
   tls:
