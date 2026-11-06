@@ -53,5 +53,3 @@
   ansible.builtin.debug:
     msg:
       - "K3s agent installed successfully"
-      - "Tailscale IP: {{ host_tailscale_ip }}"
-      - "Connected to server: {{ k3s_server_url }}"

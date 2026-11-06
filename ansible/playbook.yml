@@ -42,20 +42,19 @@
       failed_when: false
       tags: [always]
 
+    # no_log here and below: `-v` would print this host's addresses to the
+    # public Actions logs.
     - name: Get Tailscale IP address
       ansible.builtin.command: tailscale ip -4
       register: tailscale_ip
       changed_when: false
+      no_log: true
       tags: [always]
 
     - name: Set Tailscale IP as fact
       ansible.builtin.set_fact:
         host_tailscale_ip: "{{ tailscale_ip.stdout }}"
-      tags: [always]
-
-    - name: Display Tailscale IP
-      ansible.builtin.debug:
-        msg: "Using Tailscale IP: {{ host_tailscale_ip }}"
+      no_log: true
       tags: [always]
 
   roles:
@@ -106,16 +105,13 @@
       ansible.builtin.command: tailscale ip -4
       register: tailscale_ip
       changed_when: false
+      no_log: true
       tags: [always]
 
     - name: Set Tailscale IP as fact
       ansible.builtin.set_fact:
         host_tailscale_ip: "{{ tailscale_ip.stdout }}"
-      tags: [always]
-
-    - name: Display Tailscale IP
-      ansible.builtin.debug:
-        msg: "Using Tailscale IP: {{ host_tailscale_ip }}"
+      no_log: true
       tags: [always]
 
   roles:
