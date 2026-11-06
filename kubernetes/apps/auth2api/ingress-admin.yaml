@@ -30,7 +30,7 @@ metadata:
   name: auth2api-admin
   namespace: apps
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure,tailnet
     # Load-bearing. See above.
     traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd,apps-auth2api-ratelimit@kubernetescrd
 spec:
