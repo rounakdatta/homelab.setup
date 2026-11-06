@@ -407,6 +407,17 @@
           BASIC_AUTH_USER: keel/username
           BASIC_AUTH_PASSWORD: keel/password
 
+      # cert-manager's Cloudflare token for DNS-01 (cluster-issuer.yaml). Made
+      # in Cloudflare, not minted here: Zone:DNS:Edit + Zone:Zone:Read on
+      # taptappers.club and itineris.world only. It can rewrite both zones, so
+      # nothing else should hold it. Bitwarden item `cloudflare/dns_api_token`,
+      # password = the token. Without it no certificate can renew; the ones
+      # already issued keep serving until they expire.
+      - name: cloudflare-api-token
+        namespace: cert-manager
+        data:
+          api-token: cloudflare/dns_api_token
+
       # agentfest — the remote computer running Claude Code. Its Secret keeps
       # the name of festie, the Codeman computer it replaced.
       #
@@ -537,6 +548,7 @@
         - apps
         - tinyauth
         - velero
+        - cert-manager
       register: ns_result
       changed_when: "'created' in ns_result.stdout"
       failed_when: false
