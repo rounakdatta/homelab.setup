@@ -1,7 +1,18 @@
 ---
 # Let's Encrypt Production ClusterIssuer
 # This creates a cluster-wide certificate issuer that all ingresses can use
-# Uses HTTP-01 challenge with Traefik (K3s default ingress controller)
+#
+# DNS-01 through Cloudflare, not HTTP-01. Most hostnames are tailnet-only:
+# their A records hold the control plane's Tailscale address, which Let's
+# Encrypt cannot reach, so an HTTP-01 challenge for them can never complete.
+# DNS-01 proves control of the name with a TXT record instead, so it works the
+# same for a tailnet-only host and a public one, and nothing needs port 80.
+#
+# The token (Secret cloudflare-api-token, synced from the Bitwarden item
+# cloudflare/dns_api_token by ansible/playbook.yml) needs Zone:DNS:Edit and
+# Zone:Zone:Read on every zone a certificate names -- today taptappers.club and
+# itineris.world. It can rewrite those zones, so scope it to them and nothing
+# else. A ClusterIssuer reads it from cert-manager's own namespace.
 apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
@@ -19,11 +30,12 @@ spec:
     privateKeySecretRef:
       name: letsencrypt-prod-account-key
 
-    # HTTP-01 challenge solver using Traefik ingress
     solvers:
-    - http01:
-        ingress:
-          class: traefik  # K3s default ingress controller
+    - dns01:
+        cloudflare:
+          apiTokenSecretRef:
+            name: cloudflare-api-token
+            key: api-token
 
 ---
 # Let's Encrypt Staging ClusterIssuer (for testing)
@@ -43,6 +55,8 @@ spec:
       name: letsencrypt-staging-account-key
 
     solvers:
-    - http01:
-        ingress:
-          class: traefik
+    - dns01:
+        cloudflare:
+          apiTokenSecretRef:
+            name: cloudflare-api-token
+            key: api-token

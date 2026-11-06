@@ -15,7 +15,8 @@ namespace: apps
 # four edits and no app change:
 #
 #   1. oh-my-dns: add the record. A new apex is a new zone -- create
-#      zones/<domain>.txt, and make sure CLOUDFLARE_API_TOKEN covers that zone.
+#      zones/<domain>.txt, and make sure CLOUDFLARE_API_TOKEN covers that zone,
+#      and so does cert-manager's token (Bitwarden cloudflare/dns_api_token).
 #      DNS-only, never proxied. Verify it resolves BEFORE step 3.
 #   2. Google Cloud console: add https://<domain>/creator/auth/callback to the
 #      authorised redirect URIs of the OAuth client named in the
@@ -27,9 +28,9 @@ namespace: apps
 #      serves the viewer through the SPA fallback.
 #
 # Steps 3 and 4 trigger one reissue of itineris-tls-secret as a SAN cert over
-# every listed name. Do them after step 1 has propagated: an unresolvable name
-# cannot pass HTTP-01, and the renewal stalls until it can (the existing cert
-# keeps serving meanwhile, so this is recoverable, not an outage).
+# every listed name. Do them after step 1: a name in a zone cert-manager's token
+# cannot edit cannot pass DNS-01, and the renewal stalls until it can (the
+# existing cert keeps serving meanwhile, so this is recoverable, not an outage).
 
 # Bumping is two lines AND a re-render -- three things, not two.
 #
