@@ -42,6 +42,8 @@ spec:
               value: {{ .Values.paseo.version | quote }}
             - name: AGENTFEST_CLAUDE_CODE_VERSION
               value: {{ .Values.claudeCode.version | quote }}
+            - name: AGENTFEST_CODEX_VERSION
+              value: {{ .Values.codex.version | quote }}
             - name: PASEO_LISTEN
               value: "{{ .Values.paseo.listenHost }}:{{ .Values.paseo.port }}"
             - name: PASEO_RELAY_ENABLED

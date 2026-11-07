@@ -3,7 +3,7 @@ image:
   # Pinned to the same tag as Chart.appVersion so a chart upgrade always
   # corresponds to one specific image. Override at install time if you need
   # to roll forward without bumping the chart.
-  tag: "0.2.5"
+  tag: "0.2.7"
   pullPolicy: IfNotPresent
 
 # One deployment is one computer. Scaling this is meaningless: the whole
@@ -21,7 +21,13 @@ replicaCount: 1
 # entrypoint compares the pin with the version actually installed, so an
 # install that drifted out of band is brought back to the pin on the next boot.
 claudeCode:
-  version: "2.1.285"
+  version: "2.1.318"
+
+# Codex, for Paseo's Codex provider: installed and pinned the same way as
+# Claude Code, and for the same reason. Sign it in once from a terminal with
+# `codex login --device-auth`.
+codex:
+  version: "0.167.0"
 
 # Paseo: the daemon that runs the agents, and that every client — the phone
 # app, the desktop app, the CLI — talks to.
@@ -30,7 +36,7 @@ paseo:
   # is a values edit and a pod restart, not an image rebuild. The app's own
   # update button is inert by design (see paseoPrefix in flake.nix), so this
   # pin is what runs.
-  version: "0.10.2"
+  version: "0.15.3"
   port: 6767
 
   # Where the daemon listens. Loopback is enough for the relay, which dials
