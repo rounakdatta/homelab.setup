@@ -33,9 +33,8 @@ metadata:
     applet.sh/phone: {{ $p.name | quote }}
 spec:
   serviceName: applet-phone-{{ $p.name }}
-  # Asleep by default — the controller scales to 1 to wake it. This is what keeps
-  # idle phones off the RAM budget.
-  replicas: 0
+  # No `replicas`: the controller owns it (wake/sleep scale this StatefulSet), and
+  # a value here would be reset by every `kubectl apply`.
   selector:
     matchLabels:
       app.kubernetes.io/instance: {{ $.Release.Name }}
