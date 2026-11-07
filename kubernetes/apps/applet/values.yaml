@@ -3,8 +3,9 @@ image:
   repository: ghcr.io/rounakdatta/applet
   tag: "0.2.0"
 
-# The image is private (github.com/rounakdatta/applet). This Secret is synced
-# from Bitwarden by the secrets play (ghcr-pull in ansible/playbook.yml).
+# The image is private (github.com/rounakdatta/applet). deploy-stuff.yml builds
+# this ghcr-pull Secret from the GHCR_READ_TOKEN repository secret (interim,
+# like itineris-google-maps).
 imagePullSecrets:
   - name: ghcr-pull
 
