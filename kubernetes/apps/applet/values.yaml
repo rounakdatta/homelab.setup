@@ -16,9 +16,12 @@ controller:
   resources:
     requests:
       cpu: 250m
-      memory: 64Mi
+      memory: 128Mi
+    # F-Droid's index is ~75 MB and is read whole, then parsed, inside this limit
+    # alongside curl and apkeep: at 192Mi the index fetch died silently and starved
+    # apkeep's download after it.
     limits:
-      memory: 192Mi
+      memory: 512Mi
   # The controller runs on the control plane, not beside the phone: APKPure
   # silently serves nothing to the Paris worker's datacenter IP (apkeep "succeeds"
   # with no file), and adb reaches the phone across nodes anyway. It is small (64Mi
