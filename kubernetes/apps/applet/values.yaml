@@ -10,11 +10,12 @@ imagePullSecrets:
   - name: ghcr-pull
 
 controller:
-  # No CPU request: idle between calls, so it yields under contention rather
-  # than reserving a core.
+  # A small CPU request: with none, the controller ran at the minimum CPU weight,
+  # and on a busy node its downloads (F-Droid's 71 MB index, an APKPure XAPK)
+  # crawled until the server dropped them, which apkeep reports as success.
   resources:
     requests:
-      cpu: null
+      cpu: 250m
       memory: 64Mi
     limits:
       memory: 192Mi
