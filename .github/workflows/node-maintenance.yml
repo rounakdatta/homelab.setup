@@ -56,6 +56,18 @@ jobs:
           version: 1.76.1
           args: --advertise-tags=tag:homelab
 
+      # ONE-OFF, throwaway branch: why Zepto closes on launch (crash lines only).
+      - name: One-off - Zepto launch logcat
+        run: |
+          cat > /tmp/lc.sh <<'EOS'
+          logcat -c
+          monkey --pct-syskeys 0 -p com.zeptoconsumerapp -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+          sleep 10
+          echo "=== crash buffer"; logcat -d -b crash | grep -vE '^\s*$' | head -60
+          echo "=== zepto / fatal lines"; logcat -d | grep -iE 'FATAL|AndroidRuntime|zepto|DEBUG  :|libc  |Abort message|ndk_translation|native_bridge|integrity|root|emulator|SafetyNet' | grep -vE 'chatty' | head -60
+          EOS
+          tailscale ssh "root@${CONTROL}" "k3s kubectl -n apps exec -i applet-phone-rounak-0 -- sh -s" < /tmp/lc.sh 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/IP/g' | cut -c1-260
+
       - name: Before
         run: |
           tailscale ssh "root@${CONTROL}" 'df -h / | tail -1; echo "images: $(k3s crictl images -q 2>/dev/null | wc -l)"; k3s crictl imagefsinfo 2>/dev/null | tr -d " \n" | cut -c1-240; echo'
