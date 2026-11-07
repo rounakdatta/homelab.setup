@@ -175,6 +175,15 @@ jobs:
             exit 1
           fi
 
+      # ONE-OFF, throwaway branch, never merged: applet's controller moves to the
+      # control plane, and its local-path volume is pinned to the Paris worker, so
+      # recreate the claim (its state is empty). The apply below brings both back.
+      - name: One-off - free applet's controller volume to move nodes
+        run: |
+          kubectl -n apps scale deployment/applet --replicas=0
+          kubectl -n apps wait --for=delete pod -l app.kubernetes.io/component=controller --timeout=120s || true
+          kubectl -n apps delete pvc applet-data --wait=true --timeout=120s --ignore-not-found
+
       - name: Deploy manifests
         run: |
           # Render once. Charts are vendored under kubernetes/**/charts/, so
