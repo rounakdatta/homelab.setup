@@ -1,7 +1,7 @@
 ---
 image:
   repository: ghcr.io/rounakdatta/zepp-life-mcp
-  tag: "0.5.4"
+  tag: "0.5.5"
 
 zepp:
   mode: cloud_session
