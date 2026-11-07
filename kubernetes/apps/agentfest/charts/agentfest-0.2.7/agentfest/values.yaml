@@ -3,7 +3,7 @@ image:
   # Pinned to the same tag as Chart.appVersion so a chart upgrade always
   # corresponds to one specific image. Override at install time if you need
   # to roll forward without bumping the chart.
-  tag: "0.2.6"
+  tag: "0.2.7"
   pullPolicy: IfNotPresent
 
 # One deployment is one computer. Scaling this is meaningless: the whole
@@ -22,6 +22,12 @@ replicaCount: 1
 # install that drifted out of band is brought back to the pin on the next boot.
 claudeCode:
   version: "2.1.318"
+
+# Codex, for Paseo's Codex provider: installed and pinned the same way as
+# Claude Code, and for the same reason. Sign it in once from a terminal with
+# `codex login --device-auth`.
+codex:
+  version: "0.167.0"
 
 # Paseo: the daemon that runs the agents, and that every client — the phone
 # app, the desktop app, the CLI — talks to.

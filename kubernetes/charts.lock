@@ -9,11 +9,11 @@
 # come from the sibling kustomization.yaml and say where it came from.
 
 charts:
-  - path: kubernetes/apps/agentfest/charts/agentfest-0.2.6
+  - path: kubernetes/apps/agentfest/charts/agentfest-0.2.7
     chart: agentfest
-    version: 0.2.6
+    version: 0.2.7
     repo: oci://ghcr.io/rounakdatta/charts
-    sha256: dcd65738b7c1f65d13a796cfca4f7a67e90f7faa62092ec590a26878ac381a44
+    sha256: 69788420817232fdcd11e704bf87e829f4e2c8a91180de39a2c7ad2a4e79a766
   - path: kubernetes/apps/auth2api/charts/app-template-5.1.0
     chart: app-template
     version: 5.1.0
