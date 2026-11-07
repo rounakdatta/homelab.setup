@@ -125,6 +125,11 @@
         k3s_server_url: "https://{{ hostvars[groups['control'][0]]['host_tailscale_ip'] | default(k3s_server_ip) }}:6443"
         k3s_node_token: "{{ lookup('env', 'K3S_NODE_TOKEN') }}"
 
+    # The binder module for applet's redroid phones, which are pinned to this
+    # worker (kubernetes/apps/applet). Run alone with tags=binder.
+    - role: binder
+      tags: [binder, infra]
+
   post_tasks:
     - name: Label worker node
       ansible.builtin.command: >
@@ -471,6 +476,27 @@
         data:
           api-key: auth2api/api_key
 
+      # applet — the cloud-phone controller (kubernetes/apps/applet). admin-key
+      # guards every mutation in its console; mcp-bearer guards /mcp, the agent
+      # API. Both minted by create-bitwarden-secret.yml (random bytes), never
+      # chosen.
+      - name: applet
+        namespace: apps
+        data:
+          admin-key: applet/admin_key
+          mcp-bearer: applet/mcp_bearer
+
+      # ghcr-pull — lets the cluster pull applet's PRIVATE image from ghcr.io.
+      # The item's notes hold a dockerconfigjson for a classic PAT scoped to
+      # read:packages only. `secret_type` (not `type`, which picks the Bitwarden
+      # field) makes kubectl emit a real kubernetes.io/dockerconfigjson Secret.
+      - name: ghcr-pull
+        namespace: apps
+        type: notes
+        secret_type: kubernetes.io/dockerconfigjson
+        data:
+          .dockerconfigjson: ghcr/dockerconfigjson
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:
@@ -575,6 +601,9 @@
         if [ -n "$bad" ]; then echo "SKIPPED {{ item.name }}:$bad"; exit 3; fi
         kubectl create secret generic {{ item.name }} \
           --namespace={{ item.namespace }} \
+          {% if item.secret_type is defined %}
+          --type={{ item.secret_type }} \
+          {% endif %}
           {% for key in item.data.keys() %}
           --from-file={{ key }}="$d/{{ key }}" \
           {% endfor %}

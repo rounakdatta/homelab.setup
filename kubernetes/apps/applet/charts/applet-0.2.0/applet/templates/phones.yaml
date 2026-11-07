@@ -1,0 +1,104 @@
+{{- $d := .Values.phoneDefaults -}}
+{{- range $p := .Values.phones }}
+{{- $cfg := mergeOverwrite (deepCopy $d) $p }}
+---
+# A headless Service gives each phone a stable in-cluster DNS name the controller
+# adb-connects to: applet-phone-<name>.<ns>.svc.cluster.local:5555
+apiVersion: v1
+kind: Service
+metadata:
+  name: applet-phone-{{ $p.name }}
+  labels:
+    {{- include "applet.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: phone
+    applet.sh/phone: {{ $p.name | quote }}
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/component: phone
+    applet.sh/phone: {{ $p.name | quote }}
+  ports:
+    - name: adb
+      port: 5555
+      targetPort: 5555
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: applet-phone-{{ $p.name }}
+  labels:
+    {{- include "applet.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: phone
+    applet.sh/phone: {{ $p.name | quote }}
+spec:
+  serviceName: applet-phone-{{ $p.name }}
+  # Asleep by default — the controller scales to 1 to wake it. This is what keeps
+  # idle phones off the RAM budget.
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ $.Release.Name }}
+      app.kubernetes.io/component: phone
+      applet.sh/phone: {{ $p.name | quote }}
+  template:
+    metadata:
+      labels:
+        {{- include "applet.labels" $ | nindent 8 }}
+        app.kubernetes.io/component: phone
+        applet.sh/phone: {{ $p.name | quote }}
+    spec:
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $cfg.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      # redroid needs a graceful stop to flush /data; give it room.
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: redroid
+          image: "{{ $cfg.image.repository }}:{{ $cfg.image.tag }}"
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          # redroid runs Android directly on the host kernel; it needs privilege
+          # for the binder device nodes. The host must have the binder module
+          # loaded (deploy/ansible/binder).
+          securityContext:
+            privileged: true
+          {{- with $cfg.extraArgs }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: adb
+              containerPort: 5555
+          readinessProbe:
+            # adb is up well before Android finishes booting; the controller
+            # waits for boot_completed itself. This just gates the Service.
+            tcpSocket:
+              port: 5555
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              {{- if $cfg.resources.requests.cpu }}
+              cpu: {{ $cfg.resources.requests.cpu }}
+              {{- end }}
+              memory: {{ $cfg.resources.requests.memory }}
+            limits:
+              memory: {{ $cfg.resources.limits.memory }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: {{ $cfg.storage.storageClass | quote }}
+        resources:
+          requests:
+            storage: {{ $cfg.storage.size }}
+{{- end }}

@@ -1,0 +1,68 @@
+---
+image:
+  repository: ghcr.io/rounakdatta/applet
+  tag: "0.2.0"
+
+# The image is private (github.com/rounakdatta/applet). This Secret is synced
+# from Bitwarden by the secrets play (ghcr-pull in ansible/playbook.yml).
+imagePullSecrets:
+  - name: ghcr-pull
+
+controller:
+  # No CPU request: idle between calls, so it yields under contention rather
+  # than reserving a core.
+  resources:
+    requests:
+      cpu: null
+      memory: 64Mi
+    limits:
+      memory: 192Mi
+  # Everything lives on jomjom. local-path binds a volume to the node that first
+  # mounts it, so the controller's state must sit beside the phone, and the
+  # RAM-tight control plane stays out of it entirely.
+  nodeSelector:
+    homelab.setup/city: rishra
+  storage:
+    size: 5Gi
+    storageClass: local-path
+
+# No ingress: private apps are going tailnet-only (homelab.setup#292), so the
+# console and /mcp are reached in-cluster, at applet.apps.svc.cluster.local:8080.
+# The console's own cookie login (admin-key) is its guard; /mcp has its bearer.
+auth:
+  cookieAuth: true
+
+secret:
+  create: false
+  existingSecret: applet
+
+# F-Droid first (hash-verified against its signed index), then APKPure for the
+# Play-only apps. APKPure is acknowledged deliberately; Android itself refuses
+# any later update signed by a different key.
+sources: "fdroid,apkpure"
+apkpureAck: true
+
+phoneDefaults:
+  # Stock redroid: applet drives the phone over adb, so nothing is baked in.
+  image:
+    repository: redroid/redroid
+    tag: "11.0.0"
+  storage:
+    size: 8Gi
+    storageClass: local-path
+  resources:
+    requests:
+      cpu: null
+      memory: 512Mi
+    limits:
+      memory: 3Gi
+  # jomjom has the binder module (the `binder` role in the worker play).
+  nodeSelector:
+    homelab.setup/city: rishra
+
+phones:
+  - name: rounak
+    arch: amd64
+
+ingress:
+  enabled: false

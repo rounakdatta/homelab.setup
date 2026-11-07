@@ -1,0 +1,25 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apps
+
+# applet — a cloud Android phone an agent drives (github.com/rounakdatta/applet,
+# private). One controller and one phone for Rounak, all pinned to the Rishra
+# worker `jomjom`, which has the RAM the control plane doesn't.
+#
+# Bumping is two lines AND a re-render (the same three steps as zepp-life-mcp),
+# with one extra: the chart package is private, so log in first.
+#
+#   gh auth token | helm registry login ghcr.io -u <user> --password-stdin
+#   kustomize build --enable-helm kubernetes/ >/dev/null
+#   git rm -r kubernetes/apps/applet/charts/applet-<old>/
+#   git add kubernetes/apps/applet/charts/applet-<new>/
+#   python3 .github/scripts/charts-lock.py --write
+helmCharts:
+  - name: applet
+    repo: oci://ghcr.io/rounakdatta/charts
+    version: 0.2.0
+    releaseName: applet
+    namespace: apps
+    valuesFile: values.yaml
