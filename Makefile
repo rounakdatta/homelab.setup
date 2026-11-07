@@ -22,7 +22,7 @@ infra:
 		echo "[control]" > /tmp/homelab-inventory && \
 		echo "$${CONTROL_MACHINE_NAME} ansible_user=root" >> /tmp/homelab-inventory && \
 		echo "[worker]" >> /tmp/homelab-inventory && \
-		echo "$${WORKER_MACHINE_NAME} ansible_user=root node_labels=\"{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}\"" >> /tmp/homelab-inventory && \
+		echo "$${WORKER_MACHINE_NAME} ansible_user=root tailscale_mtu=1200 node_labels=\"{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}\"" >> /tmp/homelab-inventory && \
 		{ [ -z "$${WORKER_PARIS_MACHINE_NAME}" ] || echo "$${WORKER_PARIS_MACHINE_NAME} ansible_user=root binder=true node_labels=\"{'homelab.setup/region': 'france', 'homelab.setup/city': 'paris'}\"" >> /tmp/homelab-inventory; } && \
 		ansible-playbook ansible/playbook.yml -i /tmp/homelab-inventory --tags infra
 
