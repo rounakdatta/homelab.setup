@@ -147,6 +147,7 @@ jobs:
         env:
           CONTROL_MACHINE_NAME: ${{ secrets.CONTROL_MACHINE_NAME }}
           WORKER_MACHINE_NAME: ${{ secrets.WORKER_MACHINE_NAME }}
+          WORKER_PARIS_MACHINE_NAME: ${{ secrets.WORKER_PARIS_MACHINE_NAME }}
           K3S_NODE_TOKEN: ${{ env.K3S_NODE_TOKEN }}
           TAGS: ${{ inputs.tags }}
           LIMIT: ${{ inputs.limit }}
@@ -158,6 +159,10 @@ jobs:
           [worker]
           ${WORKER_MACHINE_NAME} ansible_user=root node_labels="{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}"
           EOF
+          # The Paris VPS (Ubuntu): runs applet's phones, so it also gets binder.
+          if [ -n "${WORKER_PARIS_MACHINE_NAME}" ]; then
+            echo "${WORKER_PARIS_MACHINE_NAME} ansible_user=root binder=true node_labels=\"{'homelab.setup/region': 'france', 'homelab.setup/city': 'paris'}\"" >> /tmp/inventory
+          fi
 
           ANSIBLE_CONFIG=~/.ansible.cfg ansible-playbook ansible/playbook.yml -i /tmp/inventory --tags "${TAGS}" --limit "${LIMIT}" -v
 

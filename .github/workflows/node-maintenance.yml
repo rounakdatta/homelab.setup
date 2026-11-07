@@ -31,6 +31,10 @@ on:
         description: 'Encrypt Secrets at rest in etcd: write the config.yaml.d drop-in, restart k3s once, reencrypt existing Secrets. Idempotent — a no-op once enabled.'
         type: boolean
         default: false
+      drop_server_join_flag:
+        description: 'Remove the one-time --server join flag from the k3s unit (it names the old control plane, now a worker), then restart k3s once. A no-op when absent; rolls back if the API does not return.'
+        type: boolean
+        default: false
       velero_status:
         description: 'Read-only Velero report: server + node-agent, repository password strength (never printed), BSLs, backup repositories, last backups'
         type: boolean
@@ -173,6 +177,54 @@ jobs:
             done
             echo "== final status =="
             k3s secrets-encrypt status || true
+          EOS
+
+      # k3s reads --server only for a server's FIRST join: once the node holds
+      # its own etcd member data it starts from that and never uses the flag
+      # again. The control plane still carries the one it joined with in
+      # 2026-09, which names the old control plane's address, a worker's now.
+      # Harmless while the data exists, but it points at the wrong machine, so
+      # drop it. Guarded and idempotent: a no-op when the flag is absent;
+      # refuses without local etcd member data; restarts k3s ONCE, and puts the
+      # old unit back if the API is not answering within 5 minutes.
+      - name: Drop the stale --server join flag
+        if: ${{ inputs.drop_server_join_flag }}
+        run: |
+          tailscale ssh "root@${CONTROL}" 'bash -s' <<'EOS'
+            set -e
+            unit=/etc/systemd/system/k3s.service
+            if ! grep -qE "^[[:space:]]*'--server" "$unit"; then echo "no --server flag in $unit; nothing to do"; exit 0; fi
+            [ -d /var/lib/rancher/k3s/server/db/etcd/member ] || { echo "no local etcd member data -- the flag may still be needed; not touching it"; exit 1; }
+            # Do not restart an already-unhealthy k3s.
+            systemctl is-active k3s
+            cp -a "$unit" /root/k3s.service.before-drop-server
+            # Either form: '--server' 'URL' (two lines, as the installer writes it) or '--server=URL'.
+            sed -i -E "/^[[:space:]]*'--server' \\\\$/{N;d}; /^[[:space:]]*'--server=[^']*' \\\\$/d" "$unit"
+            if grep -qE "^[[:space:]]*'--server" "$unit"; then
+              cp -a /root/k3s.service.before-drop-server "$unit"
+              echo "flag not removed cleanly; unit restored, nothing restarted"; exit 1
+            fi
+            systemctl daemon-reload
+            echo "flag removed; restarting k3s once"
+            before="$(systemctl show k3s -p NRestarts --value)"
+            systemctl restart k3s || echo "systemctl restart returned nonzero; waiting for the API anyway"
+            ok=0
+            for i in $(seq 1 60); do
+              if k3s kubectl get nodes >/dev/null 2>&1; then ok=1; echo "API back after ~$((i*5))s"; break; fi
+              sleep 5
+            done
+            if [ "$ok" != 1 ]; then
+              echo "API not back after 5 min: restoring the previous unit and restarting k3s"
+              cp -a /root/k3s.service.before-drop-server "$unit"
+              systemctl daemon-reload
+              systemctl restart k3s || true
+              exit 1
+            fi
+            systemctl is-active k3s
+            echo "restart counter: $before -> $(systemctl show k3s -p NRestarts --value) (a manual restart does not count)"
+            # Counts only: these logs are public.
+            echo "nodes by status: $(k3s kubectl get nodes --no-headers | awk '{print $2}' | sort | uniq -c | xargs)"
+            rm -f /root/k3s.service.before-drop-server
           EOS
 
       - name: Rollout restart
