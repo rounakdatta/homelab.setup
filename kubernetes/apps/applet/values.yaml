@@ -47,13 +47,13 @@ sources: "fdroid,apkpure"
 apkpureAck: true
 
 phoneDefaults:
-  # Stock redroid: applet drives the phone over adb, so nothing is baked in.
+  # redroid 11 + OpenGApps pico + libndk (applet's phone-image workflow): Rapido
+  # and most Indian apps need Google Play services and ship only ARM code. No
+  # Google sign-in. Private; pulled with the same ghcr-pull Secret as the
+  # controller.
   image:
-    repository: redroid/redroid
-    # redroid publishes dated builds only; there is no plain "11.0.0" tag (the
-    # chart's default), so the pull failed with NotFound. 240527 is the newest
-    # Android 11 build (the one 11.0.0-latest points at), pinned so it can't move.
-    tag: "11.0.0-240527"
+    repository: ghcr.io/rounakdatta/applet-phone
+    tag: "11.0.0-gapps-ndk"
   storage:
     size: 8Gi
     storageClass: local-path
@@ -71,7 +71,10 @@ phoneDefaults:
 
 phones:
   - name: rounak
-    arch: amd64
+    # The node is amd64, but libndk runs ARM code and stores often have no x86
+    # build (Rapido ships armeabi-v7a only), so fetch ARM builds. Interim, until
+    # applet falls back across ABIs on its own.
+    arch: arm
 
 ingress:
   enabled: false
