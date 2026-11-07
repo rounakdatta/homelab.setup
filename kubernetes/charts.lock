@@ -14,6 +14,11 @@ charts:
     version: 0.2.9
     repo: oci://ghcr.io/rounakdatta/charts
     sha256: e822d37883873def28c948ff83352ce0fa9e5d358f9b5fad78e8ef8b79534160
+  - path: kubernetes/apps/applet/charts/applet-0.2.0
+    chart: applet
+    version: 0.2.0
+    repo: oci://ghcr.io/rounakdatta/charts
+    sha256: a81544d45c0f21bbe55d6ea00fb2049fe6c82899c0e34bac190b0ee6a9e95ab0
   - path: kubernetes/apps/auth2api/charts/app-template-5.1.0
     chart: app-template
     version: 5.1.0

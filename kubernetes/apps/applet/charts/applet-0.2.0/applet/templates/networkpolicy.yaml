@@ -1,0 +1,28 @@
+{{- if .Values.phones }}
+# adb on a phone is total control of that device, so the only thing allowed to
+# reach a phone's :5555 is the controller. Egress is left open: the phone has to
+# reach the internet for its apps (Uber, Rapido…) to work at all — which is the
+# whole point. (k3s enforces NetworkPolicy by default.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ .Release.Name }}-phones-adb
+  labels:
+    {{- include "applet.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: phone
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+              app.kubernetes.io/component: controller
+      ports:
+        - protocol: TCP
+          port: 5555
+{{- end }}

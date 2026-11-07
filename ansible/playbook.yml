@@ -485,6 +485,19 @@
         data:
           api-key: auth2api/api_key
 
+      # applet — the cloud-phone controller (kubernetes/apps/applet). admin-key
+      # guards every mutation in its console; mcp-bearer guards /mcp, the agent
+      # API. Both minted by create-bitwarden-secret.yml (random bytes), never
+      # chosen.
+      - name: applet
+        namespace: apps
+        data:
+          admin-key: applet/admin_key
+          mcp-bearer: applet/mcp_bearer
+      # applet's PRIVATE image is pulled via the ghcr-pull Secret, created from
+      # the GHCR_READ_TOKEN repository secret in deploy-stuff.yml (the same
+      # interim pattern as itineris-google-maps) rather than from Bitwarden.
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:
