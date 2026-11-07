@@ -56,18 +56,21 @@ jobs:
           version: 1.76.1
           args: --advertise-tags=tag:homelab
 
-      # ONE-OFF, throwaway branch: where Zepto's native libraries are, and where SoLoader looks.
-      - name: One-off - Zepto native libs
+      # ONE-OFF, throwaway branch: validate extracting the translated ABI's libs, then launch Zepto.
+      - name: One-off - extract Zepto libs and launch
         run: |
           cat > /tmp/lc.sh <<'EOS'
-          D=$(dirname $(pm path com.zeptoconsumerapp | head -1 | cut -d: -f2))
-          echo "=== installed APKs"; ls -la $D | awk '{print $5, $8}'
-          echo "=== extracted lib dirs"; ls -R $D/lib 2>/dev/null | head -10
-          echo "=== props"; for p in ro.product.cpu.abilist32 ro.product.cpu.abilist64 ro.dalvik.vm.native.bridge ro.enable.native.bridge.exec ro.dalvik.vm.isa.arm ro.dalvik.vm.isa.arm64; do echo "$p=$(getprop $p)"; done
-          logcat -c; A=$(timeout 15 cmd package resolve-activity --brief -c android.intent.category.LAUNCHER com.zeptoconsumerapp | tail -1); timeout 20 am start -n "$A" >/dev/null 2>&1; sleep 6
-          echo "=== SoLoader search"; logcat -d | grep -m1 DirectApkSoSource | sed -E 's#/data/app/[^/]+/com\.zeptoconsumerapp-[^/]+/#<app>/#g; s/.*DirectApkSoSource/DirectApkSoSource/' | tr ',' '\n'
+          D=$(dirname $(pm path com.zeptoconsumerapp | head -1 | cut -d: -f2)); T=/data/local/tmp/zx; rm -rf $T; mkdir -p $T
+          echo "unzip: $(command -v unzip)  selinux: $(getenforce 2>/dev/null)  libdir owner: $(stat -c '%U:%G %a' $D/lib/arm)"
+          cd $T && unzip -o -q $D/split_config.armeabi_v7a.apk 'lib/armeabi-v7a/*' && echo "libs in split: $(ls lib/armeabi-v7a | wc -l)"
+          cp lib/armeabi-v7a/*.so $D/lib/arm/ && chown system:system $D/lib/arm/*.so && chmod 755 $D/lib/arm/*.so && restorecon -R $D/lib 2>/dev/null; rm -rf $T
+          echo "extracted: $(ls $D/lib/arm | wc -l) files, libreactnative: $(ls $D/lib/arm | grep -c '^libreactnative.so$')"
+          am force-stop com.zeptoconsumerapp; logcat -c
+          A=$(timeout 15 cmd package resolve-activity --brief -c android.intent.category.LAUNCHER com.zeptoconsumerapp | tail -1); timeout 20 am start -n "$A" >/dev/null 2>&1; sleep 12
+          echo "=== top: $(dumpsys activity activities | grep -m1 mResumedActivity | sed 's/.*u0 //')"
+          echo "=== crash lines:"; logcat -d | grep -E 'FATAL EXCEPTION|couldn.t find DSO|UnsatisfiedLink|Abort message' | head -6
           EOS
-          timeout 150 tailscale ssh "root@${CONTROL}" "k3s kubectl -n apps exec -i applet-phone-rounak-0 -- sh -s" < /tmp/lc.sh 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/IP/g'
+          timeout 170 tailscale ssh "root@${CONTROL}" "k3s kubectl -n apps exec -i applet-phone-rounak-0 -- sh -s" < /tmp/lc.sh 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/IP/g'
 
       - name: Before
         run: |
