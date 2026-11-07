@@ -5,8 +5,9 @@ kind: Kustomization
 namespace: apps
 
 # applet — a cloud Android phone an agent drives (github.com/rounakdatta/applet,
-# private). One controller and one phone for Rounak, all pinned to the Rishra
-# worker `jomjom`, which has the RAM the control plane doesn't.
+# private). One controller and one phone for Rounak, pinned to the Paris worker
+# `vizerizz` — the one host with binder loaded and the RAM the control plane
+# doesn't have.
 #
 # Bumping is two lines AND a re-render (the same three steps as zepp-life-mcp),
 # with one extra: the chart package is private, so log in first.
