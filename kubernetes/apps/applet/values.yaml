@@ -18,11 +18,14 @@ controller:
       memory: 64Mi
     limits:
       memory: 192Mi
-  # Everything lives on jomjom. local-path binds a volume to the node that first
-  # mounts it, so the controller's state must sit beside the phone, and the
-  # RAM-tight control plane stays out of it entirely.
+  # Everything lives on the Paris worker. local-path binds a volume to the node
+  # that first mounts it, so the controller's state must sit beside the phone,
+  # and the RAM-tight control plane stays out of it entirely. The chart's
+  # default selector (control-plane: "true") must be nulled: Helm merges maps,
+  # so adding a key alone kept both, which no node matched.
   nodeSelector:
-    homelab.setup/city: rishra
+    homelab.setup/city: paris
+    node-role.kubernetes.io/control-plane: null
   storage:
     size: 5Gi
     storageClass: local-path
@@ -57,9 +60,11 @@ phoneDefaults:
       memory: 512Mi
     limits:
       memory: 3Gi
-  # jomjom has the binder module (the `binder` role in the worker play).
+  # The Paris worker has the binder module (binder=true in deploy-infra's
+  # inventory runs the `binder` role there). Same nulled default as above.
   nodeSelector:
-    homelab.setup/city: rishra
+    homelab.setup/city: paris
+    node-role.kubernetes.io/control-plane: null
 
 phones:
   - name: rounak
