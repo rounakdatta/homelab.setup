@@ -51,6 +51,22 @@ jobs:
       # Secret and this step becomes a no-op rewrite of the same value).
       # A browser key ships to every visitor anyway; its protection is the
       # HTTP-referrer restriction in Google Cloud. Never printed.
+      - name: GHCR pull secret -> Secret (repository secret, interim)
+        if: ${{ env.GHCR_READ_TOKEN != '' }}
+        env:
+          # A classic PAT scoped to read:packages only. applet's image
+          # (ghcr.io/rounakdatta/applet) is private; kubelet needs this to pull.
+          # kubectl builds the dockerconfigjson for us. Interim, like the Maps
+          # key below — move to Bitwarden when convenient.
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+        run: |
+          kubectl create secret docker-registry ghcr-pull \
+            --namespace=apps \
+            --docker-server=ghcr.io \
+            --docker-username=rounakdatta \
+            --docker-password="$GHCR_READ_TOKEN" \
+            --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Google Maps key -> Secret (repository secret, interim)
         if: ${{ env.GOOGLE_MAPS_API_KEY != '' }}
         env:
