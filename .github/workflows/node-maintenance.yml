@@ -56,17 +56,20 @@ jobs:
           version: 1.76.1
           args: --advertise-tags=tag:homelab
 
-      # ONE-OFF, throwaway branch: why Zepto closes on launch (crash lines only).
-      - name: One-off - Zepto launch logcat
+      # ONE-OFF, throwaway branch: why Zepto closes on launch.
+      - name: One-off - Zepto launch diagnosis
         run: |
           cat > /tmp/lc.sh <<'EOS'
+          echo "=== package"; dumpsys package com.zeptoconsumerapp | grep -E 'versionName|primaryCpuAbi|secondaryCpuAbi|enabled=|stopped=|flags=' | head -8
+          echo "=== abilist: $(getprop ro.product.cpu.abilist) | native bridge: $(getprop ro.dalvik.vm.native.bridge)"
+          A=$(cmd package resolve-activity --brief -c android.intent.category.LAUNCHER com.zeptoconsumerapp | tail -1); echo "=== launcher activity: $A"
           logcat -c
-          monkey --pct-syskeys 0 -p com.zeptoconsumerapp -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
-          sleep 10
-          echo "=== crash buffer"; logcat -d -b crash | grep -vE '^\s*$' | head -60
-          echo "=== zepto / fatal lines"; logcat -d | grep -iE 'FATAL|AndroidRuntime|zepto|DEBUG  :|libc  |Abort message|ndk_translation|native_bridge|integrity|root|emulator|SafetyNet' | grep -vE 'chatty' | head -60
+          am start -W -n "$A" 2>&1 | head -8
+          sleep 8
+          echo "=== top activity"; dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity' | head -3
+          echo "=== log lines"; logcat -d | grep -iE 'zepto|FATAL|AndroidRuntime: |libc |DEBUG  :|Abort|ndk|bridge|ActivityTaskManager: (START|Displayed)|Process .* (has )?died|Killing' | grep -v chatty | head -70
           EOS
-          tailscale ssh "root@${CONTROL}" "k3s kubectl -n apps exec -i applet-phone-rounak-0 -- sh -s" < /tmp/lc.sh 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/IP/g' | cut -c1-260
+          tailscale ssh "root@${CONTROL}" "k3s kubectl -n apps exec -i applet-phone-rounak-0 -- sh -s" < /tmp/lc.sh 2>&1 | sed -E 's/[0-9]{1,3}(\.[0-9]{1,3}){3}/IP/g' | cut -c1-240
 
       - name: Before
         run: |
