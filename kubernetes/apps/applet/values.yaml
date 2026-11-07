@@ -50,7 +50,10 @@ phoneDefaults:
   # Stock redroid: applet drives the phone over adb, so nothing is baked in.
   image:
     repository: redroid/redroid
-    tag: "11.0.0"
+    # redroid publishes dated builds only; there is no plain "11.0.0" tag (the
+    # chart's default), so the pull failed with NotFound. 240527 is the newest
+    # Android 11 build (the one 11.0.0-latest points at), pinned so it can't move.
+    tag: "11.0.0-240527"
   storage:
     size: 8Gi
     storageClass: local-path
