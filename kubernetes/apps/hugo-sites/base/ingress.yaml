@@ -1,4 +1,6 @@
 ---
+# PUBLIC on purpose (websecure): these are websites, for anyone. Every site
+# built on this base inherits it.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -6,6 +8,7 @@ metadata:
   namespace: sites
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
 spec:
   ingressClassName: traefik
   tls:

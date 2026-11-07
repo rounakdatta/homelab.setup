@@ -77,7 +77,7 @@ admin:
 # the local-path volume then bound there, and every rollout was forced back to
 # a node that is unreachable whenever that house's link is -- which is how the
 # public site went 503 on 2026-09-05. A site meant to be shared belongs on the
-# node that is always there. (frigate/ntfy/home-assistant carry city=rishra on
+# node that is always there. (frigate and home-assistant carry city=rishra on
 # purpose; that is the other side of the same coin.)
 nodeSelector:
   node-role.kubernetes.io/control-plane: "true"

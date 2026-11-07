@@ -19,8 +19,15 @@ metadata:
     # Automatically provision TLS certificate with Let's Encrypt
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 
-    # Force HTTPS redirect
-    traefik.ingress.kubernetes.io/redirect-entry-point: https
+    # Which front door serves this host (ansible/roles/traefik):
+    #   tailnet    only the control plane's Tailscale address. The default, and
+    #              what an Ingress naming no entrypoint gets. DNS record:
+    #              the Tailscale address.
+    #   websecure  the public internet. Only for a host strangers must reach;
+    #              say why in a comment, as the public ones do. DNS record: the
+    #              public address.
+    # Never both. Plain HTTP on either door redirects to HTTPS by itself.
+    traefik.ingress.kubernetes.io/router.entrypoints: tailnet
 
     # Optional: Add custom headers
     # traefik.ingress.kubernetes.io/custom-response-headers: |

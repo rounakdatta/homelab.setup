@@ -1,0 +1,59 @@
+# Managed by homelab.setup (ansible/roles/traefik). Edit the template there,
+# never this file: the next deploy-infra run overwrites it.
+#
+# Values for k3s's bundled Traefik chart, merged over k3s's own. Two front
+# doors:
+#   websecure (+ web)  the public address, Service `traefik`
+#   tailnet   (+ web)  the Tailscale address, Service `traefik-tailnet`
+# `web` only ever redirects to https on whichever door it was reached through.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  # A failed upgrade waits for a person. The default, `reinstall`, uninstalls
+  # Traefik first, and if the install then fails too there is no ingress at all.
+  failurePolicy: abort
+  valuesContent: |-
+    # The addresses below are the control plane's. kube-proxy honours them on
+    # every node, but the pod belongs beside them, on the node that is always
+    # there.
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: "true"
+    ports:
+      web:
+        expose:
+          default: true
+          tailnet: true
+        http:
+          redirections:
+            entryPoint:
+              to: websecure
+              scheme: https
+              permanent: true
+      # The private door. asDefault makes it the ONLY default entrypoint, so an
+      # Ingress that names none is tailnet-only: forgetting the annotation fails
+      # closed. A public host has to say `websecure` on purpose.
+      tailnet:
+        port: 9443
+        asDefault: true
+        expose:
+          default: false
+          tailnet: true
+        exposedPort: 443
+        protocol: TCP
+        http:
+          tls:
+            enabled: true
+    service:
+      # Not LoadBalancer: k3s's ServiceLB would bind 80/443 on every address of
+      # every node, the Tailscale one included. externalIPs are exact.
+      type: ClusterIP
+      externalIPs:
+        - {{ traefik_public_ip }}
+      additionalServices:
+        tailnet:
+          type: ClusterIP
+          externalIPs:
+            - {{ host_tailscale_ip }}

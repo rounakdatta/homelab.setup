@@ -12,8 +12,8 @@
 # (tools/install-watch.sh in le-zepp-lean).
 #
 # DNS: `A lezepplean <host>` in rounakdatta/oh-my-dns (zones/taptappers.club.txt),
-# DNS-only like every other homelab host; without it cert-manager's HTTP-01
-# challenge fails and the pod is healthy but unreachable.
+# DNS-only like every other homelab host; without it the pod is healthy but
+# unreachable.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

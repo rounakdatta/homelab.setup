@@ -1,0 +1,116 @@
+---
+# Two front doors on k3s's bundled Traefik (2026-11):
+#
+#   websecure  the host's public address. Only hosts that are public on purpose
+#              name it: itineris, eie and the static sites, nextcloud,
+#              audiobookshelf, lezepplean.
+#   tailnet    the host's Tailscale address. Every other host, and any Ingress
+#              that names no entrypoint at all.
+#
+# DNS says which door a name is behind (oh-my-dns: public hosts hold the public
+# address, private ones the Tailscale address), but DNS is not the lock: anyone
+# can send any Host header to the public address. The lock is that the public
+# address only ever reaches websecure, and no private Ingress names websecure.
+#
+# Why externalIPs rather than ServiceLB: svclb binds 80/443 on every address of
+# every node, the Tailscale address included, so a second door on the same
+# ports cannot exist beside it. An externalIP is exact -- kube-proxy rewrites
+# only packets addressed to that IP, arriving from outside or sent by a pod on
+# any node -- so in-cluster callers that use a public name keep working, and
+# reach the same door a browser would. Making the Service a ClusterIP removes
+# Traefik's svclb DaemonSet; nothing else here uses ServiceLB.
+#
+# Applies live: k3s picks the file up within seconds and helm-controller rolls
+# Traefik (seconds of ingress downtime). No k3s restart. Both addresses come
+# from this host at run time; this role neither writes them into the repo
+# nor prints them.
+#
+# To undo: delete the file AND `kubectl -n kube-system delete helmchartconfig
+# traefik`. k3s never deletes what a removed file created; once the object is
+# gone, helm-controller restores the stock values and ServiceLB returns.
+
+- name: Read the address Traefik's public door answers on
+  ansible.builtin.set_fact:
+    traefik_public_ip: "{{ ansible_default_ipv4.address | default('') }}"
+  no_log: true
+
+# A default route through tailscale0 (an exit node) would make the "public"
+# address a tailnet one and merge the two doors.
+- name: Check the two addresses are distinct, and only one is on the tailnet
+  ansible.builtin.assert:
+    that:
+      - traefik_public_ip is match('^[0-9]+(\.[0-9]+){3}$')
+      - not (traefik_public_ip is match('^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.'))
+      - host_tailscale_ip is match('^100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.')
+    fail_msg: "The public and Tailscale addresses are missing, or overlap"
+    quiet: true
+  no_log: true
+
+# The tailnet door becomes the default entrypoint, so a live Ingress that names
+# none would move to the tailnet the moment this applies -- a public site would
+# silently vanish from the internet. Every Ingress in the repo names its door
+# (deploy-stuff must have applied that first); anything live that does not is
+# either an old deploy or a leftover, and needs looking at before this runs.
+- name: Refuse while any live Ingress names no entrypoint
+  ansible.builtin.shell: |
+    set -o pipefail
+    k3s kubectl get ingress -A \
+      -o jsonpath='{range .items[*]}{.metadata.annotations.traefik\.ingress\.kubernetes\.io/router\.entrypoints}{"\n"}{end}' \
+      | awk 'NF == 0 { n++ } END { print n + 0 }'
+  args:
+    executable: /bin/bash
+  register: traefik_unnamed_ingresses
+  changed_when: false
+  failed_when: traefik_unnamed_ingresses.rc != 0 or (traefik_unnamed_ingresses.stdout | int) > 0
+
+- name: Look for an existing Traefik customisation
+  ansible.builtin.slurp:
+    src: "{{ traefik_config_path }}"
+  register: traefik_config_existing
+  failed_when: false
+  no_log: true
+
+- name: Refuse to overwrite a Traefik customisation this role did not write
+  ansible.builtin.fail:
+    msg: >-
+      {{ traefik_config_path }} exists and was not written by homelab.setup.
+      Fold what it sets into ansible/roles/traefik/templates/traefik-config.yaml.j2,
+      delete the file, then run this again.
+  when:
+    - traefik_config_existing.content is defined
+    - "'Managed by homelab.setup' not in (traefik_config_existing.content | b64decode)"
+
+- name: Give Traefik its public and tailnet doors
+  ansible.builtin.template:
+    src: traefik-config.yaml.j2
+    dest: "{{ traefik_config_path }}"
+    mode: "0600"
+    validate: k3s kubectl apply --dry-run=server -f %s
+  no_log: true
+
+# Every run, not only when the file changed: a re-run after a rollout that
+# timed out must not pass unverified. Ten minutes in all, then fail. Counts and
+# yes/no only: the Actions logs of this repo are public.
+- name: Check Traefik is up behind both doors
+  ansible.builtin.shell: |
+    set -o pipefail
+    kc() { k3s kubectl -n kube-system "$@"; }
+    deadline=$(( $(date +%s) + 600 ))
+    until [ "$(kc get svc traefik -o jsonpath='{.spec.type}' 2>/dev/null)" = ClusterIP ] \
+      && kc get svc traefik-tailnet >/dev/null 2>&1 \
+      && [ -z "$(kc get ds -l svccontroller.k3s.cattle.io/svcname=traefik -o name 2>/dev/null)" ]; do
+      if [ "$(date +%s)" -ge "$deadline" ]; then
+        echo "traefik: Services not switched after 10 minutes; see job/helm-install-traefik" >&2
+        exit 1
+      fi
+      sleep 5
+    done
+    left=$(( deadline - $(date +%s) )); [ "$left" -gt 30 ] || left=30
+    if ! kc rollout status deployment/traefik --timeout="${left}s" >/dev/null; then
+      echo "traefik: rollout did not finish" >&2
+      exit 1
+    fi
+    echo "traefik: both doors up"
+  args:
+    executable: /bin/bash
+  changed_when: false

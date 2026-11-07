@@ -8,11 +8,12 @@
 # is expected to be privacy-scrubbed at BUILD time (route starts/ends clipped,
 # home fuzzed, EXIF stripped) rather than hidden at the edge.
 #
-# The upload / admin surface has its own ingress behind tinyauth: see
-# ingress-admin.yaml. Do not "fix" this one by adding the middleware -- that
-# would lock out every person the link was shared with.
+# The creator app has its own Ingress, signed in with Google by the app itself:
+# see ingress-admin.yaml. Do not "fix" this one by adding the tinyauth
+# middleware or moving it to the tailnet door -- that would lock out every
+# person the link was shared with.
 #
-# Mirrors the other public ingresses (audiobookshelf, ntfy): cert-manager TLS
+# Mirrors the other public ingresses (audiobookshelf, nextcloud): cert-manager TLS
 # on the websecure entrypoint, nothing else.
 #
 # TWO HOSTS, one service. itineris.world is the shareable public address;
@@ -26,14 +27,14 @@
 # repo (zones/<zone-name>.txt, synced to Cloudflare on push): these hosts are
 # `A itineris 173.234.14.113` in zones/taptappers.club.txt and `A @
 # 173.234.14.113` in zones/itineris.world.txt, DNS-only like every other
-# homelab host. Without the record cert-manager's HTTP-01 challenge fails and
-# the pod is healthy but unreachable.
+# homelab host. Without the record the pod is healthy but unreachable.
 #
-# ORDER MATTERS on a new host: adding a name below makes cert-manager reissue
-# itineris-tls-secret as a SAN certificate covering both. If the new name does
-# not resolve yet its HTTP-01 challenge cannot complete and the renewal stalls
-# -- the existing certificate keeps serving until it expires, so this is
-# recoverable, but land the DNS first and verify it resolves.
+# A NEW NAME needs its zone covered by cert-manager's Cloudflare token
+# (kubernetes/infrastructure/cert-manager/cluster-issuer.yaml): adding a name
+# below makes cert-manager reissue itineris-tls-secret as a SAN certificate
+# covering every name, with a DNS-01 challenge per name. A name in a zone the
+# token cannot edit stalls the renewal -- the existing certificate keeps
+# serving until it expires, so this is recoverable, but extend the token first.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -68,8 +69,8 @@ spec:
             name: itineris
             port:
               number: 80
-  # One secret, one certificate, every name a SAN on it. cert-manager solves an
-  # HTTP-01 challenge per name and reissues when the list changes, so a new
+  # One secret, one certificate, every name a SAN on it. cert-manager solves a
+  # DNS-01 challenge per name and reissues when the list changes, so a new
   # domain needs no new secret and no new annotation.
   tls:
   - hosts:

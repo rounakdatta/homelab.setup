@@ -8,6 +8,9 @@ metadata:
     # Automatically provision TLS certificate with Let's Encrypt
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 
+    # Which entrypoints serve this host: kubernetes/infrastructure/ingress/ingress-template.yaml
+    traefik.ingress.kubernetes.io/router.entrypoints: tailnet
+
     # Force HTTPS redirect
     traefik.ingress.kubernetes.io/redirect-entry-point: https
 
