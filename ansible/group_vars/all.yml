@@ -1,0 +1,6 @@
+---
+# The k3s release every node installs. Agents must never run a newer Kubernetes
+# than the control plane, and get.k3s.io's default (the stable channel) moves
+# on by itself: on 2026-11-07 it served v1.37.2 while the cluster ran v1.34.5.
+# To upgrade, raise this and upgrade the control plane before any agent.
+k3s_version: v1.34.5+k3s1

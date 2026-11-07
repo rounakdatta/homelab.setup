@@ -126,6 +126,12 @@
         k3s_server_url: "https://{{ hostvars[groups['control'][0]]['host_tailscale_ip'] | default(k3s_server_ip) }}:6443"
         k3s_node_token: "{{ lookup('env', 'K3S_NODE_TOKEN') }}"
 
+    # The Android binder module for applet's redroid phones, only on the workers
+    # whose inventory line says binder=true (the ones phones are pinned to).
+    - role: binder
+      tags: [binder, infra]
+      when: binder | default(false) | bool
+
   post_tasks:
     - name: Label worker node
       ansible.builtin.command: >

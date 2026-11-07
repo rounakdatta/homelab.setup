@@ -1,0 +1,40 @@
+---
+# applet's cloud phones are redroid: Android running on the host kernel, which
+# needs the `binder` module with Android's device nodes. Ubuntu ships it in
+# linux-modules-extra, which a minimal install may lack, so that comes first.
+# Dependency-free (apt, plain commands, two config files) and idempotent: the
+# modprobe only runs when the module isn't already loaded. No reboot, no k3s
+# restart. Modern kernels need no ashmem — redroid uses memfd instead.
+
+- name: Install linux-modules-extra for the running kernel (provides binder_linux)
+  ansible.builtin.apt:
+    name: "linux-modules-extra-{{ ansible_kernel }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check whether binder_linux is already loaded
+  ansible.builtin.command: grep -q '^binder_linux' /proc/modules
+  register: binder_loaded
+  changed_when: false
+  failed_when: false
+
+- name: Load binder_linux with Android device nodes
+  ansible.builtin.command: modprobe binder_linux devices=binder,hwbinder,vndbinder
+  when: binder_loaded.rc != 0
+
+- name: Load binder_linux on every boot
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/binder.conf
+    content: "binder_linux\n"
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Pin the binder device names for that autoload
+  ansible.builtin.copy:
+    dest: /etc/modprobe.d/binder.conf
+    content: "options binder_linux devices=binder,hwbinder,vndbinder\n"
+    owner: root
+    group: root
+    mode: "0644"
