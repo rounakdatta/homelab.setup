@@ -1,7 +1,7 @@
 ---
 image:
   repository: ghcr.io/rounakdatta/applet
-  tag: "0.2.0"
+  tag: "0.2.1"
 
 # The image is private (github.com/rounakdatta/applet). deploy-stuff.yml builds
 # this ghcr-pull Secret from the GHCR_READ_TOKEN repository secret (interim,
