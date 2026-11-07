@@ -1,15 +1,19 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.2.6"
+  tag: "0.2.7"
 
 # Pin the self-updating components to exact versions rather than tracking
 # "latest", so upgrades are deliberate and reproducible. Bump after reviewing
-# the release notes, then restart the pod. Both pins are compared with what is
-# actually installed on the volume, so a drifted install is put back.
+# the release notes, then restart the pod. All three pins are compared with
+# what is actually installed on the volume, so a drifted install is put back.
 #
 # 2.1.280 is the floor for Opus 5.5.
 claudeCode:
   version: "2.1.318"
+
+# For Paseo's Codex provider. OpenCode and Antigravity come with the image.
+codex:
+  version: "0.167.0"
 
 paseo:
   version: "0.15.3"
