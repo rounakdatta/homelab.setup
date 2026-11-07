@@ -1,0 +1,75 @@
+---
+# Tie k3s to Tailscale, and size Tailscale for the pod network.
+# Needs k3s_unit (k3s on the control plane, k3s-agent on workers).
+#
+# flannel's VXLAN device (flannel.1) is built on tailscale0. Restarting
+# tailscaled recreates tailscale0 and the kernel deletes flannel.1 with it;
+# flannel only rebuilds it when k3s starts, so until then the node's pods are
+# cut off from every other node. Making k3s PartOf tailscaled restarts k3s
+# whenever tailscaled restarts.
+#
+# Pods get tailscale0's MTU minus VXLAN's 50 bytes. At Tailscale's default 1280
+# that was 1230, below IPv6's 1280 minimum, so the kernel keeps IPv6 off pod
+# interfaces and anything that insists on it (Android: applet's redroid phones)
+# cannot bring its network up. tailscale_mtu (group_vars/all.yml) raises it.
+
+- name: Ensure the {{ k3s_unit }} drop-in directory exists
+  ansible.builtin.file:
+    path: "/etc/systemd/system/{{ k3s_unit }}.service.d"
+    state: directory
+    mode: '0755'
+
+- name: Order {{ k3s_unit }} after tailscaled and restart it with tailscaled
+  ansible.builtin.copy:
+    dest: "/etc/systemd/system/{{ k3s_unit }}.service.d/10-tailscale.conf"
+    content: |
+      # flannel.1 sits on tailscale0, which a tailscaled restart recreates.
+      [Unit]
+      After=tailscaled.service
+      PartOf=tailscaled.service
+    mode: '0644'
+  register: tailscale_link_dropin
+
+- name: Reload systemd for the drop-in
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: tailscale_link_dropin.changed
+
+# TS_DEBUG_MTU is read by tailscaled from its EnvironmentFile.
+- name: Set tailscale0's MTU
+  ansible.builtin.lineinfile:
+    path: /etc/default/tailscaled
+    regexp: '^TS_DEBUG_MTU='
+    line: "TS_DEBUG_MTU={{ tailscale_mtu }}"
+  register: tailscale_mtu_env
+
+# This connection itself runs over Tailscale, so the restart is detached and the
+# play reconnects afterwards. Through PartOf it restarts k3s too, which brings
+# flannel.1 back at the new size.
+- name: Restart tailscaled, and with it {{ k3s_unit }}, to apply the MTU
+  ansible.builtin.command: systemd-run --quiet --on-active=3 systemctl restart tailscaled
+  when: tailscale_mtu_env.changed
+  throttle: 1
+
+- name: Wait for the node to come back on the tailnet
+  ansible.builtin.wait_for_connection:
+    delay: 20
+    timeout: 300
+  when: tailscale_mtu_env.changed
+
+- name: Check whether k3s is installed here yet
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: tailscale_link_k3s
+
+- name: Wait for {{ k3s_unit }} and flannel to be back at the new MTU
+  ansible.builtin.shell: |
+    [ "$(cat /sys/class/net/tailscale0/mtu)" = "{{ tailscale_mtu }}" ] || exit 1
+    [ "$(systemctl is-active {{ k3s_unit }})" = active ] || exit 1
+    [ "$(cat /sys/class/net/flannel.1/mtu 2>/dev/null)" = "{{ tailscale_mtu | int - 50 }}" ] || exit 1
+  register: tailscale_link_check
+  until: tailscale_link_check.rc == 0
+  retries: 60
+  delay: 10
+  changed_when: false
+  when: tailscale_link_k3s.stat.exists

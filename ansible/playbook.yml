@@ -63,6 +63,13 @@
     - role: node-tuning
       tags: [node-tuning, infra]
 
+    # k3s restarts with tailscaled, and tailscale0's MTU leaves pods room for
+    # IPv6. Before k3s, so a fresh machine starts flannel at the right size.
+    - role: tailscale-link
+      tags: [tailscale-link, infra]
+      vars:
+        k3s_unit: k3s
+
     # Install and configure K3s with Tailscale binding
     - role: k3s
       tags: [k3s, infra]
@@ -120,6 +127,11 @@
       tags: [always]
 
   roles:
+    - role: tailscale-link
+      tags: [tailscale-link, infra]
+      vars:
+        k3s_unit: k3s-agent
+
     - role: k3s-agent
       tags: [k3s-agent, infra]
       vars:
