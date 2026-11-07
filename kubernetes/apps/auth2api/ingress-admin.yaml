@@ -17,8 +17,8 @@
 # THE CONSEQUENCE, STATED PLAINLY: with admin-auth off, this middleware is the
 # ONLY thing standing in front of the account inventory and /admin/reload. If
 # the tinyauth annotation below is ever dropped, mistyped, or the middleware
-# stops resolving, /admin is open to the internet with no second line of
-# defence. Treat that annotation as load-bearing, and never widen this router's
+# stops resolving, /admin is open to every device on the tailnet with no
+# second line of defence. Treat that annotation as load-bearing, and never widen this router's
 # paths.
 #
 # No cert-manager annotation on purpose: ingress.yaml owns the certificate for
@@ -30,7 +30,7 @@ metadata:
   name: auth2api-admin
   namespace: apps
   annotations:
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.entrypoints: tailnet
     # Load-bearing. See above.
     traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd,apps-auth2api-ratelimit@kubernetescrd
 spec:

@@ -2,7 +2,7 @@
 
 This repository hosts all the playbooks required to deploy and run my homelab. You have to bring your own hardware, Linux operating system, configuration secrets and *data* though.
 
-My homelab is a single-node x64 (previously ARM) machine, and applications are deployed containerized via K3s (lightweight Kubernetes). Tailscale takes care of all the networking required for administration and deployments. Traefik handles ingress with automatic TLS certificates from Let's Encrypt.
+My homelab is a single-node x64 (previously ARM) machine, and applications are deployed containerized via K3s (lightweight Kubernetes). Tailscale takes care of all the networking required for administration and deployments, and is the only way to reach most of the apps: they answer on the tailnet alone, under their usual `*.taptappers.club` names. Traefik handles ingress with automatic TLS certificates from Let's Encrypt.
 
 ## List of self-hosted applications
 
@@ -19,13 +19,12 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | Audiobookshelf | Audiobook server (Audible alternative)                     | https://www.audiobookshelf.org/          |
 | Snibox         | Snippets organizer                                         | https://github.com/MohamedElashri/Snibox |
 | Memoet         | Spaced-repetition system                                   | https://github.com/memoetapp/memoet      |
-| ntfy           | Push notifications                                         | https://ntfy.sh/                         |
 | Frigate        | NVR with realtime object detection for IP cameras          | https://frigate.video/                   |
 | Synt           | LLM chat archiving                                         | https://github.com/rounakdatta/synt      |
 | texas-fold-em  | fold.money refresh-token broker (in-cluster API)           | https://github.com/rounakdatta/texas-fold-em |
 | Hugo sites     | Personal static sites (rounak2018 / rounak2020 / rounak2025) | https://gohugo.io/                       |
 | eie            | Everything is Everything podcast archive, set as a newspaper (static, served from a tag of its repo) | https://github.com/rounakdatta/eie |
-| itineris       | Travel journal: map, timeline, photo wall, stories (public); tinyauth-gated /admin for uploads | https://github.com/rounakdatta/itineris |
+| itineris       | Travel journal: map, timeline, photo wall, stories (public); a creator app with its own Google sign-in | https://github.com/rounakdatta/itineris |
 | auth2api       | Local AI gateway                                           | https://github.com/AmazingAng/auth2api   |
 
 ### Supporting infrastructure
@@ -39,7 +38,14 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 
 ## Architecture
 
-K3s is a lightweight Kubernetes distribution that's perfect for single-node homelabs. Traefik (bundled with K3s) handles all ingress routing with automatic TLS via cert-manager and Let's Encrypt. Tinyauth sits in front of apps as a forward-auth middleware backed by Google OAuth, so any subset of apps can be put behind a single sign-on with one annotation.
+K3s is a lightweight Kubernetes distribution that's perfect for single-node homelabs. Traefik (bundled with K3s) handles all ingress routing with automatic TLS via cert-manager and Let's Encrypt, issued over DNS-01 so a certificate never needs the host to be reachable. Tinyauth sits in front of apps as a forward-auth middleware backed by Google OAuth, so any subset of apps can be put behind a single sign-on with one annotation.
+
+Traefik has two front doors (`ansible/roles/traefik`):
+
+- **tailnet** answers only on the control plane's Tailscale address. It is the default: every app is private unless it says otherwise, and an Ingress that names no entrypoint lands here. Its DNS records hold the Tailscale address, so the names stay the same and simply do not answer off the tailnet.
+- **websecure** is the public internet, for the few hosts strangers must reach: itineris, eie and the static sites, Nextcloud, Audiobookshelf and lezepplean. Each says so, and why, on its Ingress.
+
+DNS only says which door a name is behind; the lock is that the public address leads to websecure alone. In-cluster callers use Service DNS (`<app>.<namespace>.svc.cluster.local`) where they can; one that uses a public name still reaches the right door, because kube-proxy answers for both addresses on every node.
 
 Most third-party apps are inflated from upstream Helm charts via Kustomize's `helmCharts` block (with values overridden in-tree), so version bumps stay a one-line change. Apps with no chart of their own use bjw-s `app-template`, a generic chart that takes any image — `auth2api` is the first. Manifests are organized using Kustomize and secrets are managed through Bitwarden — synced into Kubernetes Secrets by an Ansible play. The setup is fully declarative — adding a new application is just about creating a few YAML files and adding secrets to Bitwarden.
 

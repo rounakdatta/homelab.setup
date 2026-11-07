@@ -6,7 +6,7 @@ metadata:
   namespace: velero
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.entrypoints: tailnet
     traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
 spec:
   ingressClassName: traefik

@@ -1,4 +1,7 @@
 ---
+# PUBLIC for now (websecure), while its future is decided: Nextcloud's own login
+# guards it, and its sync clients and share links expect to reach it from
+# anywhere. Moving it to the tailnet is one annotation plus its DNS record.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

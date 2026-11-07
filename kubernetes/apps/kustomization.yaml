@@ -13,7 +13,6 @@ resources:
   - vikunja/
   - webtrees/
   - nextcloud/
-  - ntfy/
   - frigate/
   - home-assistant/
   - synt/

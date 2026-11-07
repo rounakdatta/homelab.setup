@@ -42,20 +42,19 @@
       failed_when: false
       tags: [always]
 
+    # no_log here and below: `-v` would print this host's addresses to the
+    # public Actions logs.
     - name: Get Tailscale IP address
       ansible.builtin.command: tailscale ip -4
       register: tailscale_ip
       changed_when: false
+      no_log: true
       tags: [always]
 
     - name: Set Tailscale IP as fact
       ansible.builtin.set_fact:
         host_tailscale_ip: "{{ tailscale_ip.stdout }}"
-      tags: [always]
-
-    - name: Display Tailscale IP
-      ansible.builtin.debug:
-        msg: "Using Tailscale IP: {{ host_tailscale_ip }}"
+      no_log: true
       tags: [always]
 
   roles:
@@ -71,6 +70,11 @@
     # Setup kubectl access and External Secrets Operator
     - role: k8s-setup
       tags: [k8s, infra]
+
+    # Traefik's two front doors: public (websecure) and tailnet-only. Applies
+    # live -- a Traefik rollout, no k3s restart.
+    - role: traefik
+      tags: [traefik, infra]
 
 # Worker node setup (K3s agent)
 - name: Setup K3s worker nodes
@@ -106,16 +110,13 @@
       ansible.builtin.command: tailscale ip -4
       register: tailscale_ip
       changed_when: false
+      no_log: true
       tags: [always]
 
     - name: Set Tailscale IP as fact
       ansible.builtin.set_fact:
         host_tailscale_ip: "{{ tailscale_ip.stdout }}"
-      tags: [always]
-
-    - name: Display Tailscale IP
-      ansible.builtin.debug:
-        msg: "Using Tailscale IP: {{ host_tailscale_ip }}"
+      no_log: true
       tags: [always]
 
   roles:
@@ -284,9 +285,9 @@
       # expired token breaks syncing, not reading.
       #
       # `bearerToken` is what MCP clients must send as `Authorization: Bearer`
-      # to zepp.taptappers.club. It is the only thing standing between the
-      # internet and a complete personal health archive, so it should be long
-      # and random. Rotating it needs a rollout restart: the server reads it
+      # to zepp.taptappers.club. That host is tailnet-only, but the token is still
+      # the only thing standing between every tailnet device (and every pod) and
+      # a complete personal health archive, so it should be long and random. Rotating it needs a rollout restart: the server reads it
       # from the environment at startup.
       #
       # Bitwarden items `zepp-life-mcp/apptoken` and `zepp-life-mcp/bearer_token`,
@@ -335,22 +336,6 @@
           admin-key: texas-fold-em/admin_key
           firefly-pat: firefly/personal_access_token
           llm-api-key: deepseek/api_key
-
-      # ntfy credentials. ntfy provisions users declaratively from config
-      # (v2.28 auth-users / auth-tokens), and the chart exposes no env block,
-      # so kubernetes/apps/ntfy/kustomization.yaml patches these two in as
-      # NTFY_AUTH_USERS / NTFY_AUTH_TOKENS. They hold a bcrypt hash and a
-      # bearer token respectively and this repo is public, which is why they
-      # come from Bitwarden rather than values.yaml.
-      #   auth-users:  rounak:$2a$10$...:admin   (hash via `ntfy user hash`)
-      #   auth-tokens: rounak:tk_...:homelab scripts
-      # The matching plaintext login lives in Bitwarden as ntfy/admin_password
-      # and is deliberately NOT synced here -- nothing in the cluster reads it.
-      - name: ntfy-credentials
-        namespace: apps
-        data:
-          auth-users: ntfy/auth_users
-          auth-tokens: ntfy/auth_tokens
 
       # tinyauth credentials (replaces authelia)
       # Keys match the env var names tinyauth reads via valueFrom in
@@ -411,6 +396,17 @@
         data:
           BASIC_AUTH_USER: keel/username
           BASIC_AUTH_PASSWORD: keel/password
+
+      # cert-manager's Cloudflare token for DNS-01 (cluster-issuer.yaml). Made
+      # in Cloudflare, not minted here: Zone:DNS:Edit + Zone:Zone:Read on
+      # taptappers.club and itineris.world only. It can rewrite both zones, so
+      # nothing else should hold it. Bitwarden item `cloudflare/dns_api_token`,
+      # password = the token. Without it no certificate can renew; the ones
+      # already issued keep serving until they expire.
+      - name: cloudflare-api-token
+        namespace: cert-manager
+        data:
+          api-token: cloudflare/dns_api_token
 
       # agentfest — the remote computer running Claude Code. Its Secret keeps
       # the name of festie, the Codeman computer it replaced.
@@ -555,6 +551,7 @@
         - apps
         - tinyauth
         - velero
+        - cert-manager
       register: ns_result
       changed_when: "'created' in ns_result.stdout"
       failed_when: false
