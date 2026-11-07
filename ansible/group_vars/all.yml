@@ -10,4 +10,11 @@ k3s_version: v1.34.5+k3s1
 # 2026-11-07 with `tailscale ping --size`: every direct path between the three
 # nodes carried 1450-byte probes, so 1380 (WireGuard packets of 1440 bytes over
 # IPv4, 1460 over IPv6) keeps a margin. Pods get 1330.
+#
+# jomjom overrides this with 1200 in the inventory. When Tailscale reaches it on
+# its Jio IPv4 address, that path carries only ~1275-byte packets and drops
+# bigger ones silently, which stalled its kubelet's watches (NotReady blips) and
+# restarted velero's node-agent. 1200 means WireGuard packets of 1260 bytes; TCP
+# both ways sizes itself to jomjom's MSS. The cost: jomjom's pods (MTU 1150) get
+# no IPv6, and nothing there needs it. Home Assistant is on the host network.
 tailscale_mtu: 1380

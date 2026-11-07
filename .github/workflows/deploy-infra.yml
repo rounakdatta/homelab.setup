@@ -157,7 +157,7 @@ jobs:
           ${CONTROL_MACHINE_NAME} ansible_user=root
 
           [worker]
-          ${WORKER_MACHINE_NAME} ansible_user=root node_labels="{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}"
+          ${WORKER_MACHINE_NAME} ansible_user=root tailscale_mtu=1200 node_labels="{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}"
           EOF
           # The Paris VPS (Ubuntu): runs applet's phones, so it also gets binder.
           if [ -n "${WORKER_PARIS_MACHINE_NAME}" ]; then
