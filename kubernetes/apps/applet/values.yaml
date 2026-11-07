@@ -18,14 +18,12 @@ controller:
       memory: 64Mi
     limits:
       memory: 192Mi
-  # Everything lives on the Paris worker. local-path binds a volume to the node
-  # that first mounts it, so the controller's state must sit beside the phone,
-  # and the RAM-tight control plane stays out of it entirely. The chart's
-  # default selector (control-plane: "true") must be nulled: Helm merges maps,
-  # so adding a key alone kept both, which no node matched.
+  # The controller runs on the control plane, not beside the phone: APKPure
+  # silently serves nothing to the Paris worker's datacenter IP (apkeep "succeeds"
+  # with no file), and adb reaches the phone across nodes anyway. It is small (64Mi
+  # request). Its local-path volume was recreated here once when it moved.
   nodeSelector:
-    homelab.setup/city: paris
-    node-role.kubernetes.io/control-plane: null
+    node-role.kubernetes.io/control-plane: "true"
   storage:
     size: 5Gi
     storageClass: local-path
