@@ -10,18 +10,14 @@
     path: /usr/local/bin/k3s
   register: k3s_binary
 
-- name: Install K3s agent with Tailscale configuration
-  ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | K3S_URL="{{ k3s_server_url }}" \
-      K3S_TOKEN="{{ k3s_node_token }}" \
-      INSTALL_K3S_EXEC="agent \
-      --node-ip={{ host_tailscale_ip }} \
-      --flannel-iface=tailscale0" sh -
-  args:
-    executable: /bin/bash
-  when: not k3s_binary.stat.exists
-  register: k3s_agent_install
-  changed_when: k3s_agent_install.rc == 0
+# The override goes in BEFORE the install, so a fresh agent starts once, with
+# it, instead of starting and then restarting. Every agent start makes the
+# control plane serve a full resync, which it can be slow to do.
+- name: Ensure the k3s-agent drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/k3s-agent.service.d
+    state: directory
+    mode: '0755'
 
 - name: Ensure k3s-agent waits for tailscale0 interface
   ansible.builtin.copy:
@@ -37,17 +33,47 @@
     daemon_reload: yes
   when: k3s_agent_override.changed
 
+# INSTALL_K3S_VERSION: the release in group_vars/all.yml. Unpinned, get.k3s.io
+# installs its stable channel, which can be newer than the control plane.
+- name: Install K3s agent with Tailscale configuration
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | K3S_URL="{{ k3s_server_url }}" \
+      K3S_TOKEN="{{ k3s_node_token }}" \
+      INSTALL_K3S_VERSION="{{ k3s_version }}" \
+      INSTALL_K3S_EXEC="agent \
+      --node-ip={{ host_tailscale_ip }} \
+      --flannel-iface=tailscale0" sh -
+  args:
+    executable: /bin/bash
+  when: not k3s_binary.stat.exists
+  register: k3s_agent_install
+  changed_when: k3s_agent_install.rc == 0
+
+# An agent keeps the server URL it was installed with. jomjom's still named the
+# address of the control plane it first joined, which is a worker's now; it only
+# found the real server through the list in its load-balancer state. Point every
+# agent at the current control plane so a restart never depends on that list.
+- name: Point the agent at the current control plane
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/system/k3s-agent.service.env
+    regexp: '^K3S_URL='
+    line: "K3S_URL='{{ k3s_server_url }}'"
+  register: k3s_agent_url
+  no_log: true  # the same file holds the join token
+
 - name: Ensure K3s agent service is running
   ansible.builtin.systemd:
     name: k3s-agent
     state: started
     enabled: yes
 
-- name: Restart K3s agent if override was added
+# Only an agent that was already installed needs a restart for these: a fresh
+# install has just started with both in place.
+- name: Restart K3s agent if its override or server URL changed
   ansible.builtin.systemd:
     name: k3s-agent
     state: restarted
-  when: k3s_agent_override.changed
+  when: k3s_binary.stat.exists and (k3s_agent_override.changed or k3s_agent_url.changed)
 
 - name: Display K3s agent installation status
   ansible.builtin.debug:

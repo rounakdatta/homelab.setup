@@ -1,0 +1,13 @@
+---
+# The k3s release every node installs. Agents must never run a newer Kubernetes
+# than the control plane, and get.k3s.io's default (the stable channel) moves
+# on by itself: on 2026-11-07 it served v1.37.2 while the cluster ran v1.34.5.
+# To upgrade, raise this and upgrade the control plane before any agent.
+k3s_version: v1.34.5+k3s1
+
+# tailscale0's MTU on every node (TS_DEBUG_MTU; see roles/tailscale-link). Pods
+# get this minus VXLAN's 50 bytes and need at least IPv6's 1280. Measured on
+# 2026-11-07 with `tailscale ping --size`: every direct path between the three
+# nodes carried 1450-byte probes, so 1380 (WireGuard packets of 1440 bytes over
+# IPv4, 1460 over IPv6) keeps a margin. Pods get 1330.
+tailscale_mtu: 1380
