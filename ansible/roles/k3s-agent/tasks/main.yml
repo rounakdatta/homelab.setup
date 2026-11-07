@@ -10,6 +10,29 @@
     path: /usr/local/bin/k3s
   register: k3s_binary
 
+# The override goes in BEFORE the install, so a fresh agent starts once, with
+# it, instead of starting and then restarting. Every agent start makes the
+# control plane serve a full resync, which it can be slow to do.
+- name: Ensure the k3s-agent drop-in directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/k3s-agent.service.d
+    state: directory
+    mode: '0755'
+
+- name: Ensure k3s-agent waits for tailscale0 interface
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/k3s-agent.service.d/wait-for-tailscale.conf
+    content: |
+      [Service]
+      ExecStartPre=/bin/sh -c 'until ip link show tailscale0 >/dev/null 2>&1; do echo "Waiting for tailscale0..."; sleep 2; done'
+    mode: '0644'
+  register: k3s_agent_override
+
+- name: Reload systemd if override changed
+  ansible.builtin.systemd:
+    daemon_reload: yes
+  when: k3s_agent_override.changed
+
 # INSTALL_K3S_VERSION: the release in group_vars/all.yml. Unpinned, get.k3s.io
 # installs its stable channel, which can be newer than the control plane.
 - name: Install K3s agent with Tailscale configuration
@@ -38,37 +61,19 @@
   register: k3s_agent_url
   no_log: true  # the same file holds the join token
 
-- name: Ensure the k3s-agent drop-in directory exists
-  ansible.builtin.file:
-    path: /etc/systemd/system/k3s-agent.service.d
-    state: directory
-    mode: '0755'
-
-- name: Ensure k3s-agent waits for tailscale0 interface
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/k3s-agent.service.d/wait-for-tailscale.conf
-    content: |
-      [Service]
-      ExecStartPre=/bin/sh -c 'until ip link show tailscale0 >/dev/null 2>&1; do echo "Waiting for tailscale0..."; sleep 2; done'
-    mode: '0644'
-  register: k3s_agent_override
-
-- name: Reload systemd if override changed
-  ansible.builtin.systemd:
-    daemon_reload: yes
-  when: k3s_agent_override.changed
-
 - name: Ensure K3s agent service is running
   ansible.builtin.systemd:
     name: k3s-agent
     state: started
     enabled: yes
 
+# Only an agent that was already installed needs a restart for these: a fresh
+# install has just started with both in place.
 - name: Restart K3s agent if its override or server URL changed
   ansible.builtin.systemd:
     name: k3s-agent
     state: restarted
-  when: k3s_agent_override.changed or k3s_agent_url.changed
+  when: k3s_binary.stat.exists and (k3s_agent_override.changed or k3s_agent_url.changed)
 
 - name: Display K3s agent installation status
   ansible.builtin.debug:
