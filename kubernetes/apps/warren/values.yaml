@@ -285,6 +285,16 @@ service:
 # to the public internet, and to nothing private. Its own DNS is public (above),
 # so no cluster name resolves either. The control plane enforces this: k3s's
 # NetworkPolicy controller is on (never passed --disable-network-policy).
+#
+# Checked live through the proxy: the hub's proxy and dashboard ports, the
+# Kubernetes API, cluster DNS, both Tailscale addresses, RFC 1918 and link-local
+# are all refused, and public addresses still connect.
+#
+# The one private address it can still reach is the hub's node port (7000): the
+# node's own link goes there, and a network policy cannot tell that link from a
+# proxied request for the same address. So a proxy login can open connections to
+# it, and no more: enrolling needs the enrollment token or a person's approval in
+# the dashboard, and the table of waiting nodes is capped.
 networkpolicies:
   node:
     forceRename: warren-node-egress
