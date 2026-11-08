@@ -43,21 +43,14 @@ spec:
   alpnProtocols:
     - http/1.1
 ---
-# A ceiling on connections open at once through this route. Warren itself has no
-# limit before a client has authenticated, and Traefik sees every client as the
-# same masqueraded address (so this is one shared ceiling, not a per-client
-# limit). The hub passes at most 64 requests per node at a time, so 200 leaves
-# room for handshakes and costs nobody anything; what it stops is a flood of
-# half-open connections taking the shared ingress with it.
-apiVersion: traefik.io/v1alpha1
-kind: MiddlewareTCP
-metadata:
-  name: warren-inflight
-  namespace: apps
-spec:
-  inFlightConn:
-    amount: 200
----
+# No cap on open connections here, deliberately. Warren has no limit before a
+# client has logged in (only a 30 second handshake timeout), and Traefik sees
+# every client as the same masqueraded address, so an in-flight cap would be ONE
+# ceiling shared by everybody: a stranger who finds this name (it is in the
+# certificate-transparency logs) could fill it with idle connections, about
+# seven a second, and lock every real client out. A first version of this route
+# had one (200); it was removed for exactly that reason. A flood is a risk this
+# shared ingress already carries for every public host.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRouteTCP
 metadata:
@@ -69,8 +62,6 @@ spec:
     - websecure
   routes:
     - match: HostSNI(`pxin.taptappers.club`)
-      middlewares:
-        - name: warren-inflight
       services:
         - name: warren-hub
           port: 8000

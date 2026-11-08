@@ -506,6 +506,8 @@
       #   admin-token   the dashboard and /metrics.
       # All three are read once at pod start; rotating one means updating the
       # item, deploying, and restarting warren-hub (and warren-node for the token).
+      # The enrollment token needs one more step: Warren ADDS the new token beside
+      # the old one, so delete the old one in the dashboard (Tokens) or it still works.
       - name: warren-credentials
         namespace: apps
         data:
