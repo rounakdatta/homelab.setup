@@ -1,0 +1,94 @@
+image:
+  repository: ghcr.io/rounakdatta/applet
+  # Pinned to Chart.appVersion so a chart upgrade maps to one specific image.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# e.g. [{ name: ghcr }] — a GHCR pull secret, since both images are private
+# (the phone image carries Google-authored Play components).
+imagePullSecrets: []
+
+controller:
+  # No CPU request by design: the control-plane node runs at ~49% of CPU
+  # requests but the scheduler is the limit, not the hardware. This pod is idle
+  # between calls, so it yields under contention rather than reserving a core.
+  resources:
+    requests:
+      cpu: null
+      memory: 64Mi
+    limits:
+      memory: 192Mi
+  # local-path is node-local, so the controller is pinned where its data lives.
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+  tolerations: []
+  storage:
+    # state.json + the per-phone apps.lock + the APK download cache all live here.
+    size: 10Gi
+    storageClass: local-path
+  service:
+    port: 8080
+
+# Console auth. false (default): trust the upstream auth proxy, like the rest of
+# the homelab. true: use the built-in /login against the admin key (for a local
+# port-forward with no proxy in front).
+auth:
+  cookieAuth: false
+
+# admin-key protects every mutation; mcp-bearer protects /mcp. Default to a
+# Bitwarden-synced Secret (homelab convention); set create: true to inline them.
+secret:
+  create: false
+  existingSecret: applet
+  adminKey: ""
+  mcpBearer: ""
+
+# The phone's own android-control MCP URL, {name} -> phone name. Unset means the
+# console and MCP simply report no control endpoint yet.
+controlUrlTemplate: ""
+
+# Ordered source chain. F-Droid is native and hash-verified; apkpure/playstore
+# go through apkeep. Set apkpureAck to accept APKPure's modified-apps warning.
+sources: "fdroid,apkpure"
+apkpureAck: false
+fdroidRepo: "https://f-droid.org/repo"
+
+# Defaults for every phone; a phone entry may override any of these.
+phoneDefaults:
+  image:
+    # Stock redroid — applet drives the phone itself over adb, so nothing needs
+    # to be baked into the phone. Android 11 is the newest tag that works with the
+    # libndk ARM-translation layer on an x86_64 host; on an arm64 node use 13.0.0.
+    repository: redroid/redroid
+    tag: "11.0.0"
+  storage:
+    size: 8Gi
+    storageClass: local-path
+  resources:
+    requests:
+      cpu: null
+      memory: 512Mi
+    limits:
+      memory: 3Gi
+  # redroid runs Android on the host kernel: it needs privilege and the binder
+  # module (deploy/ansible/binder). Pin phones to a node where binder is loaded.
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+  # Extra androidboot args for redroid (resolution, dpi, …).
+  extraArgs: []
+
+# One entry per phone. The POC is one; scaling is more entries across more nodes.
+phones:
+  - name: rounak
+    arch: amd64
+    # Optional, for a phone image with ARM translation: the ABIs it runs, most
+    # preferred first. Apps are fetched for the first one a store has a build for.
+    # Unset, they follow arch. Like arch, read from the first phone.
+    # abis: [x86_64, x86, arm64-v8a, armeabi-v7a]
+
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  annotations: {}
+  tls: false

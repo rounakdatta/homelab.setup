@@ -1,0 +1,135 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-data
+  labels:
+    {{- include "applet.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.controller.storage.storageClass | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.controller.storage.size }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "applet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+spec:
+  replicas: 1
+  # Single writer of the state file; never scale beyond 1.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: controller
+  template:
+    metadata:
+      labels:
+        {{- include "applet.labels" . | nindent 8 }}
+        app.kubernetes.io/component: controller
+    spec:
+      serviceAccountName: {{ .Release.Name }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controller.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: applet
+          image: {{ include "applet.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APPLET_LISTEN_ADDR
+              value: "0.0.0.0:8080"
+            - name: APPLET_NAMESPACE
+              value: {{ .Release.Namespace | quote }}
+            - name: APPLET_IN_CLUSTER
+              value: "true"
+            - name: APPLET_PHONES
+              value: "{{ range $i, $p := .Values.phones }}{{ if $i }},{{ end }}{{ $p.name }}{{ end }}"
+            - name: APPLET_PHONE_ARCH
+              value: {{ include "applet.phoneArch" . | quote }}
+            {{- with include "applet.phoneAbis" . }}
+            - name: APPLET_PHONE_ABIS
+              value: {{ . | quote }}
+            {{- end }}
+            - name: APPLET_SOURCES
+              value: {{ .Values.sources | quote }}
+            - name: APPLET_FDROID_REPO
+              value: {{ .Values.fdroidRepo | quote }}
+            - name: APPLET_APKPURE_ACK
+              value: {{ .Values.apkpureAck | quote }}
+            - name: APPLET_UI_COOKIE_AUTH
+              value: {{ .Values.auth.cookieAuth | quote }}
+            - name: APPLET_CONTROL_URL_TEMPLATE
+              value: {{ .Values.controlUrlTemplate | quote }}
+            - name: APPLET_ADMIN_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "applet.secretName" . }}
+                  key: admin-key
+            - name: APPLET_MCP_BEARER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "applet.secretName" . }}
+                  key: mcp-bearer
+                  optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            requests:
+              {{- if .Values.controller.resources.requests.cpu }}
+              cpu: {{ .Values.controller.resources.requests.cpu }}
+              {{- end }}
+              memory: {{ .Values.controller.resources.requests.memory }}
+            limits:
+              memory: {{ .Values.controller.resources.limits.memory }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}
+  labels:
+    {{- include "applet.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controller
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: controller
+  ports:
+    - name: http
+      port: {{ .Values.controller.service.port }}
+      targetPort: http

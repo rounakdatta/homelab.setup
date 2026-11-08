@@ -1,7 +1,7 @@
 ---
 image:
   repository: ghcr.io/rounakdatta/applet
-  tag: "0.2.1"
+  tag: "0.2.2"
 
 # The image is private (github.com/rounakdatta/applet). deploy-stuff.yml builds
 # this ghcr-pull Secret from the GHCR_READ_TOKEN repository secret (interim,
@@ -10,24 +10,24 @@ imagePullSecrets:
   - name: ghcr-pull
 
 controller:
-  # A small CPU request: with none, the controller ran at the minimum CPU weight,
-  # and on a busy node its downloads (F-Droid's 71 MB index, an APKPure XAPK)
-  # crawled until the server dropped them, which apkeep reports as success.
+  # No CPU request: idle between calls, so it yields under contention rather
+  # than reserving a core.
   resources:
     requests:
-      cpu: 250m
+      cpu: null
       memory: 128Mi
-    # F-Droid's index is ~75 MB and is read whole, then parsed, inside this limit
-    # alongside curl and apkeep: at 192Mi the index fetch died silently and starved
-    # apkeep's download after it.
+    # F-Droid's index is ~75 MB and applet reads it whole and parses it in memory,
+    # alongside curl and apkeep: at 192Mi the index fetch died with no error.
     limits:
       memory: 512Mi
-  # The controller runs on the control plane, not beside the phone: APKPure
-  # silently serves nothing to the Paris worker's datacenter IP (apkeep "succeeds"
-  # with no file), and adb reaches the phone across nodes anyway. It is small (64Mi
-  # request). Its local-path volume was recreated here once when it moved.
+  # Everything lives on the Paris worker. local-path binds a volume to the node
+  # that first mounts it, so the controller's state must sit beside the phone,
+  # and the RAM-tight control plane stays out of it entirely. The chart's
+  # default selector (control-plane: "true") must be nulled: Helm merges maps,
+  # so adding a key alone kept both, which no node matched.
   nodeSelector:
-    node-role.kubernetes.io/control-plane: "true"
+    homelab.setup/city: paris
+    node-role.kubernetes.io/control-plane: null
   storage:
     size: 5Gi
     storageClass: local-path
@@ -73,10 +73,10 @@ phoneDefaults:
 
 phones:
   - name: rounak
-    # The node is amd64, but libndk runs ARM code and stores often have no x86
-    # build (Rapido ships armeabi-v7a only), so fetch ARM builds. Interim, until
-    # applet falls back across ABIs on its own.
-    arch: arm
+    arch: amd64
+    # The image translates ARM code (libndk), and many apps ship ARM builds only
+    # (Rapido: armeabi-v7a), so applet fetches for each of these, in order.
+    abis: [x86_64, x86, arm64-v8a, armeabi-v7a]
 
 ingress:
   enabled: false

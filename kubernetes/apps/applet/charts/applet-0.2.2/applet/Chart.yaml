@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 0.2.2
+description: Run any Android app in a cloud phone — one per person, on Kubernetes.
+name: applet
+type: application
+version: 0.2.2

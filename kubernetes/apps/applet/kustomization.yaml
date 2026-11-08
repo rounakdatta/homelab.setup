@@ -20,7 +20,7 @@ namespace: apps
 helmCharts:
   - name: applet
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.2.1
+    version: 0.2.2
     releaseName: applet
     namespace: apps
     valuesFile: values.yaml
