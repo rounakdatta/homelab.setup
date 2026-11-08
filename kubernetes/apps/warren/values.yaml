@@ -203,7 +203,7 @@ controllers:
           - $(WARREN_HUB_SERVICE_HOST):7000
           - --tls
           - --hub-fingerprint
-          - "0000000000000000000000000000000000000000000000000000000000000000"
+          - "98dbcb30046da11cb4ec72451818c4b84a9ecdf6449feb2efd82d9f7571cf8e8"
           - --token
           - $(WARREN_ENROLL_TOKEN)
           - --name
