@@ -1,0 +1,36 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apps
+
+# Warren (github.com/doedja/warren): an India residential proxy at
+# pxin.taptappers.club. The hub (the public endpoint) sits on the control plane;
+# one exit node sits on the Rishra worker and dials OUT to it, so the target sees
+# a Jio home connection. The image is rounakdatta/warren, a pinned release in a
+# scratch image.
+#
+# No chart of its own, so app-template, the same as auth2api. One release, two
+# controllers (hub, node); see values.yaml.
+#
+# Bumping app-template is two lines AND a re-render:
+#
+#   kustomize build --enable-helm kubernetes/ >/dev/null
+#   git rm -r kubernetes/apps/warren/charts/app-template-<old>/
+#   git add kubernetes/apps/warren/charts/app-template-<new>/
+#   python3 .github/scripts/charts-lock.py --write
+helmCharts:
+  - name: app-template
+    # OCI, not the retired bjw-s GitHub Pages repo (see auth2api).
+    repo: oci://ghcr.io/bjw-s-labs/helm
+    version: 5.1.0
+    releaseName: warren
+    namespace: apps
+    valuesFile: values.yaml
+
+# The chart renders the Deployments, Service, PVCs and the node's NetworkPolicy.
+# The rest is ours, as everywhere in this repo: the public TCP route and its
+# certificate, and the private dashboard Ingress.
+resources:
+  - proxy-route.yaml
+  - admin-ingress.yaml

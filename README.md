@@ -26,6 +26,7 @@ My homelab is a single-node x64 (previously ARM) machine, and applications are d
 | eie            | Everything is Everything podcast archive, set as a newspaper (static, served from a tag of its repo) | https://github.com/rounakdatta/eie |
 | itineris       | Travel journal: map, timeline, photo wall, stories (public); a creator app with its own Google sign-in | https://github.com/rounakdatta/itineris |
 | auth2api       | Local AI gateway                                           | https://github.com/AmazingAng/auth2api   |
+| Warren         | India residential proxy at pxin.taptappers.club: the hub on the control plane, one exit node on the Rishra worker | https://github.com/doedja/warren |
 
 ### Supporting infrastructure
 
@@ -43,7 +44,7 @@ K3s is a lightweight Kubernetes distribution that's perfect for single-node home
 Traefik has two front doors (`ansible/roles/traefik`):
 
 - **tailnet** answers only on the control plane's Tailscale address. It is the default: every app is private unless it says otherwise, and an Ingress that names no entrypoint lands here. Its DNS records hold the Tailscale address, so the names stay the same and simply do not answer off the tailnet.
-- **websecure** is the public internet, for the few hosts strangers must reach: itineris, eie and the static sites, Nextcloud, Audiobookshelf and lezepplean. Each says so, and why, on its Ingress.
+- **websecure** is the public internet, for the few hosts strangers must reach: itineris, eie and the static sites, Nextcloud, Audiobookshelf, lezepplean and the Warren proxy (a TCP route on this door, TLS ended here). Each says so, and why, on its Ingress or route.
 
 DNS only says which door a name is behind; the lock is that the public address leads to websecure alone. In-cluster callers use Service DNS (`<app>.<namespace>.svc.cluster.local`) where they can; one that uses a public name still reaches the right door, because kube-proxy answers for both addresses on every node.
 

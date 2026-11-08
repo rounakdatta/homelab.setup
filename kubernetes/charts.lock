@@ -69,6 +69,11 @@ charts:
     version: v2.0.2
     repo: oci://ghcr.io/go-vikunja/helm-chart
     sha256: 792ecdf7a25e442a81ea658ac15eb2604dfddf471b987cacecf9f5545d5ea372
+  - path: kubernetes/apps/warren/charts/app-template-5.1.0
+    chart: app-template
+    version: 5.1.0
+    repo: oci://ghcr.io/bjw-s-labs/helm
+    sha256: 620439b6817242f77862c034f5b4978388815f57df18cc85b667de268ae2473a
   - path: kubernetes/apps/webtrees/charts/webtrees-2.2.23
     chart: webtrees
     version: 2.2.23

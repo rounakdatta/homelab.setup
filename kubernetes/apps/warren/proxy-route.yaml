@@ -1,0 +1,81 @@
+---
+# PUBLIC on purpose: pxin.taptappers.club is the India residential proxy, and a
+# proxy is only worth having if the machines that need an Indian address can
+# reach it from anywhere. It is not open: every request needs the proxy login
+# (Warren answers 407 without it), and the login is a random 256-bit secret in
+# Bitwarden (warren/proxy_pass).
+#
+# It is an HTTPS proxy on the ordinary web port. Traefik answers on 443 for the
+# SNI `pxin.taptappers.club`, ends the TLS with the certificate below, and hands
+# the plain proxy protocol to the hub. Two reasons it is not simply a raw port:
+#   - the proxy password travels inside that TLS, not in the clear (Warren's own
+#     listener has no TLS), which matters most from hotel and cafe networks;
+#   - 443 is the one port that always gets out. Nothing new is opened on the host.
+# Use it as `https://pxin:<password>@pxin.taptappers.club:443`. Clients that only
+# speak plain HTTP or SOCKS5 proxies can use the Service in-cluster
+# (warren-hub.apps:8000), which takes both on one port.
+#
+# DNS: `A pxin <public address>` in rounakdatta/oh-my-dns (zones/taptappers.club.txt).
+# The certificate is DNS-01, so it issues before the record exists.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: pxin-tls
+  namespace: apps
+spec:
+  secretName: pxin-tls-secret
+  dnsNames:
+    - pxin.taptappers.club
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+---
+# Plain HTTP/1.1 only. A client that offers HTTP/2 to its proxy (Chrome does)
+# would otherwise be answered with h2 by Traefik and then speak h2 frames to a
+# hub that only understands the HTTP/1.1 proxy protocol.
+apiVersion: traefik.io/v1alpha1
+kind: TLSOption
+metadata:
+  name: warren-http1
+  namespace: apps
+spec:
+  minVersion: VersionTLS12
+  alpnProtocols:
+    - http/1.1
+---
+# A ceiling on connections open at once through this route. Warren itself has no
+# limit before a client has authenticated, and Traefik sees every client as the
+# same masqueraded address (so this is one shared ceiling, not a per-client
+# limit). The hub passes at most 64 requests per node at a time, so 200 leaves
+# room for handshakes and costs nobody anything; what it stops is a flood of
+# half-open connections taking the shared ingress with it.
+apiVersion: traefik.io/v1alpha1
+kind: MiddlewareTCP
+metadata:
+  name: warren-inflight
+  namespace: apps
+spec:
+  inFlightConn:
+    amount: 200
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRouteTCP
+metadata:
+  name: warren-proxy
+  namespace: apps
+spec:
+  # The public door only. The tailnet door never serves this name.
+  entryPoints:
+    - websecure
+  routes:
+    - match: HostSNI(`pxin.taptappers.club`)
+      middlewares:
+        - name: warren-inflight
+      services:
+        - name: warren-hub
+          port: 8000
+  tls:
+    secretName: pxin-tls-secret
+    options:
+      name: warren-http1
+      namespace: apps

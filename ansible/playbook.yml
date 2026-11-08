@@ -498,6 +498,21 @@
       # the GHCR_READ_TOKEN repository secret in deploy-stuff.yml (the same
       # interim pattern as itineris-google-maps) rather than from Bitwarden.
 
+      # Warren (kubernetes/apps/warren) — the India residential proxy.
+      #   proxy-pass    the login for pxin.taptappers.club (user `pxin`). Minted as
+      #                 hex (create-bitwarden-secret.yml, encoding=hex), because it
+      #                 goes into proxy URLs, where / + = would need escaping.
+      #   enroll-token  what the exit node presents to join the pool.
+      #   admin-token   the dashboard and /metrics.
+      # All three are read once at pod start; rotating one means updating the
+      # item, deploying, and restarting warren-hub (and warren-node for the token).
+      - name: warren-credentials
+        namespace: apps
+        data:
+          proxy-pass: warren/proxy_pass
+          enroll-token: warren/enroll_token
+          admin-token: warren/admin_token
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:

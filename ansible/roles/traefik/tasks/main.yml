@@ -3,7 +3,8 @@
 #
 #   websecure  the host's public address. Only hosts that are public on purpose
 #              name it: itineris, eie and the static sites, nextcloud,
-#              audiobookshelf, lezepplean.
+#              audiobookshelf, lezepplean, and the Warren proxy (pxin), which is
+#              a TCP route on this door rather than an Ingress.
 #   tailnet    the host's Tailscale address. Every other host, and any Ingress
 #              that names no entrypoint at all.
 #
