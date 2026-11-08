@@ -89,6 +89,9 @@ controllers:
                 key: proxy-pass
           # What a node must present to be approved without a person clicking.
           # The hub prints it in its startup log, so never ship these logs.
+          # Unlike the proxy login, rotating it does NOT retire the old one: a
+          # new token is added to the database and the old one keeps working, so
+          # after a rotation delete the old token in the dashboard (Tokens).
           WARREN_ENROLL_TOKEN:
             valueFrom:
               secretKeyRef:
@@ -195,7 +198,10 @@ controllers:
         #     | openssl x509 -outform DER | sha256sum
         #
         # --key-file is the node's identity. A node that comes back with a new key
-        # under the same name is refused, so it lives on a volume.
+        # under the same name is refused, so it lives on a volume. If that volume
+        # is ever lost the node loops, refused, while its pod still shows Running
+        # (it has no probes): revoke the old key in the dashboard (Node keys) and
+        # it enrolls again.
         args:
           - node
           - run
@@ -293,8 +299,14 @@ service:
 # The one private address it can still reach is the hub's node port (7000): the
 # node's own link goes there, and a network policy cannot tell that link from a
 # proxied request for the same address. So a proxy login can open connections to
-# it, and no more: enrolling needs the enrollment token or a person's approval in
-# the dashboard, and the table of waiting nodes is capped.
+# it. It cannot enroll a node (that needs the enrollment token or a person's
+# approval in the dashboard), but it can be a nuisance, and only a login holder
+# can, because 7000 is not published: Warren bounds its table of waiting nodes by
+# count (256) and not by size, and logs and stores a node's name without a bound
+# (up to its 1 MiB frame), so a crafted flood of enrolment attempts can push the
+# hub past its 128Mi limit; and the 16 links per address that port allows are
+# shared with the node's own link. Both want a change in Warren itself (cap the
+# name). Until then the proxy login is a trusted credential.
 networkpolicies:
   node:
     forceRename: warren-node-egress
@@ -317,7 +329,8 @@ networkpolicies:
               port: 7000
         # Everything public, nothing private: RFC 1918, loopback, link-local
         # (cloud metadata), "this network", and 100.64/10, which is both carrier
-        # NAT and the tailnet.
+        # NAT and the tailnet; plus the protocol-assignment, benchmarking,
+        # multicast and reserved blocks, which nothing public lives in.
         - to:
             - ipBlock:
                 cidr: 0.0.0.0/0
@@ -328,4 +341,8 @@ networkpolicies:
                   - 127.0.0.0/8
                   - 169.254.0.0/16
                   - 172.16.0.0/12
+                  - 192.0.0.0/24
                   - 192.168.0.0/16
+                  - 198.18.0.0/15
+                  - 224.0.0.0/4
+                  - 240.0.0.0/4

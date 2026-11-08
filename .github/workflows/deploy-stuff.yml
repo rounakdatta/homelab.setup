@@ -260,6 +260,16 @@ jobs:
             kubectl wait --for=condition=Established crd --all --timeout=60s 2>/dev/null || true
             kubectl apply -f /tmp/manifest.yaml
           fi
+
+          # One-time (2026-11-08), AFTER the apply on purpose: the warren route
+          # briefly carried an in-flight cap, MiddlewareTCP warren-inflight. Traefik
+          # sees every client as one masqueraded address, so it was a single ceiling
+          # any stranger could fill, and the route no longer names it. apply does not
+          # prune, so the object is removed here; deleting it before the apply would
+          # leave the live route pointing at a missing middleware for a few seconds.
+          # Idempotent: --ignore-not-found.
+          kubectl -n apps delete middlewaretcp warren-inflight --ignore-not-found
+
           echo ""
           echo "=== Deployment Status ==="
           kubectl get pods -A | grep -v kube-system
