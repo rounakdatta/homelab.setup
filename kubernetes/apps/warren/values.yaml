@@ -1,0 +1,331 @@
+# Values for bjw-s app-template 5.1.0.
+# Chart source: https://github.com/bjw-s-labs/helm-charts
+#
+# Warren (github.com/doedja/warren) turns devices you own into a proxy pool
+# behind one endpoint. Here: the HUB on the control plane (public, as
+# pxin.taptappers.club, through Traefik) and one NODE on the Rishra worker,
+# which dials OUT to the hub and makes every request from the Jio home
+# connection. The target sees that connection's address.
+#
+#   client --TLS--> Traefik (websecure) --> hub :8000 <--TLS, pinned-- node --> internet
+#                                           (kanmani)                  (jomjom)
+#
+# Both run the same image (ghcr.io/rounakdatta/warren: one pinned, checksummed
+# upstream release in a scratch image) with different arguments.
+#
+# The node link (hub :7000) is cluster-internal on purpose and is NOT published:
+# the node is in this cluster, so nothing outside needs to reach that port.
+# Cost, accepted: the hub works out a node's country from the address it
+# connects from (and ignores what the node says), which here is a pod address,
+# so the dashboard shows no location and `-region-India` finds no node. With a
+# single exit node the whole pool is India anyway; check the exit with an
+# IP-echo through the proxy.
+
+# No ServiceAccount of its own: neither process talks to the Kubernetes API, and
+# no token is mounted (below).
+global:
+  createDefaultServiceAccount: false
+
+# Per-controller `pod:` options below must ADD to these, not replace them; the
+# default ("overwrite") would drop the security context from any controller that
+# sets, say, a nodeSelector.
+defaultPodOptionsStrategy: merge
+
+defaultPodOptions:
+  # Neither process talks to the Kubernetes API.
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    fsGroup: 65534
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
+
+controllers:
+  hub:
+    # Names are pinned (here and on the Service, PVCs and policy below):
+    # app-template names an object after the release while it is the only one of
+    # its kind and appends the identifier once there are two, and
+    # `kubectl apply` never prunes, so a rename leaves the old object running.
+    forceRename: warren-hub
+    type: deployment
+    replicas: 1
+    # strategy stays at app-template's default, Recreate: /data is a
+    # ReadWriteOnce volume and SQLite takes one writer.
+    pod:
+      # A public service must not float: it, and its local-path volume, would
+      # follow the pod onto the worker that drops off the network.
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      enableServiceLinks: false
+    containers:
+      main:
+        image:
+          repository: ghcr.io/rounakdatta/warren
+          # Tag for people, digest for the kubelet: the digest is what is pulled.
+          tag: "0.4.11@sha256:c14dc0c0d37b0db4c939a9906d14cf863e471d637a34e45446aaba016953fcf8"
+          pullPolicy: IfNotPresent
+        # The TLS certificate for the node link is written next to the database,
+        # so /data holds both: the cert's fingerprint is what the node pins, and
+        # it only stays the same while this volume does.
+        args:
+          - hub
+          - --db
+          - /data/warren.db
+          - --admin-listen
+          - 0.0.0.0:9000
+        env:
+          # The username is not a secret; the password is. Both are (re)written
+          # to the database at every start, so rotating the Bitwarden item and
+          # restarting the pod rotates the login. Never blank: a hub with no
+          # proxy user would relay for anyone.
+          WARREN_PROXY_USER: pxin
+          WARREN_PROXY_PASS:
+            valueFrom:
+              secretKeyRef:
+                name: warren-credentials
+                key: proxy-pass
+          # What a node must present to be approved without a person clicking.
+          # The hub prints it in its startup log, so never ship these logs.
+          WARREN_ENROLL_TOKEN:
+            valueFrom:
+              secretKeyRef:
+                name: warren-credentials
+                key: enroll-token
+          # The dashboard and /metrics. The dashboard also shows the proxy
+          # password, so it is tailnet-only and behind tinyauth (admin-ingress.yaml).
+          WARREN_ADMIN_TOKEN:
+            valueFrom:
+              secretKeyRef:
+                name: warren-credentials
+                key: admin-token
+        ports:
+          - name: proxy
+            containerPort: 8000
+            protocol: TCP
+          - name: node
+            containerPort: 7000
+            protocol: TCP
+          - name: admin
+            containerPort: 9000
+            protocol: TCP
+        probes:
+          readiness:
+            enabled: true
+            type: TCP
+            port: 8000
+            spec:
+              periodSeconds: 10
+              timeoutSeconds: 3
+              failureThreshold: 3
+          liveness:
+            enabled: true
+            type: TCP
+            port: 8000
+            spec:
+              periodSeconds: 20
+              timeoutSeconds: 3
+              failureThreshold: 3
+          startup:
+            enabled: false
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        # No CPU request: it idles between requests and this node is the one
+        # short of CPU.
+        resources:
+          requests:
+            memory: 32Mi
+          limits:
+            memory: 128Mi
+
+  node:
+    forceRename: warren-node
+    type: deployment
+    replicas: 1
+    pod:
+      nodeSelector:
+        homelab.setup/region: india
+        homelab.setup/city: rishra
+      # This pod can only ever run on that one worker, so there is nowhere to be
+      # evicted TO. Without these it is evicted five minutes into every
+      # NotReady blip and left Terminating on a node that cannot confirm it.
+      # With them it simply stays, and its own reconnect loop does the rest.
+      tolerations:
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+      # The exit resolves names from where it exits: public resolvers, reached
+      # over the Jio connection, not CoreDNS on the Singapore control plane (a
+      # tailnet hop for every lookup, and answers steered for the wrong
+      # country). The hub is reached by address, below.
+      dnsPolicy: None
+      dnsConfig:
+        nameservers:
+          - 1.1.1.1
+          - 8.8.8.8
+          - 9.9.9.9
+      # ON, deliberately: the hub's address comes from the injected
+      # WARREN_HUB_SERVICE_HOST, which needs no DNS (see args).
+      enableServiceLinks: true
+      # The node finishes in-flight requests on SIGTERM, up to 20 seconds.
+      terminationGracePeriodSeconds: 30
+    containers:
+      main:
+        image:
+          repository: ghcr.io/rounakdatta/warren
+          tag: "0.4.11@sha256:c14dc0c0d37b0db4c939a9906d14cf863e471d637a34e45446aaba016953fcf8"
+          pullPolicy: IfNotPresent
+        # `warren node` takes flags only, no environment, so the token goes in
+        # as an argument; the kubelet fills in $(...) from the env below.
+        #
+        # --hub-fingerprint pins the hub's self-signed certificate (sha256 of the
+        # DER). It is a public hash, and it changes only if the hub's volume is
+        # lost: the hub then makes a new certificate, the node refuses it, and
+        # this line is the fix. Read it off the live hub:
+        #   openssl s_client -connect <hub clusterIP>:7000 </dev/null 2>/dev/null \
+        #     | openssl x509 -outform DER | sha256sum
+        #
+        # --key-file is the node's identity. A node that comes back with a new key
+        # under the same name is refused, so it lives on a volume.
+        args:
+          - node
+          - run
+          - --hub
+          - $(WARREN_HUB_SERVICE_HOST):7000
+          - --tls
+          - --hub-fingerprint
+          - "98dbcb30046da11cb4ec72451818c4b84a9ecdf6449feb2efd82d9f7571cf8e8"
+          - --token
+          - $(WARREN_ENROLL_TOKEN)
+          - --name
+          - rishra
+          - --key-file
+          - /data/node.key
+        env:
+          WARREN_ENROLL_TOKEN:
+            valueFrom:
+              secretKeyRef:
+                name: warren-credentials
+                key: enroll-token
+        # The node listens on nothing, so there is no port to probe, and the
+        # chart's default probes would aim at one that does not exist.
+        probes:
+          liveness:
+            enabled: false
+          readiness:
+            enabled: false
+          startup:
+            enabled: false
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        resources:
+          requests:
+            memory: 16Mi
+          limits:
+            memory: 64Mi
+
+persistence:
+  hub-data:
+    forceRename: warren-hub-data
+    type: persistentVolumeClaim
+    accessMode: ReadWriteOnce
+    size: 1Gi
+    storageClass: local-path
+    advancedMounts:
+      hub:
+        main:
+          - path: /data
+  node-key:
+    forceRename: warren-node-key
+    type: persistentVolumeClaim
+    accessMode: ReadWriteOnce
+    size: 64Mi
+    storageClass: local-path
+    advancedMounts:
+      node:
+        main:
+          - path: /data
+
+service:
+  hub:
+    forceRename: warren-hub
+    controller: hub
+    primary: true
+    type: ClusterIP
+    ports:
+      proxy:
+        port: 8000
+        protocol: TCP
+        primary: true
+      node:
+        port: 7000
+        protocol: TCP
+      admin:
+        port: 9000
+        protocol: TCP
+
+# LOAD-BEARING. Warren's node dials whatever the hub asks, with no filter on the
+# destination (checked in its source and by test: a node connected to a service
+# on its own loopback on request). Left alone, a proxy login would reach this
+# cluster's pod and service networks, the Kubernetes API, the tailnet and the
+# Rishra LAN (Home Assistant, the cameras). So the node may talk to the hub and
+# to the public internet, and to nothing private. Its own DNS is public (above),
+# so no cluster name resolves either. The control plane enforces this: k3s's
+# NetworkPolicy controller is on (never passed --disable-network-policy).
+#
+# Checked live through the proxy: the hub's proxy and dashboard ports, the
+# Kubernetes API, cluster DNS, both Tailscale addresses, RFC 1918 and link-local
+# are all refused, and public addresses still connect.
+#
+# The one private address it can still reach is the hub's node port (7000): the
+# node's own link goes there, and a network policy cannot tell that link from a
+# proxied request for the same address. So a proxy login can open connections to
+# it, and no more: enrolling needs the enrollment token or a person's approval in
+# the dashboard, and the table of waiting nodes is capped.
+networkpolicies:
+  node:
+    forceRename: warren-node-egress
+    controller: node
+    policyTypes:
+      - Ingress
+      - Egress
+    rules:
+      # Nothing listens on the node, so nothing may connect to it.
+      ingress: []
+      egress:
+        # The hub, on the node link only.
+        - to:
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: warren
+                  app.kubernetes.io/controller: hub
+          ports:
+            - protocol: TCP
+              port: 7000
+        # Everything public, nothing private: RFC 1918, loopback, link-local
+        # (cloud metadata), "this network", and 100.64/10, which is both carrier
+        # NAT and the tailnet.
+        - to:
+            - ipBlock:
+                cidr: 0.0.0.0/0
+                except:
+                  - 0.0.0.0/8
+                  - 10.0.0.0/8
+                  - 100.64.0.0/10
+                  - 127.0.0.0/8
+                  - 169.254.0.0/16
+                  - 172.16.0.0/12
+                  - 192.168.0.0/16

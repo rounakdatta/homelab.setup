@@ -1,0 +1,39 @@
+---
+# Warren's dashboard and /metrics: tailnet-only, behind tinyauth, and behind
+# Warren's own admin token (HTTP Basic, any username, the token as password).
+# It is the place to add proxy users, approve or revoke nodes, and see what each
+# node is doing, and it displays the proxy password, so it is never public.
+#
+# Three locks: the name only answers on the tailnet, Google sign-in via
+# tinyauth, then the admin token. The token is the one that stands alone if
+# either of the others is ever loosened, which is why it is random and long.
+#
+# DNS: `A warren <tailnet address>` in rounakdatta/oh-my-dns.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: warren-admin
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: tailnet
+    # Load-bearing: without it the token is the only thing in front of the
+    # dashboard.
+    traefik.ingress.kubernetes.io/router.middlewares: tinyauth-tinyauth@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - warren.taptappers.club
+      secretName: warren-tls-secret
+  rules:
+    - host: warren.taptappers.club
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: warren-hub
+                port:
+                  number: 9000
