@@ -15,7 +15,13 @@
 #   has files at root — kustomization.yaml carries a JSON patch that strips
 #   the subPath line so files mount at the volume root.
 
-# Pin to the exact image bits we ran before the cutover. Docker Hub
+# 33.0.10 (from 33.0.1, 2026-11) for the security fixes since: an
+# ImageMagick bug reachable through previews, two 2FA bypasses, and more.
+# A patch release within 33: the image's entrypoint copies the new code in
+# (never touching data/ or config/) and runs `occ upgrade` once, before
+# Apache starts -- see startupProbe below.
+#
+# Pin to the exact image bits we run. Docker Hub
 # version tags are 3-component (33.0.1-apache); the schema version
 # 33.0.1.2 in our config.php is the in-container build number, not a
 # Docker tag. Combining tag + digest gets us readability AND byte
@@ -24,7 +30,7 @@
 # Empty tag would fall back to chart AppVersion (33.0.3) and trigger
 # `occ upgrade` on first boot.
 image:
-  tag: "33.0.1-apache@sha256:0b14848e05d19aa25e8a189eb9cfef4215489e0cbf5eb999e8784bf03027c226"
+  tag: "33.0.10-apache@sha256:81cb09055a20142521a267cea2bc27e6a81a065871c70850d209f08803567dbc"
   pullPolicy: IfNotPresent
 
 # Service name = nextcloud (matches what our standalone ingress.yaml expects).
@@ -146,6 +152,17 @@ readinessProbe:
   periodSeconds: 10
   timeoutSeconds: 10
   failureThreshold: 3
+
+# An image upgrade runs entirely BEFORE Apache starts (code copy, then
+# `occ upgrade`'s database migrations), so liveness would kill the container
+# ~2.5 min in -- mid-migration, if the node is slow. The startup probe holds
+# liveness and readiness off for up to 15 minutes until /status.php answers.
+startupProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 10
+  failureThreshold: 90
 
 # We keep our standalone ingress.yaml + middleware.yaml — chart ingress off.
 ingress:
