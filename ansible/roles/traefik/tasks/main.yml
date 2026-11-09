@@ -97,11 +97,15 @@
     set -o pipefail
     kc() { k3s kubectl -n kube-system "$@"; }
     deadline=$(( $(date +%s) + 600 ))
+    # helm-controller applies a changed config a little after the file lands,
+    # so the image is waited for here too -- checked once, straight after the
+    # write, it is still the old one.
     until [ "$(kc get svc traefik -o jsonpath='{.spec.type}' 2>/dev/null)" = ClusterIP ] \
       && kc get svc traefik-tailnet >/dev/null 2>&1 \
-      && [ -z "$(kc get ds -l svccontroller.k3s.cattle.io/svcname=traefik -o name 2>/dev/null)" ]; do
+      && [ -z "$(kc get ds -l svccontroller.k3s.cattle.io/svcname=traefik -o name 2>/dev/null)" ] \
+      && [ "$(kc get deployment traefik -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null)" = "{{ traefik_image_repository }}:{{ traefik_image_tag }}" ]; do
       if [ "$(date +%s)" -ge "$deadline" ]; then
-        echo "traefik: Services not switched after 10 minutes; see job/helm-install-traefik" >&2
+        echo "traefik: Services or image not switched after 10 minutes; see job/helm-install-traefik" >&2
         exit 1
       fi
       sleep 5
@@ -109,10 +113,6 @@
     left=$(( deadline - $(date +%s) )); [ "$left" -gt 30 ] || left=30
     if ! kc rollout status deployment/traefik --timeout="${left}s" >/dev/null; then
       echo "traefik: rollout did not finish" >&2
-      exit 1
-    fi
-    if [ "$(kc get deployment traefik -o jsonpath='{.spec.template.spec.containers[0].image}')" != "{{ traefik_image_repository }}:{{ traefik_image_tag }}" ]; then
-      echo "traefik: running image is not the configured one" >&2
       exit 1
     fi
     echo "traefik: both doors up, on the configured image"
