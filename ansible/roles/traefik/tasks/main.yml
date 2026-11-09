@@ -111,7 +111,11 @@
       echo "traefik: rollout did not finish" >&2
       exit 1
     fi
-    echo "traefik: both doors up"
+    if [ "$(kc get deployment traefik -o jsonpath='{.spec.template.spec.containers[0].image}')" != "{{ traefik_image_repository }}:{{ traefik_image_tag }}" ]; then
+      echo "traefik: running image is not the configured one" >&2
+      exit 1
+    fi
+    echo "traefik: both doors up, on the configured image"
   args:
     executable: /bin/bash
   changed_when: false

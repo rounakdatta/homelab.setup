@@ -21,6 +21,9 @@ spec:
     # there.
     nodeSelector:
       node-role.kubernetes.io/control-plane: "true"
+    image:
+      repository: {{ traefik_image_repository }}
+      tag: "{{ traefik_image_tag }}"
     ports:
       web:
         expose:
