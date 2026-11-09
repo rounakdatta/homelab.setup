@@ -2,3 +2,11 @@
 # k3s's documented customisation point for its packaged Traefik: a
 # HelmChartConfig in the auto-deploy directory, applied within seconds.
 traefik_config_path: /var/lib/rancher/k3s/server/manifests/traefik-config.yaml
+
+# Traefik itself, ahead of the 3.6.9 this k3s release bundles, for the security
+# fixes since (the 3.6.10-3.6.25 migration notes change nothing this setup uses).
+# k3s's own mirror (rancher/mirrored-library-traefik) has no 3.6.25, so this is
+# the upstream image, pinned by digest. Drop both lines once k3s ships a Traefik
+# at least this new; the chart reads the version from the tag before the `@`.
+traefik_image_repository: traefik
+traefik_image_tag: "v3.6.25@sha256:31267173a15b4944e797a76ffd9c419707c8d8b32fe5b610f80cd0cfa05f372d"
