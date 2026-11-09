@@ -156,13 +156,14 @@ readinessProbe:
 # An image upgrade runs entirely BEFORE Apache starts (code copy, then
 # `occ upgrade`'s database migrations), so liveness would kill the container
 # ~2.5 min in -- mid-migration, if the node is slow. The startup probe holds
-# liveness and readiness off for up to 15 minutes until /status.php answers.
+# liveness and readiness off for up to 30 minutes until /status.php answers;
+# a container that fails outright still restarts at once.
 startupProbe:
   enabled: true
   initialDelaySeconds: 30
   periodSeconds: 10
   timeoutSeconds: 10
-  failureThreshold: 90
+  failureThreshold: 180
 
 # We keep our standalone ingress.yaml + middleware.yaml — chart ingress off.
 ingress:
