@@ -73,3 +73,19 @@
   delay: 10
   changed_when: false
   when: tailscale_link_k3s.stat.exists
+
+# flannel's pod bridge, cni0, keeps the MTU it was created with, while flannel.1
+# and every new pod take the new one. A packet bigger than cni0's MTU is then
+# dropped on its way into a pod, and only senders that honour the ICMP "too big"
+# reply adapt. Anycast CDNs often lose that reply: on 2026-11-07 APKPure's CDN
+# never finished a TLS handshake to a new pod while cni0 sat at the old 1230.
+# A reboot recreates cni0 at the right size; this covers a live MTU change.
+- name: Size the pod bridge (cni0) to the pod MTU
+  ansible.builtin.shell: |
+    want={{ tailscale_mtu | int - 50 }}
+    [ -e /sys/class/net/cni0 ] || exit 0
+    [ "$(cat /sys/class/net/cni0/mtu)" = "$want" ] && exit 0
+    ip link set cni0 mtu "$want" && echo changed
+  register: tailscale_link_cni0
+  changed_when: "'changed' in tailscale_link_cni0.stdout"
+  when: tailscale_link_k3s.stat.exists
