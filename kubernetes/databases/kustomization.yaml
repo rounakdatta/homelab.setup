@@ -6,5 +6,6 @@ namespace: databases
 
 resources:
   - mysql/
+  - mariadb/
   - postgres/
   - redis/

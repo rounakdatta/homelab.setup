@@ -1,0 +1,103 @@
+# MariaDB 11.4 LTS (supported to May 2029): the replacement for the shared
+# 10.5.2 in ../mysql. 10.5.2 was a 2020 beta, and 10.5 left support in June
+# 2025.
+#
+# A new, empty server rather than an in-place upgrade. MariaDB documents
+# upgrades one major version at a time, and the old data files were written by
+# a beta. A one-off copies every database across with the apps stopped and
+# verifies it table by table. Then the `mysql` Service (in ../mysql) moves its
+# selector here, and the apps keep the same hostname. The old server and its
+# volume stay untouched for rollback.
+#
+# The args pin the settings whose 11.4 defaults moved since 10.5, so the apps
+# see the old server's behaviour:
+# - latin1 server defaults: every existing database and table names its own
+#   charset, so this only affects a database created without one;
+# - no collation remapping;
+# - explicit_defaults_for_timestamp OFF;
+# - the same buffer pool, connection cap and idle timeout;
+# - snapshot isolation OFF: 11.6+ turns it on, and that breaks apps that
+#   update rows they read earlier.
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mariadb-pvc
+  namespace: databases
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: local-path  # K3s default storage class
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mariadb
+  namespace: databases
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # Important for databases to avoid concurrent access
+  selector:
+    matchLabels:
+      app: mariadb
+  template:
+    metadata:
+      labels:
+        app: mariadb
+    spec:
+      # Where the old server and its local volume live; never a flaky worker.
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      # Time for InnoDB to shut down cleanly when the pod is replaced.
+      terminationGracePeriodSeconds: 120
+      containers:
+      - name: mariadb
+        image: mariadb:11.4.13@sha256:d1891ede5a559f1086f55053bb8cc1569b0298338c4d72d71725a7f74f6ba620
+        args:
+        - --character-set-server=latin1
+        - --collation-server=latin1_swedish_ci
+        - --character-set-collations=
+        - --explicit-defaults-for-timestamp=OFF
+        - --innodb-buffer-pool-size=256M
+        - --max-connections=100
+        - --wait-timeout=600
+        - --innodb-snapshot-isolation=OFF
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MARIADB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-credentials
+              key: root-password
+        volumeMounts:
+        - name: mariadb-data
+          mountPath: /var/lib/mysql
+          subPath: data
+        # The migration's dumps, kept beside the data they were loaded into.
+        - name: mariadb-data
+          mountPath: /dumps
+          subPath: dumps
+        readinessProbe:
+          exec:
+            command: ["healthcheck.sh", "--connect", "--innodb_initialized"]
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+      volumes:
+      - name: mariadb-data
+        persistentVolumeClaim:
+          claimName: mariadb-pvc
