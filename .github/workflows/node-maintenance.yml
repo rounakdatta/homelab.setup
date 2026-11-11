@@ -49,12 +49,23 @@ jobs:
     env:
       CONTROL: ${{ secrets.CONTROL_MACHINE_NAME }}
     steps:
+      # Only the masking script; no token is left in the workspace.
+      - name: Checkout (scripts only)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
       - name: Setup Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           version: 1.76.1
           args: --advertise-tags=tag:homelab
+
+      # Public logs: hide tailnet and node addresses from everything after this.
+      - name: Mask addresses in this public log
+        run: .github/scripts/mask-addresses.sh
 
       - name: Before
         run: |
@@ -232,10 +243,9 @@ jobs:
         env:
           TARGET: ${{ inputs.rollout_restart }}
         run: |
-          case "$TARGET" in
-            [a-z0-9-]*/[a-z0-9-]*) ;;
-            *) echo "::error::rollout_restart must be namespace/name"; exit 1;;
-          esac
+          # Strict: the value goes into a root shell on the node.
+          [[ "$TARGET" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?/[a-z0-9]([a-z0-9-]*[a-z0-9])?$ ]] \
+            || { echo "::error::rollout_restart must be namespace/name"; exit 1; }
           ns="${TARGET%%/*}"; name="${TARGET#*/}"
           tailscale ssh "root@${CONTROL}" "k3s kubectl -n '$ns' rollout restart deployment/'$name' && k3s kubectl -n '$ns' rollout status deployment/'$name' --timeout=240s"
 
