@@ -19,7 +19,12 @@ metadata:
   name: mysql
   namespace: databases
 spec:
-  replicas: 1
+  # STOPPED (11 Nov 2026): the shared 10.5.2, a 2020 beta, replaced by MariaDB
+  # 11.4 in ../mariadb, which serves every database here as copied and
+  # verified table by table. Kept, with its untouched volume, as the rollback:
+  # set this back to 1 and the Service selector below back to `app: mysql`.
+  # Delete both, with the PVC, once the new server has proven itself.
+  replicas: 0
   strategy:
     type: Recreate  # Important for databases to avoid concurrent access
   selector:
@@ -64,8 +69,10 @@ metadata:
   name: mysql
   namespace: databases
 spec:
+  # The new 11.4 server (../mariadb). The apps keep this hostname,
+  # mysql.databases.svc.cluster.local.
   selector:
-    app: mysql
+    app: mariadb
   ports:
   - port: 3306
     targetPort: 3306
