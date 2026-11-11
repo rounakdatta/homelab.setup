@@ -19,12 +19,23 @@ jobs:
   status:
     runs-on: ubuntu-latest
     steps:
+      # Only the masking script; no token is left in the workspace.
+      - name: Checkout (scripts only)
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
       - name: Setup Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
           version: 1.76.1
           args: --advertise-tags=tag:homelab
+
+      # Public logs: hide tailnet and node addresses from everything after this.
+      - name: Mask addresses in this public log
+        run: .github/scripts/mask-addresses.sh
 
       # Node-level view of the control plane, over Tailscale SSH, BEFORE any
       # kubectl call: when the API server itself is flapping this is the only
@@ -74,13 +85,12 @@ jobs:
             # print listening ports, package versions or addresses.
             echo "== memory plan: swap, zram, vm sysctls =="
             swapon --show 2>/dev/null; echo "swap devices: $(tail -n +2 /proc/swaps | wc -l)"
-            echo "zram module: $(modinfo -F filename zram 2>/dev/null || echo MISSING)"
-            dpkg-query -W -f='${Package} ${Status} ${Version}\n' systemd-zram-generator zram-tools 2>/dev/null
-            apt-cache policy systemd-zram-generator zram-tools 2>/dev/null | grep -E '^[a-z]|Candidate'
+            echo "zram module: $(modinfo -F filename zram >/dev/null 2>&1 && echo present || echo MISSING)"
+            dpkg-query -W -f='${Package} ${Status}\n' systemd-zram-generator zram-tools 2>/dev/null
+            for p in systemd-zram-generator zram-tools; do printf '%s installable: %s\n' "$p" "$(apt-cache policy "$p" 2>/dev/null | grep -q 'Candidate: [0-9]' && echo yes || echo no)"; done
             sysctl vm.swappiness vm.overcommit_memory vm.min_free_kbytes vm.watermark_scale_factor vm.page-cluster 2>/dev/null
             grep -E 'MemTotal|MemAvailable|SReclaimable|SUnreclaim|PageTables|Committed_AS' /proc/meminfo
             echo "== memory plan: k3s and kubelet =="
-            k3s --version 2>/dev/null | head -1
             systemctl show k3s -p MemoryCurrent -p MemoryPeak -p CPUWeight -p Slice 2>/dev/null
             grep -hvE 'token|secret|password|key' /etc/rancher/k3s/config.yaml /etc/rancher/k3s/config.yaml.d/*.yaml 2>/dev/null | grep -v '^\s*$'
             ls /var/lib/rancher/k3s/agent/etc/kubelet.conf.d/ 2>/dev/null | sed 's/^/kubelet.conf.d: /'
@@ -126,11 +136,13 @@ jobs:
           sed -i "s|https://127.0.0.1:6443|https://${CONTROL}:6443|g" ~/.kube/config
           kubectl cluster-info | head -1 || echo "(API server not answering)"
 
+      # Public logs: hide tailnet and node addresses from everything after this.
+      - name: Mask addresses in this public log
+        run: .github/scripts/mask-addresses.sh
+
       - name: Nodes
         continue-on-error: true
         run: |
-          kubectl get nodes -o wide
-          echo
           kubectl get nodes -o custom-columns='NODE:.metadata.name,READY:.status.conditions[?(@.type=="Ready")].status,REASON:.status.conditions[?(@.type=="Ready")].reason,LAST-HEARTBEAT:.status.conditions[?(@.type=="Ready")].lastHeartbeatTime,MEM-PRESSURE:.status.conditions[?(@.type=="MemoryPressure")].status,DISK-PRESSURE:.status.conditions[?(@.type=="DiskPressure")].status,TAINTS:.spec.taints[*].key'
           echo
           kubectl get nodes -o custom-columns='NODE:.metadata.name,LABELS:.metadata.labels' | sed 's/map\[//; s/\]//; s/ /\n        /g'
@@ -140,7 +152,7 @@ jobs:
         env:
           NS: ${{ inputs.namespace }}
         run: |
-          kubectl get pods -A -o wide | grep -vE ' (Running|Completed) ' || true
+          kubectl get pods -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,STATUS:.status.phase,NODE:.spec.nodeName,RESTARTS:.status.containerStatuses[*].restartCount' | grep -vE ' (Running|Succeeded) ' || true
           echo
           for p in $(kubectl -n "$NS" get pods -o json | jq -r '.items[] | select(.status.phase != "Running" or .metadata.deletionTimestamp != null) | .metadata.name'); do
             echo "=================== $p ==================="
