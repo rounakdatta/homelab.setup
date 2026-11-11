@@ -87,7 +87,7 @@ jobs:
             swapon --show 2>/dev/null; echo "swap devices: $(tail -n +2 /proc/swaps | wc -l)"
             echo "zram module: $(modinfo -F filename zram 2>/dev/null || echo MISSING)"
             dpkg-query -W -f='${Package} ${Status} ${Version}\n' systemd-zram-generator zram-tools 2>/dev/null
-            apt-cache policy systemd-zram-generator zram-tools 2>/dev/null | grep -E '^[a-z]|Candidate'
+            for p in systemd-zram-generator zram-tools; do printf '%s installable: %s\n' "$p" "$(apt-cache policy "$p" 2>/dev/null | grep -q 'Candidate: [0-9]' && echo yes || echo no)"; done
             sysctl vm.swappiness vm.overcommit_memory vm.min_free_kbytes vm.watermark_scale_factor vm.page-cluster 2>/dev/null
             grep -E 'MemTotal|MemAvailable|SReclaimable|SUnreclaim|PageTables|Committed_AS' /proc/meminfo
             echo "== memory plan: k3s and kubelet =="
