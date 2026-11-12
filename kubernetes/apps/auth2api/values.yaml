@@ -166,25 +166,35 @@ controllers:
           limits:
             memory: 64Mi
 
-      # Seed auth-dir with a ready-made Anthropic account, so the gateway can
-      # serve without anyone completing the browser login first.
+      # Seed auth-dir with ready-made Anthropic accounts, so the gateway can
+      # serve without anyone completing the browser login first: one per
+      # organisation of the Claude login (eng1 and eng2, as agentfest's account
+      # switcher names them), each a year-long `claude setup-token` token that
+      # can do inference and nothing else.
       #
-      # WRITE-ONCE, and that is the whole safety story here: it writes only
-      # when auth-dir holds no claude-*.json. A real `--login` (via the login
-      # controller below) produces a strictly better file -- a genuine refresh
-      # token, the true account_uuid -- and once that exists this step never
-      # touches it again. Deleting the seeded file and logging in properly is
-      # always the upgrade path.
+      # Two accounts are the point. auth2api rotates between the accounts it
+      # holds (sticky for 20-60 min), and a 429 cools the limited account down
+      # and retries the same request on the next one (proxyWithRetry), so one
+      # org running out of its allowance no longer takes the gateway with it.
+      #
+      # WRITE-ONCE PER TOKEN, and that is the whole safety story here. A token
+      # already in some claude-*.json stays there (moved to claude-<label>.json
+      # if it carries another label); a token not yet on the volume gets a
+      # fresh claude-<label>.json, unless that name already holds another
+      # token -- a real `--login` (via the login controller below) produces a
+      # strictly better file, with a genuine refresh token and the true
+      # account_uuid, and this step never overwrites one. Nothing is lost.
       #
       # The shape comes from src/auth/token-storage.ts: files are named
       # claude-<email>.json, loadAllTokens does nothing but JSON.parse (no
       # field validation), and storageToToken defaults account_uuid to "".
-      # So access_token, email, type and expired are what actually matter.
+      # `email` is only a label: it names the file and is what /admin/accounts
+      # and the stats show; auth rides entirely on the access token.
       #
       # refresh_token is a placeholder on purpose. AccountManager only reaches
       # for it when `expiresAt - now <= leadMs` (4h, manager.ts), so with a
       # year-long token it is never exercised; when that day comes the account
-      # goes into cooldown and the fix is a real login, not a better dummy.
+      # goes into cooldown and the fix is a new setup-token, not a better dummy.
       seed-account:
         image:
           repository: ghcr.io/rounakdatta/auth2api
@@ -194,52 +204,68 @@ controllers:
         args:
           - |
             set -eu
-            if [ -z "${CLAUDE_OAUTH_TOKEN:-}" ]; then
-              echo "no claude-oauth-token in auth2api-credentials; leaving auth-dir alone"
-              exit 0
-            fi
-            if ls /data/claude-*.json >/dev/null 2>&1; then
-              echo "auth-dir already holds an anthropic account; leaving it alone"
-              exit 0
-            fi
             mkdir -p /data
             chmod 700 /data
-            # `expired` drives the refresh decision, nothing else -- set it a
-            # year out to match the token actually issued.
-            EXPIRES="$(node -e 'process.stdout.write(new Date(Date.now()+365*864e5).toISOString())')"
-            NOW="$(node -e 'process.stdout.write(new Date().toISOString())')"
             umask 077
-            node -e '
-              const fs = require("fs");
-              fs.writeFileSync(process.argv[1], JSON.stringify({
-                access_token:  process.env.CLAUDE_OAUTH_TOKEN,
+            node - <<'SEED'
+            const fs = require("fs");
+            const path = require("path");
+            const dir = "/data";
+            const now = new Date().toISOString();
+            const year = new Date(Date.now() + 365 * 864e5).toISOString();
+            const seeds = [
+              ["eng2", process.env.CLAUDE_OAUTH_TOKEN],
+              ["eng1", process.env.CLAUDE_OAUTH_TOKEN_2],
+            ];
+            const read = (f) => {
+              try { return JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")); } catch { return null; }
+            };
+            for (const [label, token] of seeds) {
+              if (!token) { console.log(`${label}: no token in auth2api-credentials, skipped`); continue; }
+              const files = fs.readdirSync(dir).filter((f) => /^claude-.*\.json$/.test(f));
+              const want = `claude-${label}.json`;
+              const holder = files.find((f) => read(f)?.access_token === token);
+              if (holder === want) { console.log(`${label}: already on the volume`); continue; }
+              if (holder) {
+                const t = read(holder);
+                t.email = label;
+                fs.writeFileSync(path.join(dir, want), JSON.stringify(t, null, 2), { mode: 0o600 });
+                fs.unlinkSync(path.join(dir, holder));
+                console.log(`${label}: relabelled from an older file name`);
+                continue;
+              }
+              if (files.includes(want)) { console.log(`${label}: ${want} holds another token (a real login?); left alone`); continue; }
+              fs.writeFileSync(path.join(dir, want), JSON.stringify({
+                access_token: token,
                 refresh_token: "seeded-no-refresh-token",
-                last_refresh:  process.argv[2],
-                email:         process.argv[3],
-                type:          "anthropic",
-                expired:       process.argv[4],
-                account_uuid:  ""
+                last_refresh: now,
+                email: label,
+                type: "anthropic",
+                expired: year,
+                account_uuid: "",
               }, null, 2), { mode: 0o600 });
-            ' "/data/claude-${ACCOUNT_EMAIL}.json" "$NOW" "$ACCOUNT_EMAIL" "$EXPIRES"
-            echo "seeded /data/claude-${ACCOUNT_EMAIL}.json (expires ${EXPIRES})"
+              console.log(`${label}: seeded (expires ${year})`);
+            }
+            SEED
         env:
           # Not marked optional -- app-template's schema does not allow it on a
-          # secretKeyRef. If the key is ever missing the pod stops at
+          # secretKeyRef. If a key is ever missing the pod stops at
           # CreateContainerConfigError, which names the missing key plainly;
           # the deploy syncs Bitwarden before applying manifests, so in the
-          # normal order it is always there first.
+          # normal order both are always there first.
+          #
+          # The eng2 organisation's token.
           - name: CLAUDE_OAUTH_TOKEN
             valueFrom:
               secretKeyRef:
                 name: auth2api-credentials
                 key: claude-oauth-token
-          # Identity label only -- it names the file and is what /admin/accounts
-          # and the stats aggregation show. Auth itself rides entirely on the
-          # access token, so a mismatch here is cosmetic, not breaking. Set it
-          # to the Anthropic account's real address to keep the admin view
-          # honest.
-          - name: ACCOUNT_EMAIL
-            value: "rounak@lyric.tech"
+          # The eng1 organisation's token.
+          - name: CLAUDE_OAUTH_TOKEN_2
+            valueFrom:
+              secretKeyRef:
+                name: auth2api-credentials
+                key: claude-oauth-token-2
         resources:
           requests:
             cpu: 10m
