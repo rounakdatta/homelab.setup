@@ -243,9 +243,10 @@ checks:
 
   # ---- Apps: each Service answers -------------------------------------------
   - {id: app-audiobookshelf, name: Audiobookshelf, group: apps, every: 1m, for: 3m, warn_above: 3s,
+     display: {link: 'https://audiobookshelf.taptappers.club/'},
      http: {url: "http://audiobookshelf.apps.svc.cluster.local/healthcheck"}}
   - {id: app-aiapi, name: aiapi gateway, group: apps, every: 1m, for: 3m, warn_above: 3s,
-     display: {repo: rounakdatta/auth2api},
+     display: {repo: rounakdatta/auth2api, link: 'https://aiapi.taptappers.club/admin/accounts'},
      http: {url: "http://auth2api.apps.svc.cluster.local:8317/health"}}
   - id: app-bookstack
     name: BookStack
@@ -253,13 +254,15 @@ checks:
     every: 1m
     for: 3m
     warn_above: 3s
+    display: {link: 'https://bookstack.taptappers.club/'}
     http:
       url: http://bookstack.apps.svc.cluster.local:8080/status
       expect_json: {$.database: true, $.cache: true, $.session: true}
   - {id: app-firefly, name: Firefly III, group: apps, every: 1m, for: 3m, warn_above: 3s,
+     display: {link: 'https://firefly.taptappers.club/'},
      http: {url: "http://firefly.apps.svc.cluster.local:8080/health"}}
   - {id: app-fold, name: fold, group: apps, every: 5m, for: 10m, warn_above: 5s,
-     display: {repo: rounakdatta/texas-fold-em},
+     display: {repo: rounakdatta/texas-fold-em, link: 'https://fold.taptappers.club/'},
      http: {url: "http://texas-fold-em.apps.svc.cluster.local:8080/"}}
   # fold signs in to fold.money with a refresh token that texas-fold-em renews
   # every ~13 minutes (each access token lives 15). If fold refuses it (a
@@ -279,19 +282,22 @@ checks:
     fail_above: 17m
     fail_reason: fold has stopped renewing it
   - {id: app-frigate, name: Frigate, group: apps, every: 1m, for: 3m, warn_above: 3s,
+     display: {link: 'https://home-cam.taptappers.club/'},
      http: {url: "http://frigate.apps.svc.cluster.local:5000/api/version"}}
   - {id: app-home-assistant, name: Home Assistant, group: apps, every: 1m, for: 3m, warn_above: 3s,
+     display: {link: 'https://home-assistant.taptappers.club/'},
      http: {url: "http://home-assistant.apps.svc.cluster.local:8123/manifest.json"}}
   - {id: app-itineris, name: itineris, group: apps, every: 1m, for: 3m, warn_above: 3s,
-     display: {repo: rounakdatta/itineris},
+     display: {repo: rounakdatta/itineris, link: 'https://itineris.taptappers.club/'},
      http: {url: "http://itineris.apps.svc.cluster.local/"}}
   - {id: app-itineris-creator, name: itineris creator, group: apps, every: 5m, for: 10m, warn_above: 3s,
-     display: {repo: rounakdatta/itineris},
+     display: {repo: rounakdatta/itineris, link: 'https://itineris.taptappers.club/creator'},
      http: {url: "http://itineris-admin.apps.svc.cluster.local/creator", expect_status: [302]}}
   - {id: app-lezepplean, name: LeZeppLean, group: apps, every: 1m, for: 3m, warn_above: 3s,
-     display: {repo: rounakdatta/le-zepp-lean},
+     display: {repo: rounakdatta/le-zepp-lean, link: 'https://lezepplean.taptappers.club/'},
      http: {url: "http://lezepplean.apps.svc.cluster.local:8787/"}}
   - {id: app-memoet, name: Memoet, group: apps, every: 1m, for: 3m, warn_above: 3s,
+     display: {link: 'https://memoet.taptappers.club/'},
      http: {url: "http://memoet.apps.svc.cluster.local:4000/"}}
   - id: app-nextcloud
     name: Nextcloud
@@ -299,16 +305,19 @@ checks:
     every: 1m
     for: 3m
     warn_above: 3s
+    display: {link: 'https://nextcloud.taptappers.club/'}
     http:
       url: http://nextcloud.apps.svc.cluster.local/status.php
       headers: {Host: nextcloud.taptappers.club}
       expect_json: {$.installed: true, $.maintenance: false, $.needsDbUpgrade: false}
   - {id: app-snibox, name: Snibox, group: apps, every: 1m, for: 3m, warn_above: 3s,
+     display: {link: 'https://snibox.taptappers.club/'},
      http: {url: "http://snibox.apps.svc.cluster.local:3000/", expect_status: [302]}}
   - {id: app-synt, name: synt, group: apps, every: 1m, for: 3m, warn_above: 3s,
-     display: {repo: rounakdatta/synt},
+     display: {repo: rounakdatta/synt, link: 'https://synt.taptappers.club/'},
      http: {url: "http://synt.apps.svc.cluster.local:8080/healthz"}}
   - {id: app-tinyauth, name: tinyauth, group: apps, every: 1m, for: 3m, warn_above: 3s,
+     display: {link: 'https://auth.taptappers.club/'},
      http: {url: "http://tinyauth.tinyauth.svc.cluster.local:3000/api/healthz"}}
   - {id: app-velero-ui, name: Velero UI, group: apps, every: 5m, for: 10m, warn_above: 3s,
      http: {url: "http://velero-ui.velero.svc.cluster.local:3000/"}}
@@ -320,26 +329,28 @@ checks:
     every: 1m
     for: 3m
     warn_above: 3s
+    display: {link: 'https://vikunja.taptappers.club/'}
     http:
       url: http://vikunja.apps.svc.cluster.local:3456/api/v1/info
       expect_json_has: [$.version]
   - {id: app-warren, name: Warren hub, group: apps, every: 1m, for: 3m, warn_above: 3s,
-     display: {repo: rounakdatta/warren},
+     display: {repo: rounakdatta/warren, link: 'https://warren.taptappers.club/'},
      http: {url: "http://warren-hub.apps.svc.cluster.local:9000/", expect_status: [401]}}
   - {id: app-webtrees, name: webtrees, group: apps, every: 1m, for: 3m, warn_above: 3s,
+     display: {link: 'https://webtrees.taptappers.club/'},
      http: {url: "http://webtrees.apps.svc.cluster.local/", expect_status: [302]}}
   - {id: app-zepp, name: Zepp MCP, group: apps, every: 1m, for: 3m, warn_above: 3s,
      display: {repo: rounakdatta/zepp-life-mcp},
      http: {url: "http://zepp-life-mcp.apps.svc.cluster.local/healthz"}}
   - {id: site-eie, name: eie, group: sites, every: 5m, for: 10m, warn_above: 3s,
-     display: {repo: rounakdatta/eie},
+     display: {repo: rounakdatta/eie, link: 'https://eie.taptappers.club/'},
      http: {url: "http://eie-static-site.sites.svc.cluster.local/"}}
   - {id: site-rounak2018, name: rounak2018, group: sites, every: 5m, for: 10m, warn_above: 3s,
-     display: {repo: rounakdatta/rounakdatta.github.io/tree/2018},
+     display: {repo: rounakdatta/rounakdatta.github.io/tree/2018, link: 'https://rounak2018.taptappers.club/'},
      http: {url: "http://rounak2018-static-site.sites.svc.cluster.local/"}}
   - {id: site-rounak2020, name: rounak2020, group: sites, every: 5m, for: 10m, warn_above: 3s,
-     display: {repo: rounakdatta/rounakdatta.github.io/tree/2020},
+     display: {repo: rounakdatta/rounakdatta.github.io/tree/2020, link: 'https://rounak2020.taptappers.club/'},
      http: {url: "http://rounak2020-static-site.sites.svc.cluster.local/"}}
   - {id: site-rounak2025, name: rounak2025, group: sites, every: 5m, for: 10m, warn_above: 3s,
-     display: {repo: rounakdatta/rounakdatta.github.io/tree/2025},
+     display: {repo: rounakdatta/rounakdatta.github.io/tree/2025, link: 'https://rounak2025.taptappers.club/'},
      http: {url: "http://rounak2025-static-site.sites.svc.cluster.local/"}}
