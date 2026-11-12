@@ -67,6 +67,7 @@ spec:
                 {{- end }}
               env:
                 {{- include "zepp-life-mcp.commonEnv" $root | nindent 16 }}
+                {{- include "zepp-life-mcp.tokenEnv" $root | nindent 16 }}
               resources:
                 {{- toYaml $root.Values.sync.resources | nindent 16 }}
               volumeMounts:

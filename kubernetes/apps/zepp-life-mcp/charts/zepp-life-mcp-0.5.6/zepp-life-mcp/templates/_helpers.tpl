@@ -51,6 +51,13 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 - name: ZEPP_USER_ID
   value: {{ .Values.zepp.userId | quote }}
 {{- end }}
+{{- end }}
+
+{{/*
+The apptoken as an env var, for the sync jobs: each run is a fresh pod, so it
+always starts with the current value.
+*/}}
+{{- define "zepp-life-mcp.tokenEnv" -}}
 - name: ZEPP_APP_TOKEN
   valueFrom:
     secretKeyRef:

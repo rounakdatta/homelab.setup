@@ -54,6 +54,11 @@ spec:
             {{- end }}
           env:
             {{- include "zepp-life-mcp.commonEnv" . | nindent 12 }}
+            # A file, not an env var: /metrics asks Zepp with it, and a mounted
+            # Secret updates in place when the apptoken is renewed. An env var
+            # would keep the expired one until the pod restarted.
+            - name: ZEPP_APP_TOKEN_FILE
+              value: /run/zepp/apptoken
             # Read from the environment rather than a flag: an argv secret shows
             # up in `ps` and in the pod spec.
             - name: ZEPP_MCP_AUTH_TOKEN
@@ -86,7 +91,19 @@ spec:
             # write.
             - name: tmp
               mountPath: /tmp
+            - name: apptoken
+              mountPath: /run/zepp
+              readOnly: true
       volumes:
+        - name: apptoken
+          secret:
+            secretName: {{ .Values.zepp.existingSecret }}
+            # Group-readable: the pod runs as 10001 with fsGroup 10001, and the
+            # Secret files are root-owned with group fsGroup.
+            defaultMode: 0440
+            items:
+              - key: {{ .Values.zepp.secretKeys.apptoken }}
+                path: apptoken
         - name: data
           {{- if .Values.persistence.enabled }}
           persistentVolumeClaim:
