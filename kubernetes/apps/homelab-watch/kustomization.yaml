@@ -8,15 +8,25 @@ namespace: apps
 # inside the cluster and pushes signed results to the watcher on Cloudflare
 # (watch.taptappers.club), which alerts and serves the status page.
 #
-# It only connects outward: no Service, no Ingress, no Kubernetes token. Its
-# only listener (/healthz, /status) is bound to the pod's loopback.
+# It only connects outward: no Service and no Ingress. Its one Kubernetes
+# permission is reading the agentfest Deployment (rbac.yaml). Its only
+# listener (/healthz, /status) is bound to the pod's loopback.
 #
-# Edit checks.yaml to add or change a check. The ConfigMap name carries a hash
-# of it, so a change rolls the pod.
+# A second, separate prober reports the Claude accounts' usage from agentfest's
+# account switcher (usage.yaml), so the cluster's own prober never depends on
+# agentfest's volume.
+#
+# Edit checks.yaml (or claude-usage.yaml) to add or change a check. The
+# ConfigMap name carries a hash of it, so a change rolls the pod.
 resources:
+  - rbac.yaml
   - deployment.yaml
+  - usage.yaml
 
 configMapGenerator:
   - name: homelab-watch-checks
     files:
       - checks.yaml
+  - name: homelab-watch-usage
+    files:
+      - claude-usage.yaml

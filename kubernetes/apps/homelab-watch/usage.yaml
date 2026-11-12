@@ -1,0 +1,95 @@
+---
+# The Claude accounts' usage, as agentfest's account switcher last read it
+# (the seamless-claude-accounts plugin refreshes it every few minutes for the
+# accounts in rotation). This prober reads that cache file and pushes it to
+# the watcher as agent `claude-usage`. It never calls Anthropic, so it adds
+# nothing to the accounts' own rate limits.
+#
+# Its own Deployment, not part of the cluster's prober: if agentfest's volume
+# ever goes away, only this stops (and says so), never the homelab's pushes.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelab-watch-usage
+  labels:
+    app.kubernetes.io/name: homelab-watch-usage
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: homelab-watch-usage
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: homelab-watch-usage
+      annotations:
+        # Velero backs up every pod volume unless told otherwise
+        # (defaultVolumesToFsBackup). agentfest excludes its home on purpose;
+        # this read-only view of a corner of it must not be the way it gets in.
+        backup.velero.io/backup-volumes-excludes: usage
+    spec:
+      # agentfest's home is a local-path volume on the control plane.
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        # agentfest's user: the cache file is its, mode 0600.
+        runAsUser: 1000
+        runAsGroup: 100
+        # No fsGroup, deliberately: the kubelet must never re-own agentfest's
+        # files (see agentfest's values.yaml on the 567k-file walk).
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: prober
+          image: ghcr.io/rounakdatta/homelab-watch-prober:0.2.0
+          args:
+            - -config=/config/claude-usage.yaml
+            - -listen=127.0.0.1:8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              memory: 16Mi
+            limits:
+              memory: 64Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: signing
+              mountPath: /secrets/signing
+              readOnly: true
+            # Only the switcher's cache directory, read-only: none of the
+            # credentials beside it in agentfest's home.
+            - name: usage
+              mountPath: /usage
+              subPath: .cache/seamless-claude-accounts
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: homelab-watch-usage
+        # The cluster prober's signing key, under its own agent name. World-
+        # readable inside this one-process container: without fsGroup, a
+        # secret's group is root's.
+        - name: signing
+          secret:
+            secretName: homelab-watch
+            defaultMode: 0444
+            items:
+              - key: signing-seed
+                path: seed
+        - name: usage
+          persistentVolumeClaim:
+            claimName: agentfest-home
+            readOnly: true

@@ -1,0 +1,33 @@
+---
+# The prober's one window into the Kubernetes API: it may read the agentfest
+# Deployment, and nothing else, to see whether Paseo is ready. Paseo listens on
+# its own pod's loopback and has no Service, so readiness (its probe asks
+# Paseo's /api/health) is the only outside view of it. `get` on one named
+# object: no list, no watch, no secrets, no other workload.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: homelab-watch-prober
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: homelab-watch-read-agentfest
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["agentfest"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: homelab-watch-read-agentfest
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: homelab-watch-read-agentfest
+subjects:
+  - kind: ServiceAccount
+    name: homelab-watch-prober
