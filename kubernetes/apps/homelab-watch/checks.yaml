@@ -56,7 +56,9 @@ checks:
   - id: aiapi-login-expiry
     name: Login expires in
     group: aiapi
-    every: 6h
+    every: 1h
+    # One failed read must not stand as an alert for hours.
+    for: 3h
     json:
       url: http://auth2api.apps.svc.cluster.local:8317/admin/accounts
       until: $.providers.anthropic.accounts[0].expiresAt
@@ -70,6 +72,7 @@ checks:
     name: Velero nightly, last success
     group: backups
     every: 10m
+    for: 25m
     unit: s
     prom:
       url: http://velero.velero.svc.cluster.local:8085/metrics
@@ -82,6 +85,7 @@ checks:
     name: Velero nightly, last result
     group: backups
     every: 10m
+    for: 25m
     unit: bool
     prom:
       url: http://velero.velero.svc.cluster.local:8085/metrics
@@ -103,6 +107,20 @@ checks:
       value: time() - min(zepp_sync_last_success_timestamp_seconds)
     fail_above: 15m
 
+  # A data type that has never succeeded has no success timestamp at all, so
+  # the check above can't see it; its failure flag can.
+  - id: zepp-sync-failing
+    name: Every data type syncing
+    group: zepp
+    every: 5m
+    for: 15m
+    unit: bool
+    prom:
+      url: http://zepp-life-mcp.apps.svc.cluster.local/metrics
+      value: max(zepp_sync_last_attempt_failed)
+    fail_above: 0
+    fail_reason: a data type's last sync failed
+
   # Zepp has a newer day than the archive: the sync is losing data.
   - id: zepp-archive-behind
     name: Archive lag behind Zepp
@@ -123,6 +141,7 @@ checks:
     name: Newest day from the phone
     group: zepp
     every: 10m
+    for: 30m
     unit: s
     prom:
       url: http://zepp-life-mcp.apps.svc.cluster.local/metrics
