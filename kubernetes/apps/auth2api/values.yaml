@@ -207,7 +207,7 @@ controllers:
             mkdir -p /data
             chmod 700 /data
             umask 077
-            node /dev/stdin <<'SEED'
+            node - <<'SEED'
             const fs = require("fs");
             const path = require("path");
             const dir = "/data";
