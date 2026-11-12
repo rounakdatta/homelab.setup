@@ -74,10 +74,27 @@ checks:
       warn_status: [429]
     warn_above: 15s
 
-  # The seeded login has no refresh token: when it lapses, only a real
-  # `--login` fixes it. Warn a month ahead.
+  # Both of the gateway's Claude accounts are loaded: with one, a rate limit
+  # on it has nowhere to go (auth2api's seed-account, values.yaml).
+  - id: aiapi-accounts
+    name: Accounts loaded
+    group: aiapi
+    every: 10m
+    for: 30m
+    unit: ""
+    display: {template: "{v} of 2"}
+    json:
+      url: http://auth2api.apps.svc.cluster.local:8317/admin/accounts
+      value: $.providers.anthropic.account_count
+    warn_below: 2
+    fail_below: 1
+    warn_reason: one account is missing, so a rate limit has nowhere to go
+    fail_reason: no account loaded
+
+  # The seeded logins have no refresh token: when one lapses, only a new
+  # setup-token fixes it. Warn a month ahead.
   - id: aiapi-login-expiry
-    name: Login expires in
+    name: First login expires in
     group: aiapi
     display: {template: "in {v}"}
     every: 1h
@@ -86,6 +103,19 @@ checks:
     json:
       url: http://auth2api.apps.svc.cluster.local:8317/admin/accounts
       until: $.providers.anthropic.accounts[0].expiresAt
+    warn_below: 30d
+    fail_below: 3d
+
+  - id: aiapi-login-expiry-2
+    name: Second login expires in
+    group: aiapi
+    display: {template: "in {v}"}
+    every: 1h
+    # One failed read must not stand as an alert for hours.
+    for: 3h
+    json:
+      url: http://auth2api.apps.svc.cluster.local:8317/admin/accounts
+      until: $.providers.anthropic.accounts[1].expiresAt
     warn_below: 30d
     fail_below: 3d
 
