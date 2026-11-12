@@ -38,7 +38,10 @@ spec:
   - host: zepp.taptappers.club
     http:
       paths:
-      - path: /
+      # Only the MCP endpoint leaves the cluster. /healthz and /metrics sit
+      # outside the bearer check so in-cluster probes need no credential;
+      # routing /mcp alone keeps them off the tailnet.
+      - path: /mcp
         pathType: Prefix
         backend:
           service:
