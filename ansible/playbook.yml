@@ -494,6 +494,15 @@
         data:
           admin-key: applet/admin_key
           mcp-bearer: applet/mcp_bearer
+      # homelab-watch's prober (kubernetes/apps/homelab-watch): the Ed25519
+      # seed it signs pushes with. The public half is PROBER_KEYS in the
+      # watcher (rounakdatta/homelab-watch). Bitwarden item
+      # homelab-watch/signing_seed, password = the base64 seed.
+      - name: homelab-watch
+        namespace: apps
+        data:
+          signing-seed: homelab-watch/signing_seed
+
       # applet's PRIVATE image is pulled via the ghcr-pull Secret, created from
       # the GHCR_READ_TOKEN repository secret in deploy-stuff.yml (the same
       # interim pattern as itineris-google-maps) rather than from Bitwarden.

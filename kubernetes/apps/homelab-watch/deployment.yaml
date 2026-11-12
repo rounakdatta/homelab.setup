@@ -1,0 +1,87 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: homelab-watch-prober
+  labels:
+    app.kubernetes.io/name: homelab-watch-prober
+spec:
+  replicas: 1
+  # Exactly one prober: a rolling update would briefly push from two.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: homelab-watch-prober
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: homelab-watch-prober
+    spec:
+      # The control plane has the dependable egress. On the Rishra worker the
+      # Jio path drops large packets, which would read as "homelab silent".
+      # And if this node dies, the silence is exactly the right alert.
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: prober
+          image: ghcr.io/rounakdatta/homelab-watch-prober:0.1.0
+          args:
+            - -config=/config/checks.yaml
+            - -listen=127.0.0.1:8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # No probes on purpose: the watcher's "homelab silent" alert is the
+          # health check, and a probe on the loopback listener would prove less.
+          resources:
+            # No CPU request, like the other small apps here: the control plane
+            # is full on CPU *requests*, not on CPU.
+            requests:
+              memory: 24Mi
+            limits:
+              memory: 96Mi
+          volumeMounts:
+            - name: config
+              mountPath: /config
+              readOnly: true
+            - name: signing
+              mountPath: /secrets/signing
+              readOnly: true
+            - name: aiapi
+              mountPath: /secrets/aiapi
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: homelab-watch-checks
+        # Bitwarden homelab-watch/signing_seed, synced by the ansible secrets play.
+        - name: signing
+          secret:
+            secretName: homelab-watch
+            defaultMode: 0440
+            items:
+              - key: signing-seed
+                path: seed
+        # The same key fold and eie use; read per request, so a rotation lands
+        # without a restart.
+        - name: aiapi
+          secret:
+            secretName: auth2api-credentials
+            defaultMode: 0440
+            items:
+              - key: api-key
+                path: api-key
