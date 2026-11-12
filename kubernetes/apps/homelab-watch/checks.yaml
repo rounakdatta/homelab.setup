@@ -13,6 +13,29 @@ push:
   key_file: /secrets/signing/seed
 
 checks:
+  # ---- Agentfest: is the Paseo computer up? ---------------------------------
+  # Paseo listens on its own pod's loopback and has no Service, so it is judged
+  # by its pod's readiness (the readiness probe asks Paseo's /api/health), read
+  # from the Kubernetes API with a token that may get this one Deployment and
+  # nothing else (rbac.yaml). Every 15 s, so a deploy's downtime is measured to
+  # the quarter minute; Kubernetes leaves readyReplicas out when it is 0.
+  - id: agentfest-paseo
+    name: Paseo daemon
+    group: agentfest
+    every: 15s
+    timeout: 10s
+    for: 5m
+    unit: ""
+    absent: fail
+    fail_below: 1
+    fail_reason: no ready pod
+    display: {yes: ready, no: no ready pod}
+    json:
+      url: https://kubernetes.default.svc/apis/apps/v1/namespaces/apps/deployments/agentfest
+      bearer_file: /secrets/kube/token
+      ca_file: /secrets/kube/ca.crt
+      value: $.status.readyReplicas
+
   # ---- aiapi: is the Claude behind the gateway really answering? -------------
   # /health says ok even when the login is dead, so ask Anthropic instead.
   # count_tokens goes upstream with the OAuth token and generates nothing.
@@ -56,6 +79,7 @@ checks:
   - id: aiapi-login-expiry
     name: Login expires in
     group: aiapi
+    display: {template: "in {v}"}
     every: 1h
     # One failed read must not stand as an alert for hours.
     for: 3h
@@ -71,6 +95,7 @@ checks:
   - id: velero-nightly-age
     name: Velero nightly, last success
     group: backups
+    display: {template: "{v} ago"}
     every: 10m
     for: 25m
     unit: s
@@ -84,6 +109,7 @@ checks:
   - id: velero-nightly-result
     name: Velero nightly, last result
     group: backups
+    display: {yes: completed, no: did not complete}
     every: 10m
     for: 25m
     unit: bool
@@ -97,6 +123,7 @@ checks:
   - id: zepp-sync
     name: Last successful sync
     group: zepp
+    display: {template: "{v} ago"}
     every: 5m
     for: 10m
     unit: s
@@ -112,6 +139,7 @@ checks:
   - id: zepp-sync-failing
     name: Every data type syncing
     group: zepp
+    display: {yes: a type is failing, no: all syncing}
     every: 5m
     for: 15m
     unit: bool
@@ -125,6 +153,7 @@ checks:
   - id: zepp-archive-behind
     name: Archive lag behind Zepp
     group: zepp
+    display: {zero: in step, template: "{v} behind"}
     every: 5m
     for: 30m
     unit: s
@@ -140,6 +169,7 @@ checks:
   - id: zepp-phone-upload
     name: Newest day from the phone
     group: zepp
+    display: {template: "{v} old"}
     every: 10m
     for: 30m
     unit: s
@@ -152,6 +182,7 @@ checks:
   - id: zepp-apptoken
     name: Apptoken accepted
     group: zepp
+    display: {yes: accepted, no: rejected}
     every: 10m
     for: 30m
     unit: bool

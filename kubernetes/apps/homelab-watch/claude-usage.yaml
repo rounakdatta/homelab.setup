@@ -1,0 +1,64 @@
+# The two Claude accounts agentfest (Paseo) and aiapi run on, as agentfest's
+# account switcher last read them: eng1 and eng2, two organisations of one
+# user, named by the first part of their organisation id (the switcher keys
+# its cache by account/organisation). See usage.yaml.
+#
+# A level, not a fault: no thresholds, because one account running low is
+# what the switcher handles. A reading is unknown once its window has reset
+# (the old number would mislead) or the switcher hasn't refreshed it for 20
+# minutes (an account out of the rotation isn't read at all).
+agent: claude-usage
+push:
+  url: https://watch.taptappers.club/v1/push
+  every: 120s
+  key_file: /secrets/signing/seed
+
+checks:
+  - id: claude-eng1-week
+    name: eng1, this week
+    group: claude
+    every: 2m
+    unit: "%"
+    display: {template: "{v} used", at: "resets {t}"}
+    json:
+      url: file:///usage/usage.json
+      value: '$["*/a29cf7b7-*"].week.percent'
+      reset: '$["*/a29cf7b7-*"].week.resetsAt'
+      read_at: '$["*/a29cf7b7-*"].fetchedAt'
+      max_age: 20m
+  - id: claude-eng1-5h
+    name: eng1, 5 hours
+    group: claude
+    every: 2m
+    unit: "%"
+    display: {template: "{v} used", at: "resets {t}"}
+    json:
+      url: file:///usage/usage.json
+      value: '$["*/a29cf7b7-*"].fiveHour.percent'
+      reset: '$["*/a29cf7b7-*"].fiveHour.resetsAt'
+      read_at: '$["*/a29cf7b7-*"].fetchedAt'
+      max_age: 20m
+  - id: claude-eng2-week
+    name: eng2, this week
+    group: claude
+    every: 2m
+    unit: "%"
+    display: {template: "{v} used", at: "resets {t}"}
+    json:
+      url: file:///usage/usage.json
+      value: '$["*/380cdcb3-*"].week.percent'
+      reset: '$["*/380cdcb3-*"].week.resetsAt'
+      read_at: '$["*/380cdcb3-*"].fetchedAt'
+      max_age: 20m
+  - id: claude-eng2-5h
+    name: eng2, 5 hours
+    group: claude
+    every: 2m
+    unit: "%"
+    display: {template: "{v} used", at: "resets {t}"}
+    json:
+      url: file:///usage/usage.json
+      value: '$["*/380cdcb3-*"].fiveHour.percent'
+      reset: '$["*/380cdcb3-*"].fiveHour.resetsAt'
+      read_at: '$["*/380cdcb3-*"].fetchedAt'
+      max_age: 20m

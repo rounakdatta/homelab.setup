@@ -23,6 +23,9 @@ spec:
       # And if this node dies, the silence is exactly the right alert.
       nodeSelector:
         node-role.kubernetes.io/control-plane: "true"
+      # A token is mounted by hand below, for the one read rbac.yaml allows,
+      # short-lived and refreshed by the kubelet.
+      serviceAccountName: homelab-watch-prober
       automountServiceAccountToken: false
       enableServiceLinks: false
       imagePullSecrets:
@@ -36,7 +39,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: prober
-          image: ghcr.io/rounakdatta/homelab-watch-prober:0.1.0
+          image: ghcr.io/rounakdatta/homelab-watch-prober:0.2.0
           args:
             - -config=/config/checks.yaml
             - -listen=127.0.0.1:8080
@@ -64,6 +67,9 @@ spec:
             - name: aiapi
               mountPath: /secrets/aiapi
               readOnly: true
+            - name: kube
+              mountPath: /secrets/kube
+              readOnly: true
       volumes:
         - name: config
           configMap:
@@ -85,3 +91,17 @@ spec:
             items:
               - key: api-key
                 path: api-key
+        # The agentfest readiness check's token (an hour long, renewed by the
+        # kubelet; the prober reads it on every run) and the cluster's CA.
+        - name: kube
+          projected:
+            defaultMode: 0440
+            sources:
+              - serviceAccountToken:
+                  path: token
+                  expirationSeconds: 3600
+              - configMap:
+                  name: kube-root-ca.crt
+                  items:
+                    - key: ca.crt
+                      path: ca.crt
