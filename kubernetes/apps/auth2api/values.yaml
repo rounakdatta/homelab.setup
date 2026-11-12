@@ -69,8 +69,8 @@ controllers:
       render-config:
         image:
           repository: ghcr.io/rounakdatta/auth2api
-          tag: latest
-          pullPolicy: Always
+          tag: "0579673"
+          pullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
         args:
           # Upstream's config.example.yaml verbatim, except for the two values
@@ -198,8 +198,8 @@ controllers:
       seed-account:
         image:
           repository: ghcr.io/rounakdatta/auth2api
-          tag: latest
-          pullPolicy: Always
+          tag: "0579673"
+          pullPolicy: IfNotPresent
         command: ["/bin/sh", "-c"]
         args:
           - |
@@ -279,15 +279,17 @@ controllers:
           # Our own build of upstream's Dockerfile -- AmazingAng/auth2api has
           # no CI and publishes no image, its compose file says `build: .`.
           #
-          # `latest` rather than a pinned tag is a deliberate exception to what
-          # this repo does elsewhere (see agentfest/values.yaml on why pins are
-          # the norm): this image is still moving. The registry also carries
-          # the commit tag `119b254`, identical in content to `latest` today --
-          # swapping the line below for it is how this gets pinned once the
-          # build settles.
+          # Pinned to a commit tag of rounakdatta/auth2api, as pins are the
+          # norm here (see agentfest/values.yaml): an upgrade is a deliberate
+          # bump of this tag (all four uses in this file), never whatever
+          # `latest` is when the pod next restarts. IfNotPresent, because a
+          # commit tag does not move, and a restart then needs no registry.
+          #
+          # 0579673: accounts are chosen by the allowance Anthropic reports on
+          # each response; a spent account sits out until its refill time.
           repository: ghcr.io/rounakdatta/auth2api
-          tag: latest
-          pullPolicy: Always
+          tag: "0579673"
+          pullPolicy: IfNotPresent
 
         # No command/args override: the image's ENTRYPOINT + CMD already are
         # `docker-entrypoint.sh node dist/index.js --config=/config/config.yaml`,
@@ -382,8 +384,8 @@ controllers:
       main:
         image:
           repository: ghcr.io/rounakdatta/auth2api
-          tag: latest
-          pullPolicy: Always
+          tag: "0579673"
+          pullPolicy: IfNotPresent
         # Hold the container open without starting the server, so there is
         # something to exec into.
         command: ["/bin/sh", "-c"]
