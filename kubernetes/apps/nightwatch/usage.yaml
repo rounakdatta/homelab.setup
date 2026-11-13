@@ -10,20 +10,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: homelab-watch-usage
+  name: nightwatch-usage
   labels:
-    app.kubernetes.io/name: homelab-watch-usage
+    app.kubernetes.io/name: nightwatch-usage
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app.kubernetes.io/name: homelab-watch-usage
+      app.kubernetes.io/name: nightwatch-usage
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: homelab-watch-usage
+        app.kubernetes.io/name: nightwatch-usage
       annotations:
         # Velero backs up every pod volume unless told otherwise
         # (defaultVolumesToFsBackup). agentfest excludes its home on purpose;
@@ -48,7 +48,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: prober
-          image: ghcr.io/rounakdatta/homelab-watch-prober:0.6.0
+          image: ghcr.io/rounakdatta/nightwatch-prober:0.7.0
           args:
             - -config=/config/claude-usage.yaml
             - -listen=127.0.0.1:8080
@@ -78,13 +78,13 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: homelab-watch-usage
+            name: nightwatch-usage
         # The cluster prober's signing key, under its own agent name. World-
         # readable inside this one-process container: without fsGroup, a
         # secret's group is root's.
         - name: signing
           secret:
-            secretName: homelab-watch
+            secretName: nightwatch
             defaultMode: 0444
             items:
               - key: signing-seed

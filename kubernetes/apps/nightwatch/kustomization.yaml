@@ -4,7 +4,7 @@ kind: Kustomization
 
 namespace: apps
 
-# homelab-watch's prober (rounakdatta/homelab-watch): runs checks.yaml from
+# nightwatch's prober (rounakdatta/nightwatch): runs checks.yaml from
 # inside the cluster and pushes signed results to the watcher on Cloudflare
 # (watch.taptappers.club), which alerts and serves the status page.
 #
@@ -29,9 +29,9 @@ resources:
   - nodes.yaml
 
 configMapGenerator:
-  - name: homelab-watch-checks
+  - name: nightwatch-checks
     files:
       - checks.yaml
-  - name: homelab-watch-usage
+  - name: nightwatch-usage
     files:
       - claude-usage.yaml

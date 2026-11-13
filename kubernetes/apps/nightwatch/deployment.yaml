@@ -2,9 +2,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: homelab-watch-prober
+  name: nightwatch-prober
   labels:
-    app.kubernetes.io/name: homelab-watch-prober
+    app.kubernetes.io/name: nightwatch-prober
 spec:
   replicas: 1
   # Exactly one prober: a rolling update would briefly push from two.
@@ -12,11 +12,11 @@ spec:
     type: Recreate
   selector:
     matchLabels:
-      app.kubernetes.io/name: homelab-watch-prober
+      app.kubernetes.io/name: nightwatch-prober
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: homelab-watch-prober
+        app.kubernetes.io/name: nightwatch-prober
     spec:
       # The control plane has the dependable egress. On the Rishra worker the
       # Jio path drops large packets, which would read as "homelab silent".
@@ -25,7 +25,7 @@ spec:
         node-role.kubernetes.io/control-plane: "true"
       # A token is mounted by hand below, for the one read rbac.yaml allows,
       # short-lived and refreshed by the kubelet.
-      serviceAccountName: homelab-watch-prober
+      serviceAccountName: nightwatch-prober
       automountServiceAccountToken: false
       enableServiceLinks: false
       imagePullSecrets:
@@ -39,7 +39,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: prober
-          image: ghcr.io/rounakdatta/homelab-watch-prober:0.6.0
+          image: ghcr.io/rounakdatta/nightwatch-prober:0.7.0
           args:
             - -config=/config/checks.yaml
             - -listen=127.0.0.1:8080
@@ -73,11 +73,11 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: homelab-watch-checks
-        # Bitwarden homelab-watch/signing_seed, synced by the ansible secrets play.
+            name: nightwatch-checks
+        # Bitwarden nightwatch/signing_seed, synced by the ansible secrets play.
         - name: signing
           secret:
-            secretName: homelab-watch
+            secretName: nightwatch
             defaultMode: 0440
             items:
               - key: signing-seed

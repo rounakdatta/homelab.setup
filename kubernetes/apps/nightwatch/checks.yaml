@@ -1,5 +1,5 @@
 # What the prober checks, from inside the cluster. Every result is pushed,
-# signed, to the watcher on Cloudflare (rounakdatta/homelab-watch), which
+# signed, to the watcher on Cloudflare (rounakdatta/nightwatch), which
 # alerts when a check stays bad for `for`, or when the pushes stop.
 #
 # Reasons that leave the cluster carry status codes and numbers only, never
@@ -22,7 +22,7 @@ nodes:
   api: https://kubernetes.default.svc
   bearer_file: /secrets/kube/token
   ca_file: /secrets/kube/ca.crt
-  agents: homelab-watch-node.apps.svc.cluster.local:8080
+  agents: nightwatch-node.apps.svc.cluster.local:8080
   place: [homelab.setup/city, homelab.setup/region]
   every: 1m
   timeout: 10s
