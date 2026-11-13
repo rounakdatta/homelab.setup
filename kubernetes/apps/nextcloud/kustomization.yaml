@@ -34,3 +34,7 @@ patches:
     patch: |-
       - op: remove
         path: /spec/template/spec/containers/0/volumeMounts/2/subPath
+      # Same fix for the cron sidecar (container 1, see cronjob in values.yaml):
+      # without it cron.php sees an empty data dir and refuses to run.
+      - op: remove
+        path: /spec/template/spec/containers/1/volumeMounts/2/subPath
