@@ -1,9 +1,11 @@
 ---
-# The prober's one window into the Kubernetes API: it may read the agentfest
-# Deployment, and nothing else, to see whether Paseo is ready. Paseo listens on
-# its own pod's loopback and has no Service, so readiness (its probe asks
-# Paseo's /api/health) is the only outside view of it. `get` on one named
-# object: no list, no watch, no secrets, no other workload.
+# The prober's two windows into the Kubernetes API, and nothing else:
+# - the agentfest Deployment, to see whether Paseo is ready. Paseo listens on
+#   its own pod's loopback and has no Service, so readiness (its probe asks
+#   Paseo's /api/health) is the only outside view of it. `get` on one named
+#   object: no list, no watch, no secrets, no other workload.
+# - the node list, to see whether each node is Ready (the status page's Nodes
+#   table). `list` on nodes only: never nodes/proxy, which reaches the kubelet.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -31,3 +33,25 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: homelab-watch-prober
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: homelab-watch-list-nodes
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homelab-watch-list-nodes
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: homelab-watch-list-nodes
+subjects:
+  - kind: ServiceAccount
+    name: homelab-watch-prober
+    namespace: apps

@@ -1,0 +1,114 @@
+# The node agent: one small pod on every node, so the status page can show each
+# machine's CPU, RAM and disk. It is the prober's own binary run with -node.
+#
+# It reads /proc (CPU and memory are host-wide there) and statfs of its own
+# emptyDir, which lives on the kubelet's disk: the one pods, images and logs
+# fill, and eviction watches. So it needs no host path, no Kubernetes token
+# and no egress, and only the prober may reach it (the NetworkPolicy below).
+# It answers one GET with four numbers.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: homelab-watch-node
+  labels:
+    app.kubernetes.io/name: homelab-watch-node
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: homelab-watch-node
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: homelab-watch-node
+      annotations:
+        # Velero backs up every pod volume in apps; this one only ever holds
+        # nothing.
+        backup.velero.io/backup-volumes-excludes: disk
+    spec:
+      # Every node, tainted or not: a node without its agent has no reading.
+      tolerations:
+        - operator: Exists
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      imagePullSecrets:
+        - name: ghcr-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: agent
+          image: ghcr.io/rounakdatta/homelab-watch-prober:0.5.0
+          args:
+            - -node
+            - -listen=:8080
+            - -disk=/disk
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # No probes: the prober asks every minute, and a node without a
+          # reading says so on the page.
+          resources:
+            # No CPU request, like the other small apps here: the control
+            # plane is full on CPU *requests*, not on CPU.
+            requests:
+              memory: 8Mi
+            limits:
+              memory: 32Mi
+          volumeMounts:
+            - name: disk
+              mountPath: /disk
+              readOnly: true
+      volumes:
+        # Never written: it is here to be measured.
+        - name: disk
+          emptyDir:
+            sizeLimit: 1Mi
+---
+# Headless: the name resolves to every agent's own address, which is how the
+# prober finds them all.
+apiVersion: v1
+kind: Service
+metadata:
+  name: homelab-watch-node
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: homelab-watch-node
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+# Only the prober may ask, and the agent never connects anywhere.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: homelab-watch-node
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: homelab-watch-node
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: homelab-watch-prober
+      ports:
+        - protocol: TCP
+          port: 8080

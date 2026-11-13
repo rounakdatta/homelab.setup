@@ -12,6 +12,20 @@ push:
   every: 60s
   key_file: /secrets/signing/seed
 
+# ---- Nodes: is every machine up, and how loaded is it? ----------------------
+# Each node and whether Kubernetes calls it Ready, from the API (the token may
+# list nodes and nothing else, rbac.yaml), and its CPU, RAM and disk from the
+# node agent on it (nodes.yaml). Pushed as one result per node, named by the
+# node; a node that stays not ready for `for` alerts.
+nodes:
+  api: https://kubernetes.default.svc
+  bearer_file: /secrets/kube/token
+  ca_file: /secrets/kube/ca.crt
+  agents: homelab-watch-node.apps.svc.cluster.local:8080
+  every: 1m
+  timeout: 10s
+  for: 3m
+
 checks:
   # ---- Agentfest: is the Paseo computer up? ---------------------------------
   # Paseo listens on its own pod's loopback and has no Service, so it is judged

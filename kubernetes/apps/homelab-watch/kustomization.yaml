@@ -8,9 +8,13 @@ namespace: apps
 # inside the cluster and pushes signed results to the watcher on Cloudflare
 # (watch.taptappers.club), which alerts and serves the status page.
 #
-# It only connects outward: no Service and no Ingress. Its one Kubernetes
-# permission is reading the agentfest Deployment (rbac.yaml). Its only
-# listener (/healthz, /status) is bound to the pod's loopback.
+# It only connects outward: no Service and no Ingress. Its Kubernetes
+# permissions are reading the agentfest Deployment and listing the nodes
+# (rbac.yaml). Its only listener (/healthz, /status) is bound to the pod's
+# loopback.
+#
+# A node agent on every node (nodes.yaml) gives it each machine's CPU, RAM and
+# disk: the same binary, answering only the prober.
 #
 # A second, separate prober reports the Claude accounts' usage from agentfest's
 # account switcher (usage.yaml), so the cluster's own prober never depends on
@@ -22,6 +26,7 @@ resources:
   - rbac.yaml
   - deployment.yaml
   - usage.yaml
+  - nodes.yaml
 
 configMapGenerator:
   - name: homelab-watch-checks
