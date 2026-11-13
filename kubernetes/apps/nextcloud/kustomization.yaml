@@ -34,3 +34,8 @@ patches:
     patch: |-
       - op: remove
         path: /spec/template/spec/containers/0/volumeMounts/2/subPath
+      # Same fix for the cron sidecar (see cronjob in values.yaml). It is container 1
+      # only while nginx stays disabled; enabling nginx shifts it to index 2.
+      # without it cron.php sees an empty data dir and refuses to run.
+      - op: remove
+        path: /spec/template/spec/containers/1/volumeMounts/2/subPath

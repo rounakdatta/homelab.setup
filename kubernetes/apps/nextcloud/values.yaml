@@ -183,9 +183,26 @@ resources:
     memory: "2Gi"
     cpu: "1000m"
 
-# No bundled cronjob — we don't currently run one.
+# Background jobs: the chart's crond sidecar runs cron.php every 5 minutes.
+# Without it Nextcloud sat in "ajax" mode (jobs ran only on web page loads), so
+# expired transactional file locks were never cleaned: older files refused every
+# write with 423 "is locked" for all clients. Old versions and trash never expired
+# either. The sidecar shares the web container's image, env and volumes (see the
+# data-mount patch in kustomization.yaml). crond runs as root and drops cron.php
+# to www-data. The first runs work through a backlog, so CPU and memory are capped.
 cronjob:
-  enabled: false
+  enabled: true
+  type: sidecar
+  sidecar:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        # Up to three cron.php can overlap (each runs up to 14 min) at PHP's 512M cap. An
+        # OOM here would restart the container and briefly mark the whole pod unready.
+        memory: 2Gi
 
 # No metrics exporter — we don't currently run one.
 metrics:
