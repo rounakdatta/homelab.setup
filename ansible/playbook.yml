@@ -83,6 +83,20 @@
     - role: traefik
       tags: [traefik, infra]
 
+  # Where the node is (homelab.setup/city, /region), as for the workers below:
+  # the status page shows it under each node's name.
+  post_tasks:
+    - name: Label control plane node
+      ansible.builtin.command: >
+        k3s kubectl label node {{ inventory_hostname }}
+        {% for key, value in node_labels.items() %}
+        {{ key }}={{ value }}
+        {% endfor %}
+        --overwrite
+      changed_when: true
+      when: node_labels is defined
+      tags: [k3s, infra]
+
 # Worker node setup (K3s agent)
 - name: Setup K3s worker nodes
   hosts: worker
