@@ -10,7 +10,7 @@
 #   source .env
 #   cat > /tmp/inventory << EOF
 #   [control]
-#   ${CONTROL_MACHINE_NAME} ansible_user=root
+#   ${CONTROL_MACHINE_NAME} ansible_user=root node_labels="{'homelab.setup/region': 'singapore', 'homelab.setup/city': 'singapore'}"
 #
 #   [worker]
 #   ${WORKER_MACHINE_NAME} ansible_user=root tailscale_mtu=1200 node_labels="{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}"
@@ -19,7 +19,7 @@
 #   ansible-playbook ansible/playbook.yml -i /tmp/inventory --tags infra
 
 [control]
-# Control plane node (K3s server)
+# Control plane node (K3s server) — node_labels as host vars, like the workers
 
 [worker]
 # Worker nodes (K3s agents) — add node_labels as host vars

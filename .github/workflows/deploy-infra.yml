@@ -158,7 +158,7 @@ jobs:
         run: |
           cat > /tmp/inventory << EOF
           [control]
-          ${CONTROL_MACHINE_NAME} ansible_user=root
+          ${CONTROL_MACHINE_NAME} ansible_user=root node_labels="{'homelab.setup/region': 'singapore', 'homelab.setup/city': 'singapore'}"
 
           [worker]
           ${WORKER_MACHINE_NAME} ansible_user=root tailscale_mtu=1200 node_labels="{'homelab.setup/region': 'india', 'homelab.setup/city': 'rishra'}"

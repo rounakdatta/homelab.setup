@@ -16,12 +16,14 @@ push:
 # Each node and whether Kubernetes calls it Ready, from the API (the token may
 # list nodes and nothing else, rbac.yaml), and its CPU, RAM and disk from the
 # node agent on it (nodes.yaml). Pushed as one result per node, named by the
-# node; a node that stays not ready for `for` alerts.
+# node; a node that stays not ready for `for` alerts. Where each node is comes
+# from the labels the inventory gives it (deploy-infra.yml), read hourly.
 nodes:
   api: https://kubernetes.default.svc
   bearer_file: /secrets/kube/token
   ca_file: /secrets/kube/ca.crt
   agents: homelab-watch-node.apps.svc.cluster.local:8080
+  place: [homelab.setup/city, homelab.setup/region]
   every: 1m
   timeout: 10s
   for: 3m
