@@ -541,6 +541,16 @@
           enroll-token: warren/enroll_token
           admin-token: warren/admin_token
 
+      # Bookshelf (kubernetes/apps/bookshelf): the one password for the iPad's
+      # page and for `shelve` uploads. Read at pod start, and the session cookie
+      # is derived from it, so rotating it means updating the item, deploying,
+      # restarting the bookshelf pod and signing in again on every device. Also
+      # update the pass entry books.taptappers.club, which is where shelve reads it.
+      - name: bookshelf-credentials
+        namespace: apps
+        data:
+          password: bookshelf/password
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:

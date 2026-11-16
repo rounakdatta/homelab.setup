@@ -1,0 +1,89 @@
+---
+# The books. On the control plane like the other public apps; Velero's
+# file-system backup takes the volume by default.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: bookshelf-books-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookshelf
+  namespace: apps
+  labels:
+    app: bookshelf
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: bookshelf
+  template:
+    metadata:
+      labels:
+        app: bookshelf
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+      containers:
+      - name: bookshelf
+        image: python:3.14-alpine
+        command: ["python", "-u", "/app/bookshelf.py", "--port", "8080", "/books"]
+        env:
+        # Without the Secret the pod cannot start, and with an empty value the
+        # app refuses to: a missing password never means an open shelf.
+        - name: BOOKSHELF_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bookshelf-credentials
+              key: password
+        ports:
+        - containerPort: 8080
+          name: http
+        readinessProbe:
+          httpGet:
+            path: /robots.txt
+            port: http
+        livenessProbe:
+          httpGet:
+            path: /robots.txt
+            port: http
+          periodSeconds: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+        - name: books
+          mountPath: /books
+        - name: app
+          mountPath: /app
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "256Mi"
+      volumes:
+      - name: books
+        persistentVolumeClaim:
+          claimName: bookshelf-books-pvc
+      - name: app
+        configMap:
+          name: bookshelf-app
