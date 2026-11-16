@@ -1,0 +1,51 @@
+---
+# Traefik in front of the public API (named by ingress.yaml, in this order).
+#
+# Per client address: 10 requests/s on average, bursts of 30, and no more than 16 in flight at once. The phone sends
+# a request every few seconds at most, so this is far above real use and only bites floods.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: telly-ratelimit
+  namespace: apps
+spec:
+  rateLimit:
+    average: 10
+    burst: 30
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: telly-inflight
+  namespace: apps
+spec:
+  inFlightReq:
+    amount: 16
+---
+# Bodies over 64 KiB are refused at the edge (the API's own limit is 16 KiB; nothing the app sends comes close).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: telly-body
+  namespace: apps
+spec:
+  buffering:
+    maxRequestBodyBytes: 65536
+    memRequestBodyBytes: 65536
+---
+# HTTPS only, for a year, and the usual refusals. The API sets most of these too; saying them twice costs nothing.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: telly-headers
+  namespace: apps
+spec:
+  headers:
+    stsSeconds: 31536000
+    stsIncludeSubdomains: false
+    contentTypeNosniff: true
+    frameDeny: true
+    referrerPolicy: no-referrer
+    contentSecurityPolicy: "default-src 'none'; frame-ancestors 'none'"
+    customResponseHeaders:
+      X-Powered-By: ""

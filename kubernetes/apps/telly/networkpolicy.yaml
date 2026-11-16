@@ -1,0 +1,76 @@
+---
+# Who may talk to telly, and whom telly may talk to. The pod holds a YouTube Music session, so if it were ever
+# compromised it must not become a way into the rest of the cluster, the home network or the tailnet.
+#
+# In:  Traefik (kube-system) to the API's port only; agentfest to both ports (seeding the catalogue and the
+#      sign-ins through the admin server, and checks). Probes are exec probes, so they need no rule.
+# Out: DNS; auth2api for Claude; and HTTPS to the public internet (YouTube Music, Spotify, Wikipedia, Open
+#      Library, Open-Meteo), with every private, carrier-grade-NAT (tailnet), link-local and loopback range excluded.
+#
+# k3s enforces NetworkPolicy by default (kube-router), as agentfest-netpol and warren already rely on.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: telly-netpol
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app: telly
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentfest
+              app.kubernetes.io/instance: agentfest
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8081
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: auth2api
+      ports:
+        - protocol: TCP
+          port: 8317
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 169.254.0.0/16
+              - 127.0.0.0/8
+      ports:
+        - protocol: TCP
+          port: 443

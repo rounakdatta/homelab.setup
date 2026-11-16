@@ -1,0 +1,175 @@
+---
+# On the control plane like the other apps with local-path volumes (and a public app must never land on the flaky
+# rishra worker). Velero's file-system backup takes both volumes by default.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: telly-data-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: telly-vault-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 64Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: telly
+  namespace: apps
+  labels:
+    app: telly
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: telly
+  template:
+    metadata:
+      labels:
+        app: telly
+    spec:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      # Neither container talks to Kubernetes: no token to steal.
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      # The internet-facing half. No sign-ins here: it never mounts telly-vault.
+      - name: api
+        image: ghcr.io/rounakdatta/telly-server:2.0.0
+        args: ["serve", "--data", "/data", "--port", "8080"]
+        env:
+        # The bearer token the app sends (Bitwarden telly/token). Without it the server refuses to start.
+        - name: TELLY_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: telly-credentials
+              key: token
+        # Messages are read by Claude through auth2api, in-cluster (its key is already a Secret here).
+        - name: TELLY_LLM_URL
+          value: http://auth2api.apps.svc.cluster.local:8317
+        - name: TELLY_LLM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: auth2api-credentials
+              key: api-key
+        ports:
+        - containerPort: 8080
+          name: http
+        # exec, not httpGet: the NetworkPolicy admits only Traefik and agentfest, and a probe from inside the
+        # container needs no exception.
+        readinessProbe:
+          exec:
+            command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/livez', timeout=3)"]
+          periodSeconds: 15
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/livez', timeout=3)"]
+          periodSeconds: 30
+          timeoutSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: tmp-api
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "10m"
+          limits:
+            memory: "512Mi"
+      # The private half: sync to YouTube Music and Spotify, stories, and the admin server. Not routed from outside.
+      - name: worker
+        image: ghcr.io/rounakdatta/telly-server:2.0.0
+        args: ["worker", "--data", "/data", "--vault", "/vault/vault.json", "--port", "8081"]
+        env:
+        # The admin bearer token (Bitwarden telly/admin_token), separate from the app's.
+        - name: TELLY_ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: telly-credentials
+              key: admin-token
+        # Stories are written by Claude through auth2api, in-cluster.
+        - name: TELLY_LLM_URL
+          value: http://auth2api.apps.svc.cluster.local:8317
+        - name: TELLY_LLM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: auth2api-credentials
+              key: api-key
+        ports:
+        - containerPort: 8081
+          name: admin
+        readinessProbe:
+          exec:
+            command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/livez', timeout=3)"]
+          periodSeconds: 15
+          timeoutSeconds: 5
+        livenessProbe:
+          exec:
+            command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/livez', timeout=3)"]
+          periodSeconds: 30
+          timeoutSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        - name: vault
+          mountPath: /vault
+        - name: tmp-worker
+          mountPath: /tmp
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "10m"
+          limits:
+            memory: "512Mi"
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: telly-data-pvc
+      - name: vault
+        persistentVolumeClaim:
+          claimName: telly-vault-pvc
+      - name: tmp-api
+        emptyDir:
+          sizeLimit: 64Mi
+      - name: tmp-worker
+        emptyDir:
+          sizeLimit: 64Mi
