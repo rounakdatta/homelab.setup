@@ -16,6 +16,7 @@ helmCharts:
 
 resources:
   - main-pvc.yaml
+  - obsidian-pvc.yaml
   - migrate-config-job.yaml
   - ingress.yaml
   - middleware.yaml

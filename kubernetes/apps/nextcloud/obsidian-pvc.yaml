@@ -1,0 +1,17 @@
+---
+# The Obsidian vault, kept in step with the Mac and the phone by the syncthing
+# sidecar and shown in Nextcloud as /Obsidian (values.yaml). Markdown and
+# attachments, about 0.5GB today. Velero's nightly file-system backup takes it
+# along with the pod's other volumes.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-obsidian-pvc
+  namespace: apps
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
