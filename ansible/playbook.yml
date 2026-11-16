@@ -551,14 +551,6 @@
         data:
           password: bookshelf/password
 
-      # ZeroSSL's External Account Binding HMAC key, for the zerossl-prod
-      # ClusterIssuer. ClusterIssuers read Secrets from cert-manager's own
-      # namespace, hence not `apps`.
-      - name: zerossl-eab
-        namespace: cert-manager
-        data:
-          secret: zerossl/eab_hmac_key
-
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:

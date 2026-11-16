@@ -1,10 +1,13 @@
 """The bookshelf: a password-gated page of EPUBs, plain enough for an old iPad.
 
-Safari on iOS 9 runs no modern JavaScript and cannot verify Let's Encrypt, so
-everything here is server-rendered HTML behind one password form, the session
-is a cookie that lasts a year, and books go out as application/epub+zip so
-Safari offers "Open in iBooks". The certificate comes from ZeroSSL for the same
-reason (see the zerossl-prod ClusterIssuer).
+Safari on iOS 9 runs no modern JavaScript, so everything here is server-rendered
+HTML behind one password form, the session is a cookie that lasts a year, and
+books go out as application/epub+zip so Safari offers "Open in iBooks".
+
+iOS 9 also trusts only the certificate authorities of 2015, older than the roots
+Let's Encrypt chains to. /trust.mobileconfig, open to anyone, is a profile of
+three current roots (ISRG Root X1 and X2, USERTrust RSA) for such a device to
+install once; the login page links to it.
 
 Books arrive from `shelve` on the Mac (dotfiles configs/bookshelf): PUT
 /books/<name>.epub with the password as HTTP Basic auth, in chunks, because
@@ -39,6 +42,7 @@ COOKIE = "shelf"
 YEAR = 365 * 24 * 3600
 MAX_BOOK = 1 << 30  # a whole book
 MAX_CHUNK = 64 << 20  # one PUT's body
+TRUST_PROFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trust.mobileconfig")
 
 PASSWORD = os.environ.get("BOOKSHELF_PASSWORD", "")
 # The cookie proves the password without carrying it, and changes with it, so
@@ -66,6 +70,8 @@ PAGE = """<!doctype html>
   input {{ display: block; width: 100%; box-sizing: border-box; padding: 12px; margin: 0 0 16px;
            border: 1px solid #d6cdbc; background: #fffdf8; color: inherit; }}
   button {{ padding: 12px 28px; border: 0; background: #2b2622; color: #f7f3ea; }}
+  p.note {{ font-size: 15px; margin: 36px 0 0; }}
+  p.note a {{ display: inline; padding: 0; border: 0; text-decoration: underline; }}
 </style>
 </head>
 <body ontouchstart="">
@@ -80,7 +86,9 @@ LOGIN = """<p{cls}>{message}</p>
 <form method="post" action="/login">
 <input type="password" name="password" autofocus>
 <button type="submit">Open</button>
-</form>"""
+</form>
+<p class="note">Did Safari warn about this site's certificate? Install the
+<a href="/trust.mobileconfig">certificate profile</a> once, and it won't again.</p>"""
 
 _guessing = threading.Lock()
 
@@ -147,6 +155,9 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.unquote(urllib.parse.urlsplit(self.path).path)
         if path == "/robots.txt":
             return self.send(b"User-agent: *\nDisallow: /\n", "text/plain; charset=utf-8", send_body)
+        if path == "/trust.mobileconfig":
+            with open(TRUST_PROFILE, "rb") as f:
+                return self.send(f.read(), "application/x-apple-aspen-config", send_body)
         if not self.signed_in():
             if "Authorization" in self.headers:
                 return self.send_error(401)  # a client with the wrong password, not a browser to redirect

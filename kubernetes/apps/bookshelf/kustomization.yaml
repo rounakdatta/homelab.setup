@@ -3,10 +3,14 @@
 #
 # It exists for an old iPad mini on iOS 9, and that shapes every choice here:
 #   - Public, not tailnet: Tailscale needs iOS 15, so the iPad cannot join.
-#     The app's own password gates every path but robots.txt. tinyauth is not
-#     in front because its login page is a modern SPA iOS 9 cannot run.
-#   - ZeroSSL, not Let's Encrypt (ingress.yaml): iOS 9 does not trust the ISRG
-#     roots, only the older Sectigo root that ZeroSSL chains to.
+#     The app's own password gates every path but robots.txt and the trust
+#     profile. tinyauth is not in front because its login page is a modern SPA
+#     iOS 9 cannot run.
+#   - iOS 9's trust store dates from 2015 and holds no root that today's
+#     certificates chain to, Let's Encrypt's included. So the certificate is
+#     the usual letsencrypt-prod one, and the app serves trust.mobileconfig, a
+#     profile of three current roots for the iPad to install once. It is built
+#     from macOS's system roots by make_trust_profile.py, beside this file.
 #   - One stdlib Python file on the stock python image, shipped as a
 #     ConfigMap: no image to build, publish or keep updated.
 #
@@ -22,8 +26,9 @@ resources:
   - ingress.yaml
 
 # The hash suffix kustomize puts on the generated name is what rolls the pod
-# when the script changes.
+# when either file changes.
 configMapGenerator:
   - name: bookshelf-app
     files:
       - bookshelf.py
+      - trust.mobileconfig
