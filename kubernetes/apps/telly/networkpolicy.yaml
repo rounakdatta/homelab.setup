@@ -4,7 +4,7 @@
 #
 # In:  Traefik (kube-system) to the API's port only; agentfest to both ports (seeding the catalogue and the
 #      sign-ins through the admin server, and checks). Probes are exec probes, so they need no rule.
-# Out: DNS; auth2api for Claude; and HTTPS to the public internet (YouTube Music, Spotify, Wikipedia, Open
+# Out: DNS; auth2api for Claude; LeZeppLean for lyrics; and HTTPS to the public internet (YouTube Music, Spotify, Wikipedia, Open
 #      Library, Open-Meteo), with every private, carrier-grade-NAT (tailnet), link-local and loopback range excluded.
 #
 # k3s enforces NetworkPolicy by default (kube-router), as agentfest-netpol and warren already rely on.
@@ -61,6 +61,14 @@ spec:
       ports:
         - protocol: TCP
           port: 8317
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: lezepplean
+              app.kubernetes.io/instance: lezepplean
+      ports:
+        - protocol: TCP
+          port: 8787
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
