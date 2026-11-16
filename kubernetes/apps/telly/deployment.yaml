@@ -62,7 +62,7 @@ spec:
       containers:
       # The internet-facing half. No sign-ins here: it never mounts telly-vault.
       - name: api
-        image: ghcr.io/rounakdatta/telly-server:2.1.0
+        image: ghcr.io/rounakdatta/telly-server:2.1.1
         args: ["serve", "--data", "/data", "--port", "8080"]
         env:
         # The bearer token the app sends (Bitwarden telly/token). Without it the server refuses to start.
@@ -121,7 +121,7 @@ spec:
             memory: "512Mi"
       # The private half: sync to YouTube Music and Spotify, stories, and the admin server. Not routed from outside.
       - name: worker
-        image: ghcr.io/rounakdatta/telly-server:2.1.0
+        image: ghcr.io/rounakdatta/telly-server:2.1.1
         args: ["worker", "--data", "/data", "--vault", "/vault/vault.json", "--port", "8081"]
         env:
         # The admin bearer token (Bitwarden telly/admin_token), separate from the app's.
