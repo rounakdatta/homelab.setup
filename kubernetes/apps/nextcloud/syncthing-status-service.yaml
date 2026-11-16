@@ -1,12 +1,15 @@
 ---
 # What nightwatch reads to know the Obsidian vault here is in step with the Mac and the
-# phone: syncthing-status.py, a sidecar in the nextcloud pod. It only ever reports.
+# phone: the syncthing-status sidecar in the nextcloud pod. It only ever reports.
+# publishNotReadyAddresses: Syncthing keeps syncing while Nextcloud itself is starting
+# or upgrading (the pod is not Ready then), so the report must stay reachable.
 apiVersion: v1
 kind: Service
 metadata:
   name: nextcloud-syncthing-status
   namespace: apps
 spec:
+  publishNotReadyAddresses: true
   selector:
     app.kubernetes.io/name: nextcloud
     app.kubernetes.io/instance: nextcloud

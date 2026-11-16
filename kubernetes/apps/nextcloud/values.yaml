@@ -213,6 +213,8 @@ nextcloud:
             problem     what is wrong, when something is
 
           It always answers 200 with that body, so the check's own words say what broke, not "HTTP 503".
+          It looks every 30 seconds by itself, so even a short sync between two of nightwatch's visits counts,
+          and it serves one request at a time with a short timeout, so nothing that connects can pile up threads.
           """
           import datetime as dt
           import http.server
@@ -228,11 +230,11 @@ nextcloud:
           API = os.environ.get('ST_API', 'http://127.0.0.1:8384')
           FOLDER = os.environ.get('ST_FOLDER', '')  # empty: the only folder there is
           PORT = int(os.environ.get('PORT', '8385'))
-          CACHE_S = 20
+          EVERY_S = 30
 
           lock = threading.Lock()
           in_step_at = None  # the last time this copy was fully in step with a connected peer
-          cached = (-CACHE_S, None)
+          latest = {'problem': 'starting'}
 
 
           def stamp(t):
@@ -263,6 +265,8 @@ nextcloud:
               folder = next((f for f in folders if f['id'] == FOLDER), None) if FOLDER else (folders[0] if len(folders) == 1 else None)
               if folder is None:
                   return {'problem': 'the vault folder is not set up'}
+              if folder.get('paused'):
+                  return {'problem': 'the vault folder is paused'}
               fid = urllib.parse.quote(folder['id'])
               status = api(f'/rest/db/status?folder={fid}')
               errors = api(f'/rest/folder/errors?folder={fid}').get('errors') or []
@@ -280,20 +284,19 @@ nextcloud:
                   done = False
                   if connected:
                       comp = api(f'/rest/db/completion?folder={fid}&device={urllib.parse.quote(dev)}')
-                      done = comp.get('completion') == 100 and comp.get('needItems', 1) == 0
+                      # a peer that paused or stopped sharing the folder keeps its last index at 100%: not in step
+                      done = comp.get('remoteState') == 'valid' and comp.get('completion') == 100 and comp.get('needItems', 1) == 0
                   in_step = connected and done and here_done
                   in_step_now = in_step_now or in_step
                   last = parse((seen.get(dev) or {}).get('lastSeen'))
                   peers[names.get(dev, dev[:7])] = {'connected': connected, 'last_seen': stamp(last), 'in_step': in_step}
               if in_step_now:
                   in_step_at = dt.datetime.now(dt.timezone.utc)
-              elif in_step_at is None:  # just started and no peer in step yet: the last time one was seen is the best guess
-                  last = [parse(p['last_seen']) for p in peers.values() if p['last_seen']]
+              elif in_step_at is None:  # just started, no peer in step yet: when an offline peer was last seen is the best guess
+                  last = [parse(p['last_seen']) for p in peers.values() if p['last_seen'] and not p['connected']]
                   in_step_at = max(last) if last else None
               body = {'state': status.get('state'), 'need_items': status.get('needTotalItems'), 'peers': peers}
-              if folder.get('paused'):
-                  body['problem'] = 'the vault folder is paused'
-              elif status.get('state') in ('error', 'stopped', 'unknown') or status.get('error'):
+              if status.get('state') in ('error', 'stopped', 'unknown') or status.get('error'):
                   body['problem'] = 'the vault folder is in error: ' + str(status.get('error') or status.get('state'))
               elif errors or status.get('pullErrors'):
                   body['problem'] = f'{len(errors) or status.get("pullErrors")} files cannot sync'
@@ -302,24 +305,27 @@ nextcloud:
               return body
 
 
-          def current():
-              global cached
-              with lock:
-                  if time.monotonic() - cached[0] >= CACHE_S:
-                      try:
-                          body = summary()
-                      except Exception as e:  # Syncthing down, its config unreadable ...: say so, never crash
-                          body = {'problem': f'cannot read Syncthing: {type(e).__name__}'}
-                      cached = (time.monotonic(), body)
-                  return cached[1]
+          def watch():
+              global latest
+              while True:
+                  try:
+                      body = summary()
+                  except Exception as e:  # Syncthing down, its config unreadable ...: say so, never stop
+                      body = {'problem': f'cannot read Syncthing: {type(e).__name__}'}
+                  with lock:
+                      latest = body
+                  time.sleep(EVERY_S)
 
 
           class Handler(http.server.BaseHTTPRequestHandler):
+              timeout = 5  # a client that sends nothing is dropped
+
               def do_GET(self):
                   if self.path.split('?')[0] != '/':
                       self.send_error(404)
                       return
-                  data = json.dumps(current()).encode()
+                  with lock:
+                      data = json.dumps(latest).encode()
                   self.send_response(200)
                   self.send_header('Content-Type', 'application/json')
                   self.send_header('Cache-Control', 'no-store')
@@ -332,7 +338,8 @@ nextcloud:
 
 
           if __name__ == '__main__':
-              http.server.ThreadingHTTPServer(('', PORT), Handler).serve_forever()
+              threading.Thread(target=watch, daemon=True).start()
+              http.server.HTTPServer(('', PORT), Handler).serve_forever()
       env:
         - name: ST_CONFIG
           value: /var/syncthing/config/config.xml
