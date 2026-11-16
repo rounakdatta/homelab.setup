@@ -326,6 +326,24 @@ checks:
       url: http://nextcloud.apps.svc.cluster.local/status.php
       headers: {Host: nextcloud.taptappers.club}
       expect_json: {$.installed: true, $.maintenance: false, $.needsDbUpgrade: false}
+  # The Obsidian vault Nextcloud shows as /Obsidian, kept in step with the Mac and the
+  # phone by the syncthing sidecar. in_step_at is the last time it and a device were
+  # connected and fully in step; it is left out while the folder is broken or Syncthing
+  # is not answering, which fails the check at once.
+  - id: obsidian-sync
+    name: Obsidian sync
+    group: apps
+    every: 5m
+    for: 15m
+    json:
+      url: http://nextcloud-syncthing-status.apps.svc.cluster.local:8385/
+      age: $.in_step_at
+    absent: fail
+    warn_above: 12h
+    warn_reason: no device has synced with it for 12 hours
+    fail_above: 36h
+    fail_reason: the server's copy of the vault is not syncing
+    display: {template: "in step {v} ago", link: 'https://nextcloud.taptappers.club/apps/files/?dir=/Obsidian'}
   - {id: app-snibox, name: Snibox, group: apps, every: 1m, for: 3m, warn_above: 3s,
      display: {link: 'https://snibox.taptappers.club/'},
      http: {url: "http://snibox.apps.svc.cluster.local:3000/", expect_status: [302]}}

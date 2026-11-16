@@ -1,0 +1,17 @@
+---
+# What nightwatch reads to know the Obsidian vault here is in step with the Mac and the
+# phone: syncthing-status.py, a sidecar in the nextcloud pod. It only ever reports.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud-syncthing-status
+  namespace: apps
+spec:
+  selector:
+    app.kubernetes.io/name: nextcloud
+    app.kubernetes.io/instance: nextcloud
+    app.kubernetes.io/component: app
+  ports:
+    - name: http
+      port: 8385
+      targetPort: st-status
