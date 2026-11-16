@@ -134,6 +134,96 @@ nextcloud:
         - name: nextcloud-main
           mountPath: /var/www/html/config
           subPath: config
+    # The Obsidian volume holds three trees, owned by www-data so that
+    # Nextcloud and Syncthing write the same files as the same user: vault/
+    # (the notes), syncthing/ (its keys, config and index) and versions/ (the
+    # old copies Syncthing keeps, out of Nextcloud's sight).
+    - name: obsidian-dirs
+      image: busybox:1.36
+      command: ["sh", "-c"]
+      args:
+        - |
+          mkdir -p /obsidian/vault /obsidian/syncthing /obsidian/versions
+          chown 33:33 /obsidian/vault /obsidian/syncthing /obsidian/versions
+      volumeMounts:
+        - name: obsidian
+          mountPath: /obsidian
+
+  # The Obsidian vault. Syncthing keeps it in step with the Mac and the phone,
+  # and Nextcloud shows it as /Obsidian (an External Storage mount, made by the
+  # before-starting hook below), so an edit made in Nextcloud travels back the
+  # same way. Syncthing is the only thing that syncs it: Nextcloud just reads
+  # and writes the folder. Always on, so the Mac and the phone need never be
+  # online at the same time.
+  #
+  # Syncthing runs as www-data (PUID/PGID 33), the user Nextcloud writes as,
+  # and opens no port: it dials the Mac over the tailnet, and meets the phone
+  # through Syncthing's relays. Its GUI and API listen on localhost only, so
+  # it is configured with `kubectl exec ... -c syncthing -- syncthing cli`.
+  # Its keys and config live on the volume, which Velero backs up nightly.
+  extraSidecarContainers:
+    - name: syncthing
+      image: syncthing/syncthing:2.1.7@sha256:2b71da7c0d0a91a6ae5285ad079226fecc0a365d08b27720e1f7037b018f7546
+      env:
+        - name: PUID
+          value: "33"
+        - name: PGID
+          value: "33"
+        - name: STGUIADDRESS
+          value: "127.0.0.1:8384"
+        - name: STNODEFAULTFOLDER
+          value: "1"
+      volumeMounts:
+        - name: obsidian
+          mountPath: /var/syncthing/config
+          subPath: syncthing
+        - name: obsidian
+          mountPath: /var/syncthing/Obsidian
+          subPath: vault
+        - name: obsidian
+          mountPath: /var/syncthing/versions
+          subPath: versions
+      resources:
+        requests:
+          cpu: 10m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+
+  extraVolumes:
+    - name: obsidian
+      persistentVolumeClaim:
+        claimName: nextcloud-obsidian-pvc
+
+  # The chart appends these to the web and the cron container alike.
+  extraVolumeMounts:
+    - name: obsidian
+      mountPath: /srv/obsidian
+      subPath: vault
+
+  # Runs as www-data before Apache on every start, so the mount comes back by
+  # itself after a rebuild. Idempotent.
+  hooks:
+    before-starting: |
+      #!/bin/sh
+      set -eu
+      occ() { php /var/www/html/occ "$@"; }
+
+      occ app:enable files_external >/dev/null
+      # Local storage is off by default; this one mount is what it is for.
+      occ config:system:set files_external_allow_create_new_local --value=true --type=boolean >/dev/null
+
+      id=$(occ files_external:list --output=json | php -r '
+        foreach (json_decode(stream_get_contents(STDIN), true) ?: [] as $m)
+          if ($m["mount_point"] === "/Obsidian") { echo $m["mount_id"]; break; }')
+      if [ -z "$id" ]; then
+        id=$(occ files_external:create /Obsidian local null::null -c datadir=/srv/obsidian | grep -o '[0-9]*$')
+        occ files_external:applicable --add-user=admin "$id" >/dev/null
+        echo "obsidian: External Storage mount $id created"
+      fi
+      # Syncthing writes behind Nextcloud's back: look for changes on every access.
+      occ files_external:option "$id" filesystem_check_changes 1 >/dev/null
 
 # Chart's default 10s initialDelaySeconds is too short for nextcloud's
 # first-boot entrypoint (it rsyncs the install from /usr/src/nextcloud
