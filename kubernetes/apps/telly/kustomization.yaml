@@ -1,20 +1,34 @@
 ---
 # telly: the playlist canvas (rounakdatta/telly). Each day starts blank; the Android app says what the day holds and
-# this server makes the music for it from Rounak's own listening history, writes the playlists into YouTube Music in
-# the background, and adds a story to each.
+# telly makes the music for it from Rounak's own listening history, writes the playlists into YouTube Music in the
+# background, and adds a story to each.
 #
-# Plain manifests on an image built by the telly repo's CI (ghcr.io/rounakdatta/telly-server, code only). Bumping is
-# one line: `image` in deployment.yaml.
+# PUBLIC, on purpose (the phone shouldn't need Tailscale), so it is built to be attacked:
+#   - One pod, two containers from one image (ghcr.io/rounakdatta/telly-server, code only):
+#       api     `telly serve`: the only thing the internet reaches. Holds the app token and the gateway key, and
+#               NO music-service sign-ins.
+#       worker  `telly worker`: sync, stories, and the admin server (catalogue upload, sign-ins). The YouTube Music
+#               session and Spotify's refresh token live on the telly-vault volume, which only this container mounts.
+#   - The ingress forwards /api and /livez only; /admin never leaves the cluster. Traefik rate-limits, caps
+#     requests in flight and body size, and adds HSTS and the other security headers (middleware.yaml).
+#   - networkpolicy.yaml: in, only Traefik (to the API) and agentfest (to both); out, only DNS, auth2api and HTTPS
+#     to the public internet. Nothing else in the cluster, the home network or the tailnet is reachable.
+#   - Containers: uid 1000, read-only root, no capabilities, seccomp RuntimeDefault, no service-account token.
+#   - In the app: constant-time token checks, a lockout for addresses that keep sending bad tokens (never for the
+#     right token), hourly budgets on the routes that spend the language model, bounded threads, timeouts.
 #
-# What lives on the volume, and how it gets there (none of it is in any repo or image):
-#   catalog.db  the listening history the engine reads: built on agentfest by telly's tools/bake_catalog.py and
-#               uploaded with PUT /admin/catalog
-#   telly.db    every day's canvas and every version of each playlist, plus the YouTube Music session (POST /admin/ytm)
-#               and, once connected, Spotify's (POST /admin/spotify)
+# What lives on the volumes (none of it is in a repo or an image):
+#   telly-data   catalog.db (the listening history; built on agentfest by telly's tools/bake_catalog.py and sent to
+#                the admin server's PUT /admin/catalog) and telly.db (every day's canvas, every version of each playlist)
+#   telly-vault  the music-service sign-ins (POST /admin/ytm, POST /admin/spotify)
+#
+# Bumping is one line per container: `image` in deployment.yaml.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
   - deployment.yaml
   - service.yaml
+  - middleware.yaml
   - ingress.yaml
+  - networkpolicy.yaml

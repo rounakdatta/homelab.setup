@@ -1,4 +1,5 @@
 ---
+# The API, which the ingress forwards /api and /livez to.
 apiVersion: v1
 kind: Service
 metadata:
@@ -11,3 +12,17 @@ spec:
   - name: http
     port: 80
     targetPort: http
+---
+# The worker's admin server: in-cluster only, no ingress names it, and the NetworkPolicy admits only agentfest.
+apiVersion: v1
+kind: Service
+metadata:
+  name: telly-admin
+  namespace: apps
+spec:
+  selector:
+    app: telly
+  ports:
+  - name: admin
+    port: 80
+    targetPort: admin

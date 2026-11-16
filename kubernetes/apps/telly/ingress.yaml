@@ -1,11 +1,13 @@
 ---
-# TAILNET-ONLY, and deliberately NOT behind tinyauth: the caller is the telly Android app, which sends
-# `Authorization: Bearer <token>` and cannot complete a login redirect (the reason lezepplean and zepp-life-mcp give
-# too). Authentication is inside the application: every route but /livez needs the token (Bitwarden telly/token,
-# synced into telly-credentials). /livez answers {"ok": true} and nothing else.
+# PUBLIC (websecure), and deliberately NOT behind tinyauth: the caller is the telly Android app, which sends
+# `Authorization: Bearer <token>` and cannot complete a login redirect (the reason lezepplean gives too).
+# Authentication is inside the application (Bitwarden telly/token, synced into telly-credentials).
 #
-# DNS: `A telly <control plane Tailscale address>` in rounakdatta/oh-my-dns (zones/taptappers.club.txt, the
-# TAILNET-ONLY block).
+# Only two paths are routed: /api (the app's API) and /livez (which says {"ok": true} and nothing else). Every
+# other path, /admin included, gets Traefik's 404: the worker's admin server is reachable only inside the cluster,
+# through the telly-admin Service, and the NetworkPolicy admits only agentfest to it.
+#
+# DNS: `A telly 173.234.14.113` in rounakdatta/oh-my-dns (zones/taptappers.club.txt), DNS-only like every other host.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -13,15 +15,23 @@ metadata:
   namespace: apps
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
-    traefik.ingress.kubernetes.io/router.entrypoints: tailnet
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: apps-telly-ratelimit@kubernetescrd,apps-telly-inflight@kubernetescrd,apps-telly-body@kubernetescrd,apps-telly-headers@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
   - host: telly.taptappers.club
     http:
       paths:
-      - path: /
+      - path: /api
         pathType: Prefix
+        backend:
+          service:
+            name: telly
+            port:
+              number: 80
+      - path: /livez
+        pathType: Exact
         backend:
           service:
             name: telly
