@@ -14,9 +14,10 @@
 #   - One stdlib Python file on the stock python image, shipped as a
 #     ConfigMap: no image to build, publish or keep updated.
 #
-# Books arrive from `shelve` on the Mac (dotfiles configs/bookshelf), which
-# uploads with the same password. The password is Bitwarden item
-# bookshelf/password, synced into the bookshelf-credentials Secret.
+# Books arrive by dropping them on the shelf page in any current browser, or
+# from `shelve` on the Mac (dotfiles configs/bookshelf), which uploads with the
+# same password. The password is Bitwarden item bookshelf/password, synced into
+# the bookshelf-credentials Secret.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
