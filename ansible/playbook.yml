@@ -541,6 +541,24 @@
           enroll-token: warren/enroll_token
           admin-token: warren/admin_token
 
+      # Bookshelf (kubernetes/apps/bookshelf): the one password for the iPad's
+      # page and for `shelve` uploads. Read at pod start, and the session cookie
+      # is derived from it, so rotating it means updating the item, deploying,
+      # restarting the bookshelf pod and signing in again on every device. Also
+      # update the pass entry books.taptappers.club, which is where shelve reads it.
+      - name: bookshelf-credentials
+        namespace: apps
+        data:
+          password: bookshelf/password
+
+      # ZeroSSL's External Account Binding HMAC key, for the zerossl-prod
+      # ClusterIssuer. ClusterIssuers read Secrets from cert-manager's own
+      # namespace, hence not `apps`.
+      - name: zerossl-eab
+        namespace: cert-manager
+        data:
+          secret: zerossl/eab_hmac_key
+
   pre_tasks:
     - name: Verify required environment variables
       ansible.builtin.fail:

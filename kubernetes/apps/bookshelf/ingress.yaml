@@ -1,0 +1,35 @@
+---
+# PUBLIC, like audiobookshelf and itineris: the websecure entrypoint and no
+# tinyauth. The app's own password gates everything but robots.txt.
+#
+# zerossl-prod, not letsencrypt-prod, and that is the point of this app: the
+# iPad it serves (iOS 9) cannot verify the ISRG roots, so with a Let's Encrypt
+# certificate Safari would refuse the page. See the issuer for the chain.
+#
+# DNS: `A books 173.234.14.113` in oh-my-dns zones/taptappers.club.txt. The
+# certificate itself comes through DNS-01, so it does not wait on that record.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bookshelf
+  namespace: apps
+  annotations:
+    cert-manager.io/cluster-issuer: zerossl-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  rules:
+  - host: books.taptappers.club
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bookshelf
+            port:
+              number: 80
+  tls:
+  - hosts:
+    - books.taptappers.club
+    secretName: bookshelf-tls-secret

@@ -60,3 +60,43 @@ spec:
           apiTokenSecretRef:
             name: cloudflare-api-token
             key: api-token
+
+---
+# ZeroSSL ClusterIssuer, for hosts that old Apple devices must open.
+#
+# Its chain runs through USERTrust to Sectigo's 2004 root, "AAA Certificate
+# Services", which iOS 9 trusts; it does not trust Let's Encrypt's ISRG roots.
+# apps/bookshelf uses this, because it exists for an iPad on iOS 9.
+#
+# ZeroSSL's ACME requires External Account Binding. The key ID below is not
+# secret; its HMAC key is the Bitwarden item zerossl/eab_hmac_key, synced into
+# the zerossl-eab Secret in this namespace by ansible/playbook.yml. Challenges
+# go through the same Cloudflare DNS-01 solver as letsencrypt-prod.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: zerossl-prod
+spec:
+  acme:
+    server: https://acme.zerossl.com/v2/DV90
+
+    email: rounakdatta12@gmail.com
+
+    # The chain ending at the old root, should ZeroSSL ever offer more than one.
+    preferredChain: "AAA Certificate Services"
+
+    externalAccountBinding:
+      keyID: 9rs6wpWyaqY2NUYMx4Y7VA
+      keySecretRef:
+        name: zerossl-eab
+        key: secret
+
+    privateKeySecretRef:
+      name: zerossl-prod-account-key
+
+    solvers:
+    - dns01:
+        cloudflare:
+          apiTokenSecretRef:
+            name: cloudflare-api-token
+            key: api-token

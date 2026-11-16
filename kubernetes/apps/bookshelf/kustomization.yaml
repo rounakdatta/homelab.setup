@@ -1,0 +1,29 @@
+---
+# The bookshelf: a page of EPUBs behind one password, PUBLIC on purpose.
+#
+# It exists for an old iPad mini on iOS 9, and that shapes every choice here:
+#   - Public, not tailnet: Tailscale needs iOS 15, so the iPad cannot join.
+#     The app's own password gates every path but robots.txt. tinyauth is not
+#     in front because its login page is a modern SPA iOS 9 cannot run.
+#   - ZeroSSL, not Let's Encrypt (ingress.yaml): iOS 9 does not trust the ISRG
+#     roots, only the older Sectigo root that ZeroSSL chains to.
+#   - One stdlib Python file on the stock python image, shipped as a
+#     ConfigMap: no image to build, publish or keep updated.
+#
+# Books arrive from `shelve` on the Mac (dotfiles configs/bookshelf), which
+# uploads with the same password. The password is Bitwarden item
+# bookshelf/password, synced into the bookshelf-credentials Secret.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+# The hash suffix kustomize puts on the generated name is what rolls the pod
+# when the script changes.
+configMapGenerator:
+  - name: bookshelf-app
+    files:
+      - bookshelf.py
