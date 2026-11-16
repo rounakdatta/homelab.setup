@@ -148,6 +148,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/robots.txt":
             return self.send(b"User-agent: *\nDisallow: /\n", "text/plain; charset=utf-8", send_body)
         if not self.signed_in():
+            if "Authorization" in self.headers:
+                return self.send_error(401)  # a client with the wrong password, not a browser to redirect
             if path == "/":
                 return self.send(self.page(self.login_form()), "text/html; charset=utf-8", send_body)
             return self.redirect("/")
