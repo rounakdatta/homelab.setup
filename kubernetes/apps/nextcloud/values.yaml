@@ -190,6 +190,184 @@ nextcloud:
         limits:
           cpu: 500m
           memory: 512Mi
+    # Reports to nightwatch whether this copy of the vault is in step with the Mac and
+    # the phone (served at nextcloud-syncthing-status:8385; the script is inline so a
+    # change to it rolls the pod, like the hook below). It
+    # reads Syncthing's API on localhost with the key from Syncthing's own config, so
+    # the key never leaves the pod, and it only ever reads. No probes on purpose: a
+    # failing probe here would take the whole Nextcloud pod out of its Service.
+    - name: syncthing-status
+      image: python:3.14-alpine@sha256:5862d971d1f0ae26b258cefa4e893556b1d3aba81bd2ff30888704ad378bab67
+      command: ["python3", "-B", "-c"]
+      args:
+        - |
+          """Tells nightwatch whether the Obsidian vault on this server is in step with the Mac and the phone.
+
+          Runs beside Syncthing in the Nextcloud pod. It reads Syncthing's API on localhost with the key from
+          Syncthing's own config, so the key never leaves the pod, and it never changes anything. GET / answers:
+
+            in_step_at  the last time this copy and a peer (the Mac or the phone) were connected and fully in step.
+                        Left out whenever something is wrong, which nightwatch reads as a failure (absent: fail).
+            state       the folder's state: idle, scanning, syncing ...
+            peers       for each peer: connected, last seen, in step
+            problem     what is wrong, when something is
+
+          It always answers 200 with that body, so the check's own words say what broke, not "HTTP 503".
+          It looks every 30 seconds by itself, so even a short sync between two of nightwatch's visits counts,
+          and it serves one request at a time with a short timeout, so nothing that connects can pile up threads.
+          """
+          import datetime as dt
+          import http.server
+          import json
+          import os
+          import re
+          import threading
+          import time
+          import urllib.parse
+          import urllib.request
+
+          CONFIG = os.environ.get('ST_CONFIG', '/var/syncthing/config/config.xml')
+          API = os.environ.get('ST_API', 'http://127.0.0.1:8384')
+          FOLDER = os.environ.get('ST_FOLDER', '')  # empty: the only folder there is
+          PORT = int(os.environ.get('PORT', '8385'))
+          EVERY_S = 30
+
+          lock = threading.Lock()
+          in_step_at = None  # the last time this copy was fully in step with a connected peer
+          latest = {'problem': 'starting'}
+
+
+          def stamp(t):
+              return t.astimezone(dt.timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z') if t else None
+
+
+          def parse(s):
+              try:
+                  t = dt.datetime.fromisoformat(str(s).replace('Z', '+00:00'))
+              except ValueError:
+                  return None
+              return t if t.year > 2000 else None  # Syncthing says 1970 for "never"
+
+
+          def api(path):
+              with open(CONFIG, encoding='utf-8') as f:
+                  key = re.search(r'<apikey>([^<]+)</apikey>', f.read()).group(1)
+              req = urllib.request.Request(API + path, headers={'X-API-Key': key})
+              with urllib.request.urlopen(req, timeout=10) as r:
+                  return json.load(r)
+
+
+          def summary():
+              global in_step_at
+              cfg = api('/rest/config')
+              me = api('/rest/system/status')['myID']
+              folders = cfg.get('folders') or []
+              folder = next((f for f in folders if f['id'] == FOLDER), None) if FOLDER else (folders[0] if len(folders) == 1 else None)
+              if folder is None:
+                  return {'problem': 'the vault folder is not set up'}
+              if folder.get('paused'):
+                  return {'problem': 'the vault folder is paused'}
+              fid = urllib.parse.quote(folder['id'])
+              status = api(f'/rest/db/status?folder={fid}')
+              errors = api(f'/rest/folder/errors?folder={fid}').get('errors') or []
+              conns = api('/rest/system/connections').get('connections') or {}
+              seen = api('/rest/stats/device')
+              names = {d['deviceID']: d.get('name') or d['deviceID'][:7] for d in cfg.get('devices') or []}
+              here_done = status.get('needTotalItems', 1) == 0
+              peers, in_step_now = {}, False
+              for d in folder.get('devices') or []:
+                  dev = d['deviceID']
+                  if dev == me:
+                      continue
+                  c = conns.get(dev) or {}
+                  connected = bool(c.get('connected')) and not c.get('paused')
+                  done = False
+                  if connected:
+                      comp = api(f'/rest/db/completion?folder={fid}&device={urllib.parse.quote(dev)}')
+                      # a peer that paused or stopped sharing the folder keeps its last index at 100%: not in step
+                      done = comp.get('remoteState') == 'valid' and comp.get('completion') == 100 and comp.get('needItems', 1) == 0
+                  in_step = connected and done and here_done
+                  in_step_now = in_step_now or in_step
+                  last = parse((seen.get(dev) or {}).get('lastSeen'))
+                  peers[names.get(dev, dev[:7])] = {'connected': connected, 'last_seen': stamp(last), 'in_step': in_step}
+              if in_step_now:
+                  in_step_at = dt.datetime.now(dt.timezone.utc)
+              elif in_step_at is None:  # just started, no peer in step yet: when an offline peer was last seen is the best guess
+                  last = [parse(p['last_seen']) for p in peers.values() if p['last_seen'] and not p['connected']]
+                  in_step_at = max(last) if last else None
+              body = {'state': status.get('state'), 'need_items': status.get('needTotalItems'), 'peers': peers}
+              if status.get('state') in ('error', 'stopped', 'unknown') or status.get('error'):
+                  body['problem'] = 'the vault folder is in error: ' + str(status.get('error') or status.get('state'))
+              elif errors or status.get('pullErrors'):
+                  body['problem'] = f'{len(errors) or status.get("pullErrors")} files cannot sync'
+              elif in_step_at:
+                  body['in_step_at'] = stamp(in_step_at)
+              return body
+
+
+          def watch():
+              global latest
+              while True:
+                  try:
+                      body = summary()
+                  except Exception as e:  # Syncthing down, its config unreadable ...: say so, never stop
+                      body = {'problem': f'cannot read Syncthing: {type(e).__name__}'}
+                  with lock:
+                      latest = body
+                  time.sleep(EVERY_S)
+
+
+          class Handler(http.server.BaseHTTPRequestHandler):
+              timeout = 5  # a client that sends nothing is dropped
+
+              def do_GET(self):
+                  if self.path.split('?')[0] != '/':
+                      self.send_error(404)
+                      return
+                  with lock:
+                      data = json.dumps(latest).encode()
+                  self.send_response(200)
+                  self.send_header('Content-Type', 'application/json')
+                  self.send_header('Cache-Control', 'no-store')
+                  self.send_header('Content-Length', str(len(data)))
+                  self.end_headers()
+                  self.wfile.write(data)
+
+              def log_message(self, *args):
+                  pass
+
+
+          if __name__ == '__main__':
+              threading.Thread(target=watch, daemon=True).start()
+              http.server.HTTPServer(('', PORT), Handler).serve_forever()
+      env:
+        - name: ST_CONFIG
+          value: /var/syncthing/config/config.xml
+        - name: PORT
+          value: "8385"
+      ports:
+        - name: st-status
+          containerPort: 8385
+      securityContext:
+        runAsUser: 33
+        runAsGroup: 33
+        runAsNonRoot: true
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: ["ALL"]
+      volumeMounts:
+        - name: obsidian
+          mountPath: /var/syncthing/config
+          subPath: syncthing
+          readOnly: true
+      resources:
+        requests:
+          cpu: 5m
+          memory: 24Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
 
   extraVolumes:
     - name: obsidian
