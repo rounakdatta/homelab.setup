@@ -14,6 +14,12 @@ Books arrive from `shelve` on the Mac (dotfiles configs/bookshelf): PUT
 Traefik gives a whole request 60 seconds and a big illustrated book would not
 make it up a home connection in one piece.
 
+They also arrive from a browser: the shelf page takes EPUBs dropped on it or
+chosen, and a small script sends them as the same chunked PUTs, signed in by the
+session cookie. It shows only where fetch exists, so iOS 9, which can pick
+nothing but photos anyway, keeps the plain shelf; and it is ES5, so that Safari
+still parses the page.
+
 Usage: bookshelf.py [--port N] folder      (password in $BOOKSHELF_PASSWORD)
 """
 import argparse
@@ -55,6 +61,7 @@ PAGE = """<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bookshelf</title>
+<link rel="icon" href="data:,">
 <style>
   body {{ margin: 0; background: #f7f3ea; color: #2b2622; font-family: Georgia, serif; }}
   main {{ max-width: 620px; margin: 0 auto; padding: 40px 20px 64px; }}
@@ -72,6 +79,13 @@ PAGE = """<!doctype html>
   button {{ padding: 12px 28px; border: 0; background: #2b2622; color: #f7f3ea; }}
   p.note {{ font-size: 15px; margin: 36px 0 0; }}
   p.note a {{ display: inline; padding: 0; border: 0; text-decoration: underline; }}
+  .add {{ margin: 0 0 28px; padding: 16px 18px; border: 1px dashed #d6cdbc; }}
+  .add p {{ margin: 0; }}
+  .add label {{ text-decoration: underline; cursor: pointer; }}
+  .add input {{ display: none; }}
+  body.dropping .add {{ border-color: #2b2622; background: #fffdf8; }}
+  #progress {{ list-style: none; margin: 0; padding: 0; font-size: 16px; color: #7a7066; }}
+  #progress li {{ margin-top: 8px; overflow-wrap: break-word; }}
 </style>
 </head>
 <body ontouchstart="">
@@ -79,8 +93,130 @@ PAGE = """<!doctype html>
 <h1>Bookshelf</h1>
 {body}
 </main>
+{script}
 </body></html>
 """
+
+ADD = """<div class="add" id="add" style="display: none">
+<p>Add books: drop EPUBs on this page, or <label>choose them<input type="file" id="files"
+accept=".epub,application/epub+zip" multiple></label>.</p>
+<ul id="progress"></ul>
+</div>"""
+
+# ES5 throughout: iOS 9's Safari must still parse it, even though it bails out
+# at the fetch check and never shows the drop box.
+UPLOAD_SCRIPT = """<script>
+(function () {
+  if (!window.fetch || !window.Promise || !window.Blob || !Blob.prototype.slice) return;
+  var CHUNK = 8 * 1024 * 1024;
+  var add = document.getElementById("add");
+  var input = document.getElementById("files");
+  var list = document.getElementById("progress");
+  add.style.display = "";
+
+  function row(name) {
+    var li = document.createElement("li");
+    list.appendChild(li);
+    return function (status) { li.textContent = name + ": " + status; };
+  }
+
+  function put(file, offset, last) {
+    var url = "/books/" + encodeURIComponent(file.name) + "?offset=" + offset + (last ? "&final=1" : "");
+    return fetch(url, { method: "PUT", body: file.slice(offset, offset + CHUNK), credentials: "same-origin" })
+      .then(function (response) { return response.status; });
+  }
+
+  // Resolves with what to tell the reader; rejects only when a retry could help.
+  function send(file, show) {
+    var offset = 0;
+    function next() {
+      var last = offset + CHUNK >= file.size;
+      return put(file, offset, last).then(function (status) {
+        if (status === 409 && offset === 0) return "already on the shelf";
+        if (status === 422) return "not an EPUB";
+        if (status === 400) return "the shelf refused that file name";
+        if (status === 413) return "too big for the shelf";
+        if (status === 401) return "signed out; reload the page and sign in";
+        if (status !== 201 && status !== 204) throw new Error("the shelf answered " + status);
+        if (last) return "added";
+        offset += CHUNK;
+        show(Math.floor(offset * 100 / file.size) + "%");
+        return next();
+      });
+    }
+    return next();
+  }
+
+  // A failure starts the book over from its first byte, up to three times.
+  function shelve(file, show, attempt) {
+    return send(file, show).catch(function (error) {
+      if (attempt >= 3) return "failed (" + error.message + ")";
+      show("retrying");
+      return shelve(file, show, attempt + 1);
+    });
+  }
+
+  // Swap in the fresh list of books instead of reloading, so the messages stay.
+  function refreshShelf() {
+    return fetch("/", { credentials: "same-origin" })
+      .then(function (response) { return response.text(); })
+      .then(function (text) {
+        var fresh = new DOMParser().parseFromString(text, "text/html").querySelector("main");
+        var main = document.querySelector("main");
+        Array.prototype.forEach.call(main.querySelectorAll("main > a"), function (a) { main.removeChild(a); });
+        Array.prototype.forEach.call(fresh.querySelectorAll("main > a"), function (a) {
+          main.appendChild(document.importNode(a, true));
+        });
+        main.querySelector("main > p").textContent = fresh.querySelector("main > p").textContent;
+      })
+      .catch(function () { list.appendChild(document.createTextNode("Reload the page to see the new books.")); });
+  }
+
+  function shelveAll(files) {
+    var added = 0;
+    var queue = Promise.resolve();
+    Array.prototype.forEach.call(files, function (file) {
+      var show = row(file.name);
+      if (!/\\.epub$/i.test(file.name)) { show("skipped, not an .epub"); return; }
+      show("waiting");
+      queue = queue.then(function () {
+        show("0%");
+        return shelve(file, show, 1).then(function (outcome) {
+          show(outcome);
+          if (outcome === "added") added += 1;
+        });
+      });
+    });
+    queue.then(function () {
+      if (added) return refreshShelf();
+    });
+  }
+
+  input.addEventListener("change", function () {
+    var files = Array.prototype.slice.call(input.files);
+    input.value = "";
+    shelveAll(files);
+  });
+
+  var depth = 0;
+  document.addEventListener("dragenter", function (event) {
+    event.preventDefault();
+    depth += 1;
+    document.body.className = "dropping";
+  });
+  document.addEventListener("dragleave", function () {
+    depth -= 1;
+    if (depth <= 0) { depth = 0; document.body.className = ""; }
+  });
+  document.addEventListener("dragover", function (event) { event.preventDefault(); });
+  document.addEventListener("drop", function (event) {
+    event.preventDefault();
+    depth = 0;
+    document.body.className = "";
+    if (event.dataTransfer && event.dataTransfer.files.length) shelveAll(event.dataTransfer.files);
+  });
+})();
+</script>"""
 
 LOGIN = """<p{cls}>{message}</p>
 <form method="post" action="/login">
@@ -167,7 +303,7 @@ class Handler(BaseHTTPRequestHandler):
         books = shelf()
         name = path.removeprefix("/books/") if path.startswith("/books/") else None
         if path == "/":
-            self.send(self.page(self.shelf_body(books)), "text/html; charset=utf-8", send_body)
+            self.send(self.page(self.shelf_body(books), UPLOAD_SCRIPT), "text/html; charset=utf-8", send_body)
         elif name in books:
             self.send_book(books[name][0], send_body)
         else:
@@ -256,11 +392,12 @@ class Handler(BaseHTTPRequestHandler):
                 f'<a href="/books/{urllib.parse.quote(name)}">'
                 f'<div class="title">{html.escape(title)}</div>{byline}</a>'
             )
-        hint = "Tap a book, then tap Open in iBooks." if books else "No books yet. Run shelve on the Mac to put some here."
-        return f"<p>{hint}</p>\n" + "\n".join(rows)
+        hint = ("Tap a book, then tap Open in iBooks." if books
+                else "No books yet. Add some from a computer: drop them on this page, or run shelve.")
+        return f"<p>{hint}</p>\n{ADD}\n" + "\n".join(rows)
 
-    def page(self, body):
-        return PAGE.format(body=body).encode()
+    def page(self, body, script=""):
+        return PAGE.format(body=body, script=script).encode()
 
     def send(self, body, ctype, send_body, status=200):
         self.send_response(status)
