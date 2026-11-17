@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/rounakdatta/agentfest
-  tag: "0.2.11"
+  tag: "0.2.12"
 
 # Pin the self-updating components to exact versions rather than tracking
 # "latest", so upgrades are deliberate and reproducible. Bump after reviewing
@@ -16,7 +16,7 @@ codex:
   version: "0.167.0"
 
 paseo:
-  version: "0.15.3"
+  version: "0.16.1"
 
   # Loopback only. Phones and laptops come in through Paseo's relay, which
   # the daemon dials out to, so nothing in the cluster connects to it (festie
