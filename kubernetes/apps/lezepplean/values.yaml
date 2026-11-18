@@ -9,7 +9,7 @@
 # idle), then kept. Idle, the pod holds ~130 MB.
 image:
   repository: ghcr.io/rounakdatta/le-zepp-lean
-  tag: "0.4.1"
+  tag: "0.5.0"
 
 # The image is private (github.com/rounakdatta/le-zepp-lean). The ghcr-pull Secret is
 # built by deploy-stuff.yml from the GHCR_READ_TOKEN repository secret, as for applet.
@@ -41,6 +41,13 @@ podAnnotations:
 # zepp-life-mcp and itineris are.
 nodeSelector:
   node-role.kubernetes.io/control-plane: "true"
+
+# The app is in the Zepp store (free): store installs send no token, since anyone can read a
+# store package. They may use the watch's own endpoints, their Shazam calls held to a budget
+# of their own (the chart's defaults: 6 a minute together, 3 per install); the helper's
+# endpoints and the diagnostics stay the token's.
+env:
+  LEZEPPLEAN_PUBLIC: "1"
 
 # resources: the chart's defaults (256Mi request, 2Gi limit, no CPU request,
 # which the control plane needs: its CPU *requests* are full, its usage isn't).

@@ -6,8 +6,11 @@
 #
 # Authentication is inside the application: every endpoint but /livez requires
 # `Authorization: Bearer <token>` (the `token` key of lezepplean-credentials,
-# synced from Bitwarden lezepplean/token). /livez is for kubelet probes and
-# returns only {"ok": true}. Rotating the token: update the Bitwarden item, run
+# synced from Bitwarden lezepplean/token), except that installs from the Zepp
+# store (no token: a store package can be read by anyone) may use the watch's
+# own endpoints within a Shazam budget (LEZEPPLEAN_PUBLIC in values.yaml).
+# /livez is for kubelet probes and returns only {"ok": true}. Floods and big
+# bodies stop at Traefik first (middleware.yaml). Rotating the token: update the Bitwarden item, run
 # the deploy, restart the Deployment, and rebuild the watch app with the new one
 # (tools/install-watch.sh in le-zepp-lean).
 #
@@ -22,6 +25,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.middlewares: apps-lezepplean-ratelimit@kubernetescrd,apps-lezepplean-inflight@kubernetescrd,apps-lezepplean-body@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
