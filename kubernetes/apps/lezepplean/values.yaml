@@ -9,7 +9,7 @@
 # idle), then kept. Idle, the pod holds ~130 MB.
 image:
   repository: ghcr.io/rounakdatta/le-zepp-lean
-  tag: "0.5.0"
+  tag: "0.5.1"
 
 # The image is private (github.com/rounakdatta/le-zepp-lean). The ghcr-pull Secret is
 # built by deploy-stuff.yml from the GHCR_READ_TOKEN repository secret, as for applet.
