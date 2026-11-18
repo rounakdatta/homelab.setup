@@ -62,8 +62,9 @@ jobs:
       - name: GHCR pull secret -> Secret (repository secret, interim)
         if: ${{ env.GHCR_READ_TOKEN != '' }}
         env:
-          # A classic PAT scoped to read:packages only. applet's image
-          # (ghcr.io/rounakdatta/applet) is private; kubelet needs this to pull.
+          # A classic PAT scoped to read:packages only. applet's and
+          # lezepplean's images (ghcr.io/rounakdatta/applet, .../le-zepp-lean)
+          # are private; kubelet needs this to pull them.
           # kubectl builds the dockerconfigjson for us. Interim, like the Maps
           # key below — move to Bitwarden when convenient.
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
