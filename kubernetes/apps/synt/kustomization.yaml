@@ -14,3 +14,25 @@ helmCharts:
 
 resources:
   - ingress.yaml
+
+# Velero skips the Meilisearch volume. It is a derived index: synt re-sends
+# every message from its SQLite database (the `data` volume, still backed up)
+# every 5 minutes and recreates the index and its settings at startup, so a
+# restore that brings back an empty Meilisearch volume refills it within
+# minutes. Backing it up re-uploaded nearly the whole ~1.9 GB index every night
+# (about 93% of each nightly upload, kept for the 90-day TTL). The chart has no
+# podAnnotations value, hence the patch.
+patches:
+  - target:
+      kind: Deployment
+      name: synt
+    patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: synt
+      spec:
+        template:
+          metadata:
+            annotations:
+              backup.velero.io/backup-volumes-excludes: "meilisearch-data"
