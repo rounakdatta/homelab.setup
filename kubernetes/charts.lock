@@ -44,11 +44,11 @@ charts:
     version: 0.26.0
     repo: oci://ghcr.io/rounakdatta/charts
     sha256: 55b0db812b1f6885d1b4f8c3cd019d796608b479d01fab46216516281f0209f3
-  - path: kubernetes/apps/lezepplean/charts/lezepplean-0.5.0
+  - path: kubernetes/apps/lezepplean/charts/lezepplean-0.5.1
     chart: lezepplean
-    version: 0.5.0
+    version: 0.5.1
     repo: oci://ghcr.io/rounakdatta/charts
-    sha256: 40dd8024523584af215461cbbd923c9b64f8fcb9e044813c0953bd2715b61fca
+    sha256: da0e84b33a8cc3b296cbf1a4c8b957a50ba79b499e7d389d9e4d91f0f918b280
   - path: kubernetes/apps/nextcloud/charts/nextcloud-9.0.6
     chart: nextcloud
     version: 9.0.6
