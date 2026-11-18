@@ -530,7 +530,7 @@
         data:
           signing-seed: nightwatch/signing_seed
 
-      # applet's PRIVATE image is pulled via the ghcr-pull Secret, created from
+      # applet's and lezepplean's PRIVATE images are pulled via the ghcr-pull Secret, created from
       # the GHCR_READ_TOKEN repository secret in deploy-stuff.yml (the same
       # interim pattern as itineris-google-maps) rather than from Bitwarden.
 

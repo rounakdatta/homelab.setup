@@ -2,8 +2,12 @@ image:
   repository: ghcr.io/rounakdatta/le-zepp-lean
   # Pinned to the same tag as Chart.appVersion so a chart upgrade always
   # corresponds to one specific image.
-  tag: "0.4.0"
+  tag: "0.4.1"
   pullPolicy: IfNotPresent
+
+# The image is private (so is this repository): name a docker-registry Secret that
+# can read it from ghcr.io. The homelab's is `ghcr-pull`.
+imagePullSecrets: []
 
 # Single writer by design: the song store on /data and the word-timing worker
 # process are per pod. Do not scale beyond 1.

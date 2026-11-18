@@ -4,11 +4,13 @@ kind: Kustomization
 
 namespace: apps
 
-# LeZeppLean: the server behind the T-Rex 3 lyrics app (rounakdatta/le-zepp-lean).
+# LeZeppLean: the server behind the T-Rex 3 lyrics app (rounakdatta/le-zepp-lean,
+# private).
 #
 # Bumping is two lines AND a re-render, as for zepp-life-mcp: `version` here and
-# `image.tag` in values.yaml, then
+# `image.tag` in values.yaml, then (the chart package is private, so log in first)
 #
+#   gh auth token | helm registry login ghcr.io -u <user> --password-stdin
 #   kustomize build --enable-helm kubernetes/apps/lezepplean >/dev/null
 #   git rm -r kubernetes/apps/lezepplean/charts/lezepplean-<old>/
 #   git add kubernetes/apps/lezepplean/charts/lezepplean-<new>/
@@ -16,7 +18,7 @@ namespace: apps
 helmCharts:
   - name: lezepplean
     repo: oci://ghcr.io/rounakdatta/charts
-    version: 0.4.0
+    version: 0.4.1
     releaseName: lezepplean
     namespace: apps
     valuesFile: values.yaml
