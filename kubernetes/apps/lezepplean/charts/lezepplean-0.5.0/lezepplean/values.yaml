@@ -2,7 +2,7 @@ image:
   repository: ghcr.io/rounakdatta/le-zepp-lean
   # Pinned to the same tag as Chart.appVersion so a chart upgrade always
   # corresponds to one specific image.
-  tag: "0.4.1"
+  tag: "0.5.0"
   pullPolicy: IfNotPresent
 
 # The image is private (so is this repository): name a docker-registry Secret that
@@ -44,6 +44,10 @@ env:
   # summaries (what the watch's diagnostics said, what the server decided).
   LEZEPPLEAN_CAPTURE_AUDIO: "0"
   LEZEPPLEAN_KEEP_CAPTURES: "50"
+  # Installs from the Zepp store send no token (anyone can read a store package): "1" lets
+  # them use the watch's own endpoints, their Shazam calls held to a budget of their own
+  # (LEZEPPLEAN_PUBLIC_SHAZAM_PER_MIN, default 6; LEZEPPLEAN_INSTALL_SHAZAM_PER_MIN, default 3).
+  LEZEPPLEAN_PUBLIC: "0"
 
 # Arbitrary extra env entries, including valueFrom.
 extraEnv: []

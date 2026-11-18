@@ -1,0 +1,37 @@
+---
+# Traefik in front of LeZeppLean (named by ingress.yaml, in this order). Store installs reach the
+# API with no token since 0.5.0, so floods and oversized bodies stop here, before the app.
+#
+# Per client address: 30 requests/s on average, bursts of 100, no more than 48 in flight. A watch
+# sends a take every few seconds and holds one long poll open, the helper two pieces a second;
+# phones behind a carrier's NAT share an address, so this only bites floods.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: lezepplean-ratelimit
+  namespace: apps
+spec:
+  rateLimit:
+    average: 30
+    burst: 100
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: lezepplean-inflight
+  namespace: apps
+spec:
+  inFlightReq:
+    amount: 48
+---
+# Bodies over 256 KiB are refused at the edge: a take is ~25 KB of base64, a helper's
+# half-second of phone audio ~22 KB (the app caps a store install's take at 48 KB itself).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: lezepplean-body
+  namespace: apps
+spec:
+  buffering:
+    maxRequestBodyBytes: 262144
+    memRequestBodyBytes: 262144
