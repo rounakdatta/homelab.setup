@@ -1,0 +1,78 @@
+---
+# Who may talk to TowerOfHan, and whom it may talk to. It is a public app that parses
+# what strangers write on Hacker News; if it were ever compromised it must not become a
+# way into the rest of the cluster, the home network or the tailnet.
+#
+# In:  Traefik (kube-system) and agentfest (checks), to towerd's port only. Probes are
+#      exec probes, so they need no rule (as telly's).
+# Out: DNS; auth2api for the tags; HTTPS to the public internet (the HN Firebase API,
+#      and the Anthropic API if ANTHROPIC_API_KEY is set), with every private,
+#      carrier-grade-NAT (tailnet), link-local and loopback range excluded.
+#
+# k3s enforces NetworkPolicy by default (kube-router), as warren and telly rely on.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: towerofhan-netpol
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: towerofhan
+      app.kubernetes.io/controller: towerofhan
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentfest
+              app.kubernetes.io/instance: agentfest
+      ports:
+        - protocol: TCP
+          port: 8787
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: auth2api
+      ports:
+        - protocol: TCP
+          port: 8317
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 0.0.0.0/8
+              - 10.0.0.0/8
+              - 100.64.0.0/10
+              - 127.0.0.0/8
+              - 169.254.0.0/16
+              - 172.16.0.0/12
+              - 192.0.0.0/24
+              - 192.168.0.0/16
+              - 198.18.0.0/15
+              - 224.0.0.0/4
+              - 240.0.0.0/4
+      ports:
+        - protocol: TCP
+          port: 443

@@ -1,0 +1,163 @@
+# Values for bjw-s app-template 5.1.0.
+# Chart source: https://github.com/bjw-s-labs/helm-charts
+#
+# TowerOfHan: the HN front page as a tower; every table a thread, voiced.
+#
+#   browser --(cached JSON + clips)--> Traefik --> web :8787 (towerd) --files--> voice (Kokoro, 1 thread)
+#                                                   |                              |
+#                                                   +--- HN Firebase API          +--- auth2api (tags, in-cluster)
+#
+# Both images are private (the repository is): pulled with the ghcr-pull Secret,
+# rebuilt by deploy-stuff.yml from GHCR_READ_TOKEN, as for applet and lezepplean.
+
+global:
+  createDefaultServiceAccount: false
+
+# Per-controller pod options must ADD to these (see warren).
+defaultPodOptionsStrategy: merge
+
+defaultPodOptions:
+  # Neither process talks to the Kubernetes API.
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  imagePullSecrets:
+    - name: ghcr-pull
+  # local-path is node-local, and a public app must not land on the Rishra worker
+  # (it drops offline): pinned to the control plane, as lezepplean and itineris are.
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+  annotations:
+    # Everything on /data is rebuilt from HN and re-voiced on demand; none of it is
+    # anyone's own. Keep it out of the nightly backup rather than ship audio to R2.
+    backup.velero.io/backup-volumes-excludes: "data"
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+    fsGroupChangePolicy: OnRootMismatch
+    seccompProfile:
+      type: RuntimeDefault
+
+controllers:
+  towerofhan:
+    # Names are pinned (here, on the Service and the PVC): kubectl apply never
+    # prunes, so a rename would leave the old object running.
+    forceRename: towerofhan
+    type: deployment
+    replicas: 1
+    # Recreate (app-template's default): /data is ReadWriteOnce, and towerd and the
+    # worker each expect to be the only one of their kind.
+    containers:
+      web:
+        image:
+          repository: ghcr.io/rounakdatta/towerofhan-web
+          tag: "0.1.0@sha256:cf55ee0b6bd5bc5dd9ca39474cb5ee51ce6c18e70af36791233d3c2cbe6bd340"
+          pullPolicy: IfNotPresent
+        env:
+          VAR: /data
+          # Audio is voiced again if it is ever wanted; stories leave the front page
+          # within a day or two.
+          RETENTION_DAYS: "14"
+        ports:
+          - name: http
+            containerPort: 8787
+            protocol: TCP
+        # Exec probes: the NetworkPolicy admits only Traefik and agentfest, as telly's.
+        probes:
+          liveness:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command: ["node", "-e", "fetch('http://127.0.0.1:8787/livez').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+              periodSeconds: 30
+              timeoutSeconds: 10
+              failureThreshold: 4
+          readiness:
+            enabled: true
+            custom: true
+            spec:
+              exec:
+                command: ["node", "-e", "fetch('http://127.0.0.1:8787/livez').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+              periodSeconds: 20
+              timeoutSeconds: 10
+              failureThreshold: 3
+          startup:
+            enabled: false
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        # No CPU request: this node's CPU requests are full (its usage isn't).
+        resources:
+          requests:
+            memory: 192Mi
+          limits:
+            memory: 768Mi
+      voice:
+        image:
+          repository: ghcr.io/rounakdatta/towerofhan-voice
+          tag: "0.1.0@sha256:7afbe3787427792e8342ea4d193f928ae9f8ea9f2e43aa57c3b4555c1f1821c4"
+          pullPolicy: IfNotPresent
+        env:
+          # One thread, always: two busy threads raise CPU steal for the whole VM.
+          OMP_NUM_THREADS: "1"
+          NICE: "5"
+          # Tags (emotion, stance, intensity, cues) by Claude Haiku through auth2api,
+          # in-cluster, as lezepplean and telly do. Set ANTHROPIC_API_KEY instead to use
+          # the Anthropic API directly.
+          AUTH2API_KEY:
+            valueFrom:
+              secretKeyRef:
+                name: auth2api-credentials
+                key: api-key
+        # It listens on nothing; a stuck worker shows as voicing that stops, in /status.
+        probes:
+          liveness:
+            enabled: false
+          readiness:
+            enabled: false
+          startup:
+            enabled: false
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        # Kokoro's full model is ~870 MB resident once loaded.
+        resources:
+          requests:
+            memory: 640Mi
+          limits:
+            memory: 1536Mi
+
+persistence:
+  data:
+    forceRename: towerofhan-data
+    type: persistentVolumeClaim
+    accessMode: ReadWriteOnce
+    # ~280 MB of audio a day at one thread's pace, kept 14 days, plus JSON.
+    size: 10Gi
+    storageClass: local-path
+    globalMounts:
+      - path: /data
+  tmp:
+    type: emptyDir
+    globalMounts:
+      - path: /tmp
+
+service:
+  web:
+    forceRename: towerofhan
+    controller: towerofhan
+    primary: true
+    type: ClusterIP
+    ports:
+      http:
+        port: 8787
+        protocol: TCP
+        primary: true

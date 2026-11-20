@@ -64,6 +64,11 @@ charts:
     version: 0.26.0
     repo: oci://ghcr.io/rounakdatta/charts
     sha256: 0a94c4201d2a989b1b41f4322538ff844029f7c13998297c9a7f65b5542e8364
+  - path: kubernetes/apps/towerofhan/charts/app-template-5.1.0
+    chart: app-template
+    version: 5.1.0
+    repo: oci://ghcr.io/bjw-s-labs/helm
+    sha256: 620439b6817242f77862c034f5b4978388815f57df18cc85b667de268ae2473a
   - path: kubernetes/apps/vikunja/charts/vikunja-v2.0.2
     chart: vikunja
     version: v2.0.2
