@@ -52,7 +52,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.1.1@sha256:94f15bbac22344839aad7f415685e95781fa04bc2fae72da626f742df0c1be3f"
+          tag: "0.1.2@sha256:b783f131e47d2e5237d16f3c986bfd7549a8d7cfa78acdab2d55c788d0050277"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -100,7 +100,7 @@ controllers:
       voice:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.1.1@sha256:bd45ad10ae69bc7157e1c5df44d6932f676a933ac987b5b459f0081215336ee6"
+          tag: "0.1.2@sha256:e3b76d6013c47d88e1e08f2fc3c165f06fdd7be156d58a59cf55af9d213b7133"
           pullPolicy: IfNotPresent
         env:
           # One thread, always: two busy threads raise CPU steal for the whole VM.
