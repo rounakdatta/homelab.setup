@@ -52,13 +52,20 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.2.2@sha256:192572ed13575c95913e6397409671c08b6cc487252535f0933683cd9d8a08bb"
+          tag: "0.3.0@sha256:376c962a8751b4a87a817166906a79108fd17da15d0fa1a26c573f63e57bea53"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
           # Audio is voiced again if it is ever wanted; stories leave the front page
           # within a day or two.
           RETENTION_DAYS: "14"
+          # Commenter cards: a one-line summary of someone's public comments by Claude
+          # Haiku, through auth2api in-cluster (cached three days per person).
+          AUTH2API_KEY:
+            valueFrom:
+              secretKeyRef:
+                name: auth2api-credentials
+                key: api-key
         ports:
           - name: http
             containerPort: 8787
@@ -100,7 +107,7 @@ controllers:
       voice:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.2.2@sha256:6bcbf8781233bee93ab7acd00df5399c2455bbb2bb395f2ac02ed36b65f06078"
+          tag: "0.3.0@sha256:c1b532d39f84ea1b31dc73486c01de4cac0f9edcca1dad67c368c940ce812075"
           pullPolicy: IfNotPresent
         env:
           # Background voicing runs on one thread: sustained multi-core load raises CPU
