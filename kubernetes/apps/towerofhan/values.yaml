@@ -52,7 +52,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.1.2@sha256:b783f131e47d2e5237d16f3c986bfd7549a8d7cfa78acdab2d55c788d0050277"
+          tag: "0.2.0@sha256:499b7123f547a0a89ce8b5b31334a733e8be1c8e1e21a2e2db8ed887d066aa1f"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -100,11 +100,15 @@ controllers:
       voice:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.1.2@sha256:e3b76d6013c47d88e1e08f2fc3c165f06fdd7be156d58a59cf55af9d213b7133"
+          tag: "0.2.0@sha256:036c78098f6b48a9296e73f5d1d2f243df9e02ff88904e6ff3541d2e6d3ea32a"
           pullPolicy: IfNotPresent
         env:
-          # One thread, always: two busy threads raise CPU steal for the whole VM.
+          # Background voicing runs on one thread: sustained multi-core load raises CPU
+          # steal for the whole VM. Someone listening gets three, in bursts of at most
+          # FAST_BUDGET seconds in any ten minutes.
           OMP_NUM_THREADS: "1"
+          FAST_THREADS: "3"
+          FAST_BUDGET: "300"
           NICE: "5"
           # Tags (emotion, stance, intensity, cues) by Claude Haiku through auth2api,
           # in-cluster, as lezepplean and telly do. Set ANTHROPIC_API_KEY instead to use
@@ -128,7 +132,7 @@ controllers:
           capabilities:
             drop:
               - ALL
-        # Kokoro's full model is ~870 MB resident once loaded.
+        # Two Kokoro sessions (one-thread and three-thread) on the fp16 model: ~660 MB.
         resources:
           requests:
             memory: 640Mi
