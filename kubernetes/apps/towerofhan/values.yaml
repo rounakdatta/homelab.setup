@@ -52,7 +52,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.4.2@sha256:858b23b096edc4f3fabb739ced293abd5c13877ddc76879e8042027c4ad0af65"
+          tag: "0.4.3@sha256:2a279988df920d460e1c4094db5d6af8f21c686d0e21999dbced490c888474c4"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -107,7 +107,7 @@ controllers:
       voice:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.4.2@sha256:2342d340f9ea9c0c0c6c5b25d28ae6555a1b235a706589cf50726def81f9741a"
+          tag: "0.4.3@sha256:c3c986887256661c05ea4dd0982178784368bb95830170b2494ca33cda6bf77e"
           pullPolicy: IfNotPresent
         env:
           # Background voicing runs on one thread: sustained multi-core load raises CPU
