@@ -3,9 +3,10 @@
 #
 # TowerOfHan: the HN front page as a tower; every table a thread, voiced.
 #
-#   browser --(cached JSON + clips)--> Traefik --> web :8787 (towerd) --files--> voice (Kokoro, 1 thread)
-#                                                   |                              |
-#                                                   +--- HN Firebase API          +--- auth2api (tags, in-cluster)
+#   browser --(cached JSON + clips)--> Traefik --> web :8787 (towerd) ---- HN Firebase API, auth2api (tags)
+#                                                   :8788 (voice port, in-cluster only)
+#                                                     ^                ^
+#                         runner (Kokoro lanes) on each worker node    voice (one fallback lane, beside the data)
 #
 # Both images are private (the repository is): pulled with the ghcr-pull Secret,
 # rebuilt by deploy-stuff.yml from GHCR_READ_TOKEN, as for applet and lezepplean.
@@ -22,10 +23,6 @@ defaultPodOptions:
   enableServiceLinks: false
   imagePullSecrets:
     - name: ghcr-pull
-  # local-path is node-local, and a public app must not land on the Rishra worker
-  # (it drops offline): pinned to the control plane, as lezepplean and itineris are.
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: "true"
   annotations:
     # Everything on /data is rebuilt from HN and re-voiced on demand; none of it is
     # anyone's own. Keep it out of the nightly backup rather than ship audio to R2.
@@ -46,29 +43,51 @@ controllers:
     forceRename: towerofhan
     type: deployment
     replicas: 1
-    # Recreate (app-template's default): /data is ReadWriteOnce, and towerd and the
-    # worker each expect to be the only one of their kind.
+    # Recreate (app-template's default): /data is ReadWriteOnce, and towerd expects
+    # to be the only one of its kind.
+    pod:
+      # local-path is node-local, and a public app must not land on the Rishra worker
+      # (it drops offline): pinned to the control plane, as lezepplean and itineris are.
+      # (Here, not in defaultPodOptions: the runners must be free of it, and a merged
+      # map can't drop a key.)
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
     containers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.4.6@sha256:bd970ab75f021878673ede84b14389eeac4c9d5aeb1658bf2adb757850fbbb3e"
+          tag: "0.5.5@sha256:a02505861db6cbef53739225ef4fb12bf93581f6804aeb63b270cc2fb9ebf590"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
           # Audio is voiced again if it is ever wanted; stories leave the front page
           # within a day or two.
-          RETENTION_DAYS: "14"
-          # Commenter cards: a one-line summary of someone's public comments by Claude
-          # Haiku, through auth2api in-cluster (cached three days per person).
+          RETENTION_DAYS: "7"
+          # Commenter cards (a one-line summary of someone's public comments, cached three
+          # days per person) and the tags every comment is performed with (emotion,
+          # stance, intensity, cues; one call per table batch): Claude Haiku through
+          # auth2api, in-cluster. Runners hold no keys.
           AUTH2API_KEY:
             valueFrom:
               secretKeyRef:
                 name: auth2api-credentials
                 key: api-key
+          # Pre-voicing while anyone has the page open (it yields to listeners at once):
+          # deeper than the one-node defaults (6 floors, 4 tables, 14 turns), since the
+          # runners on the workers voice ~6.5x real time between them.
+          PREWARM_FLOORS: "8"
+          PREWARM_TABLES: "6"
+          PREWARM_TURNS: "16"
+          # The voice port: runners claim comments here and send each clip back as it's
+          # voiced; towerd stays the only writer of /data. Not on the ingress; the
+          # NetworkPolicy admits the runners (and agentfest, for checks) only.
+          VOICE_PORT: "8788"
         ports:
           - name: http
             containerPort: 8787
+            protocol: TCP
+          - name: voice
+            containerPort: 8788
             protocol: TCP
         # Exec probes: the NetworkPolicy admits only Traefik and agentfest, as telly's.
         probes:
@@ -107,25 +126,23 @@ controllers:
       voice:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.4.6@sha256:4f6f17e19c2e3d9dfdf85abd2d90e2ce9deba7df5a864b45ec079a7171072f73"
+          tag: "0.5.5@sha256:6132140b4b3b3f497c30a00bd1c5b2d0a82dea3dc715ca6665b12a2ba2cab699"
           pullPolicy: IfNotPresent
+        # The standby lane: one thread (this VPS throttles sustained multi-core load
+        # for every process on it). It takes nothing while any runner has been heard
+        # from in the last PATIENCE seconds, and everything once they've gone quiet
+        # (both workers down). Same image and model as the runners, so voices match.
         env:
-          # Background voicing runs on one thread: sustained multi-core load raises CPU
-          # steal for the whole VM. Someone listening gets three, in bursts of at most
-          # FAST_BUDGET seconds in any ten minutes.
-          OMP_NUM_THREADS: "1"
-          FAST_THREADS: "3"
-          FAST_BUDGET: "300"
+          VOICE_URL: http://127.0.0.1:8788
+          LANES: "1"
+          THREADS: "1"
+          PATIENCE: "15"
           NICE: "5"
-          # Tags (emotion, stance, intensity, cues) by Claude Haiku through auth2api,
-          # in-cluster, as lezepplean and telly do. Set ANTHROPIC_API_KEY instead to use
-          # the Anthropic API directly.
-          AUTH2API_KEY:
+          NODE_NAME:
             valueFrom:
-              secretKeyRef:
-                name: auth2api-credentials
-                key: api-key
-        # It listens on nothing; a stuck worker shows as voicing that stops, in /status.
+              fieldRef:
+                fieldPath: spec.nodeName
+        # It listens on nothing; a stuck lane shows in /status (voicing.lanes).
         probes:
           liveness:
             enabled: false
@@ -139,23 +156,101 @@ controllers:
           capabilities:
             drop:
               - ALL
-        # Two Kokoro sessions (one-thread and three-thread) on the fp16 model: ~660 MB.
+        # One Kokoro session on the fp16 model: ~530 MB.
         resources:
           requests:
-            memory: 640Mi
+            memory: 512Mi
           limits:
-            memory: 1536Mi
+            memory: 1Gi
+
+  # Voice runners: the voicing, on the worker nodes (the control plane is a VPS that
+  # throttles sustained load, and is short of memory). One per worker, each running
+  # as many Kokoro lanes as it has cores (two threads a lane, at most four lanes).
+  # Stateless: they claim a comment from towerd's voice port, voice it and send the
+  # clips back; a node that drops off just lets its leases lapse (20 s), and its
+  # comments resume elsewhere from their last clip. No volume, no keys, no internet.
+  runner:
+    forceRename: towerofhan-runner
+    type: deployment
+    replicas: 2
+    pod:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/control-plane
+                    operator: DoesNotExist
+        # one per node: two on one node would only fight over its cores
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: towerofhan
+                  app.kubernetes.io/controller: runner
+      # The Rishra worker blinks NotReady now and then: stay through it (the lanes
+      # reconnect on their own) rather than be evicted and left Terminating.
+      tolerations:
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+      terminationGracePeriodSeconds: 10
+    containers:
+      main:
+        image:
+          repository: ghcr.io/rounakdatta/towerofhan-voice
+          tag: "0.5.5@sha256:6132140b4b3b3f497c30a00bd1c5b2d0a82dea3dc715ca6665b12a2ba2cab699"
+          pullPolicy: IfNotPresent
+        env:
+          VOICE_URL: http://towerofhan.apps.svc.cluster.local:8788
+          THREADS: "2"
+          MAX_LANES: "4"
+          NODE_NAME:
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+        probes:
+          liveness:
+            enabled: false
+          readiness:
+            enabled: false
+          startup:
+            enabled: false
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+        # No CPU request or limit: the lanes use whatever the node isn't using, and
+        # give way at once to everything else on it (frigate, Home Assistant, the
+        # phones), which all ask for CPU. Memory: ~530 MB a lane.
+        resources:
+          requests:
+            memory: 1Gi
+          limits:
+            memory: 3Gi
 
 persistence:
   data:
     forceRename: towerofhan-data
     type: persistentVolumeClaim
     accessMode: ReadWriteOnce
-    # ~280 MB of audio a day at one thread's pace, kept 14 days, plus JSON.
+    # Audio at ~26 kbps: a busy day of voicing (many hours of speech) is under a GB,
+    # kept RETENTION_DAYS, plus JSON.
     size: 10Gi
     storageClass: local-path
-    globalMounts:
-      - path: /data
+    # towerd and the fallback lane only: the runners are on other nodes, and carry nothing
+    advancedMounts:
+      towerofhan:
+        web:
+          - path: /data
+        voice:
+          - path: /data
   tmp:
     type: emptyDir
     globalMounts:
@@ -172,3 +267,7 @@ service:
         port: 8787
         protocol: TCP
         primary: true
+      # runners only (the NetworkPolicy); the ingress routes to http alone
+      voice:
+        port: 8788
+        protocol: TCP
