@@ -56,7 +56,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.1@sha256:c3e7a6d7686deae2de07f5d92390c94aad20aba8509bf4820d770722f36a9b8d"
+          tag: "0.5.3@sha256:e86f434f74b022028e7ba01eab5526ed74f2892dc8b4975b8ac43e57633c0448"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -126,7 +126,7 @@ controllers:
       voice:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.5.1@sha256:860e9c92f8d92971b3226e8f4cf7192077f3916bcde79f1f1f9adf8b4c76c757"
+          tag: "0.5.3@sha256:dcd2a6a7e0fd12c43445b3e424604cf70ae21a00f15f3e9361ca2b84342d42ff"
           pullPolicy: IfNotPresent
         # The standby lane: one thread (this VPS throttles sustained multi-core load
         # for every process on it). It takes nothing while any runner has been heard
@@ -203,7 +203,7 @@ controllers:
       main:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.5.1@sha256:860e9c92f8d92971b3226e8f4cf7192077f3916bcde79f1f1f9adf8b4c76c757"
+          tag: "0.5.3@sha256:dcd2a6a7e0fd12c43445b3e424604cf70ae21a00f15f3e9361ca2b84342d42ff"
           pullPolicy: IfNotPresent
         env:
           VOICE_URL: http://towerofhan.apps.svc.cluster.local:8788
