@@ -56,7 +56,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.0@sha256:778ede77c5c95fbbece6a31c430c291b394e9291e61ed5224f1bd241022ecc6d"
+          tag: "0.5.1@sha256:c3e7a6d7686deae2de07f5d92390c94aad20aba8509bf4820d770722f36a9b8d"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -72,6 +72,12 @@ controllers:
               secretKeyRef:
                 name: auth2api-credentials
                 key: api-key
+          # Pre-voicing while anyone has the page open (it yields to listeners at once):
+          # deeper than the one-node defaults (6 floors, 4 tables, 14 turns), since the
+          # runners on the workers voice ~6.5x real time between them.
+          PREWARM_FLOORS: "8"
+          PREWARM_TABLES: "6"
+          PREWARM_TURNS: "16"
           # The voice port: runners claim comments here and send each clip back as it's
           # voiced; towerd stays the only writer of /data. Not on the ingress; the
           # NetworkPolicy admits the runners (and agentfest, for checks) only.
@@ -120,12 +126,12 @@ controllers:
       voice:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.5.0@sha256:458d2201e3beb52a50edfc6fbe270036b06a0e4d901a48682cc0ab0f55341f96"
+          tag: "0.5.1@sha256:860e9c92f8d92971b3226e8f4cf7192077f3916bcde79f1f1f9adf8b4c76c757"
           pullPolicy: IfNotPresent
-        # The fallback lane: one thread (this VPS throttles sustained multi-core load
-        # for every process on it), and it takes a comment only once it has waited
-        # PATIENCE seconds while runners are around, or at once when none are (both
-        # workers gone). Same image and model as the runners, so voices match.
+        # The standby lane: one thread (this VPS throttles sustained multi-core load
+        # for every process on it). It takes nothing while any runner has been heard
+        # from in the last PATIENCE seconds, and everything once they've gone quiet
+        # (both workers down). Same image and model as the runners, so voices match.
         env:
           VOICE_URL: http://127.0.0.1:8788
           LANES: "1"
@@ -197,7 +203,7 @@ controllers:
       main:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.5.0@sha256:458d2201e3beb52a50edfc6fbe270036b06a0e4d901a48682cc0ab0f55341f96"
+          tag: "0.5.1@sha256:860e9c92f8d92971b3226e8f4cf7192077f3916bcde79f1f1f9adf8b4c76c757"
           pullPolicy: IfNotPresent
         env:
           VOICE_URL: http://towerofhan.apps.svc.cluster.local:8788
