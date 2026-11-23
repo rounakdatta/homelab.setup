@@ -3,8 +3,9 @@
 # what strangers write on Hacker News; if it were ever compromised it must not become a
 # way into the rest of the cluster, the home network or the tailnet.
 #
-# In:  Traefik (kube-system) and agentfest (checks), to towerd's port only. Probes are
-#      exec probes, so they need no rule (as telly's).
+# In:  Traefik (kube-system) and agentfest (checks), to towerd's port; the voice runners
+#      (and agentfest) to its voice port. Probes are exec probes, so they need no rule
+#      (as telly's).
 # Out: DNS; auth2api for the tags; HTTPS to the public internet (the HN Firebase API,
 #      and the Anthropic API if ANTHROPIC_API_KEY is set), with every private,
 #      carrier-grade-NAT (tailnet), link-local and loopback range excluded.
@@ -38,6 +39,18 @@ spec:
       ports:
         - protocol: TCP
           port: 8787
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: towerofhan
+              app.kubernetes.io/controller: runner
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: agentfest
+              app.kubernetes.io/instance: agentfest
+      ports:
+        - protocol: TCP
+          port: 8788
   egress:
     - to:
         - namespaceSelector:
@@ -76,3 +89,40 @@ spec:
       ports:
         - protocol: TCP
           port: 443
+---
+# The voice runners (on the worker nodes) talk to towerd's voice port and nothing else:
+# no internet (the model is in the image), no other app, and nobody talks to them.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: towerofhan-runner-netpol
+  namespace: apps
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: towerofhan
+      app.kubernetes.io/controller: runner
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: towerofhan
+              app.kubernetes.io/controller: towerofhan
+      ports:
+        - protocol: TCP
+          port: 8788

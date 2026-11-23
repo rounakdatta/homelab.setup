@@ -7,13 +7,15 @@ namespace: apps
 # TowerOfHan (github.com/rounakdatta/tower-of-hn.io, private): Hacker News's front
 # page as a tower you can walk into, its threads voiced at tables, verbatim.
 #
-# One pod, two containers sharing /data: `web` (towerd: follows the HN API, writes
-# the cached JSON the client polls, serves the client, queues voicing) and `voice`
-# (Kokoro on ONE CPU thread: this node's hypervisor throttles sustained multi-core
-# load for the whole VM). They talk through files, hence one pod.
+# `towerofhan`, on the control plane: `web` (towerd: follows the HN API, writes the
+# cached JSON the client polls, serves the client, plans voicing and hands it out on
+# an in-cluster voice port) and `voice` (one fallback Kokoro lane on ONE thread: this
+# node's hypervisor throttles sustained multi-core load for the whole VM), sharing /data.
+# `towerofhan-runner`, one per worker node: Kokoro lanes that claim comments from the
+# voice port and send the clips back. towerd is the only writer of /data.
 #
 # No chart of its own, so app-template, as auth2api and warren. Bumping a release is
-# two image tags in values.yaml (tag AND digest); bumping app-template is the
+# three image tags in values.yaml (tag AND digest); bumping app-template is the
 # re-render described in warren's kustomization.
 helmCharts:
   - name: app-template
