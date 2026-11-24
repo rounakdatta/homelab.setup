@@ -66,9 +66,9 @@ controllers:
           RETENTION_DAYS: "7"
           # Which audio is kept (the app's docs/AUDIO.md): only what a floor on the tower
           # can still play, and for a day after it could; at most 1 GB; nothing new voiced
-          # while the disk has under 15% free. tower-dry only logs what it would do.
-          # Roll back: age (RETENTION_DAYS alone).
-          AUDIO_POLICY: "tower-dry"
+          # while the disk has under 15% free (tower-dry only logs what it would do; it
+          # ran first, 25 Nov). Roll back: age (RETENTION_DAYS alone).
+          AUDIO_POLICY: "tower"
           # Commenter cards (a one-line summary of someone's public comments, cached three
           # days per person) and the tags every comment is performed with (emotion,
           # stance, intensity, cues; one call per table batch): Claude Haiku through
