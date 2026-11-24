@@ -452,7 +452,6 @@ discover:
   ca_file: /secrets/kube/ca.crt
   every: 2m
   for: 30m
-  report_only: true   # stage 1 of the rollout: -discover reports, nothing is pushed yet
   ignore:
     kube-system: k3s's own add-ons (Traefik, CoreDNS, local-path, metrics-server); the doors go through Traefik and every check needs CoreDNS
     cert-manager: issues the certificates; no page of its own, and a renewal stuck for weeks would show as an expired certificate
