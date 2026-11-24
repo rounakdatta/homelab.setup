@@ -45,6 +45,7 @@ finish() {
   if [ "$logged" = 0 ]; then say_last aborted "exit $rc before a summary"; fi
 }
 trap finish EXIT
+trap 'exit 143' TERM INT HUP
 gib() { awk -v b="$1" 'BEGIN { v = b / 1073741824; if (v > -0.05 && v < 0.05) v = 0; printf "%.1f", v }'; }
 
 DRY_RUN=1 MIN_AGE_DAYS=3 PAUSE_S=10 MAX_PER_RUN=40 IO_PRESSURE_MAX=25
@@ -85,7 +86,7 @@ work=$(mktemp -d /run/homelab-disk-hygiene.XXXXXX)
 # containers running (else the runtime may be starting), and each running
 # container's image found among the images. If the runtime's JSON ever names
 # things differently, that last check fails and nothing is judged unused.
-why=
+why='' unmatched=0
 look() {
   why="could not list containers or images"
   crictl ps -a -o json > "$work/ps.json" 2> /dev/null || return 1
@@ -94,17 +95,20 @@ look() {
   jq -e '.images | type == "array" and length > 0' "$work/images.json" > /dev/null 2>&1 || return 1
   jq -r '.containers[] | (.imageRef // empty), (.image.image // empty), (.imageId // empty)' "$work/ps.json" | sort -u > "$work/used" || return 1
   jq -r '.images[] | .id, (.repoTags // [])[], (.repoDigests // [])[]' "$work/images.json" | sort -u > "$work/known" || return 1
-  local running unmatched
+  local running
   running=$(jq '[.containers[] | select(.state == "CONTAINER_RUNNING")] | length' "$work/ps.json") || return 1
   why="only $running containers running: the runtime may be starting"
   [ "$running" -ge 5 ] || return 1
+  why="could not match running containers to images"
   unmatched=$(jq --rawfile known "$work/known" '
       ($known | split("\n") | map(select(length > 0)) | INDEX(.)) as $k
       | [.containers[] | select(.state == "CONTAINER_RUNNING")
          | [(.imageRef // empty), (.image.image // empty), (.imageId // empty)]
          | select(any(.[]; $k[.] != null) | not)] | length' "$work/ps.json") || return 1
-  why="$unmatched running containers have an image not among the images: the runtime's answers can't be trusted"
-  [ "$unmatched" = 0 ] || return 1
+  # One whose image record is gone (a hand-run rmi) is harmless: an unlisted
+  # image is never a candidate. Many means the answers are misread.
+  why="$unmatched of $running running containers have an image not among the images: the runtime's answers can't be trusted"
+  [ $((unmatched * 4)) -le "$running" ] || return 1
   why=
 }
 is_used() { # refs...
@@ -113,11 +117,9 @@ is_used() { # refs...
   return 1
 }
 io_pressure() { # whole percent, some avg10; 0 when the kernel doesn't say
-  if [ -r "$PRESSURE" ]; then
-    sed -n 's/^some avg10=\([0-9]*\).*/\1/p' "$PRESSURE"
-  else
-    echo 0
-  fi
+  local v=
+  if [ -r "$PRESSURE" ]; then v=$(sed -n 's/^some avg10=\([0-9]*\).*/\1/p' "$PRESSURE"); fi
+  echo "${v:-0}"
 }
 
 look || refuse "$why"
@@ -156,7 +158,7 @@ done < "$work/images.tsv"
 
 candidates=$(wc -l < "$work/candidates")
 avail_before=$(df -B1 --output=avail / | tail -1 | tr -d ' ')
-count=0 bytes=0 failed=0 stopped=
+count=0 bytes=0 failed=0 stopped='' in_a_row=0
 while IFS=$'\t' read -r id size pulled name refs; do
   line="$name ($((size / 1048576)) MB, pulled $(date -u -d "@$pulled" +%Y-%m-%d))"
   if [ "$count" -ge "$MAX_PER_RUN" ]; then
@@ -185,16 +187,18 @@ while IFS=$'\t' read -r id size pulled name refs; do
   fi
   if crictl rmi "$id" > /dev/null 2>&1; then
     echo "  removed $line"
-    count=$((count + 1)) bytes=$((bytes + size))
+    count=$((count + 1)) bytes=$((bytes + size)) in_a_row=0
     sleep "$PAUSE_S"
   else
-    echo "  could not remove $line"; failed=$((failed + 1))
+    echo "  could not remove $line"; failed=$((failed + 1)) in_a_row=$((in_a_row + 1))
+    if [ "$in_a_row" -ge 3 ]; then stopped="3 removals failed in a row"; break; fi
   fi
 done < <(sort -t$'\t' -k2,2nr "$work/candidates")
 
 avail_after=$(df -B1 --output=avail / | tail -1 | tr -d ' ')
 pct=$(df --output=pcent / | tail -1 | tr -d ' %')
 kept="kept $kept_used in use, $kept_pinned pinned, $kept_recent pulled under $MIN_AGE_DAYS d ago, $kept_unknown of unknown age"
+if [ "$unmatched" -gt 0 ]; then kept="$kept; $unmatched running containers' images are not listed"; fi
 left=""
 if [ -n "$stopped" ]; then left="; stopped ($stopped) with $((candidates - count)) left for the next run"; fi
 if [ "$DRY_RUN" != 0 ]; then

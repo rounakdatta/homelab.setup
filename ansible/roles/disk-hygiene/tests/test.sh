@@ -96,6 +96,10 @@ mix; echo "some avg10=3.10 avg60=5.00 avg300=2.00 total=1" > "$T/pressure"; run
 check "low I/O pressure: goes ahead" '[ $rc = 0 ] && removed "sha256:6666 sha256:8888 sha256:bbbb "'
 mix; echo "sha256:8888" > "$T/rmi.fail"; run
 check "a failed removal: counted, the run exits 1" '[ $rc = 1 ] && removed "sha256:6666 sha256:bbbb " && echo "$out" | grep -q "1 failed"'
+mix; printf 'sha256:8888\nsha256:6666\nsha256:bbbb\n' > "$T/rmi.fail"; run
+check "3 failures in a row: stops" '[ $rc = 1 ] && echo "$out" | grep -q "3 failed; stopped (3 removals failed in a row)"'
+mix; echo "full avg10=0.00 avg60=0.00 avg300=0.00 total=0" > "$T/pressure"; run
+check "a pressure file without a some line: no brake, no noise" '[ $rc = 0 ] && removed "sha256:6666 sha256:8888 sha256:bbbb " && ! echo "$out" | grep -q "integer"'
 
 # --- refusals: nothing removed, and the line says why
 refused() { [ "$rc" = 1 ] && [ ! -s "$T/rmi.log" ] && echo "$out" | grep -q "^refused: $1"; }
@@ -106,9 +110,11 @@ check "2 running: refuses" 'refused "only 2 containers running"'
 mix; echo 'not json' > "$T/ps.json"; run
 check "garbage from the runtime: refuses" 'refused "could not list"'
 mix; sed 's/"imageRef"/"imgRef"/g; s/"image":{"image"/"img":{"image"/g' "$T/ps.json" > "$T/x" && mv "$T/x" "$T/ps.json"; run
-check "renamed JSON keys: refuses instead of judging everything unused" 'refused "7 running containers have an image not among the images"'
-mix; containers "$(running5)$(ctr sha256:abab)" > "$T/ps.json"; run
-check "a running container whose image isn't listed: refuses" 'refused "1 running containers have an image not among the images"'
+check "renamed JSON keys: refuses instead of judging everything unused" 'refused "7 of 7 running containers have an image not among the images"'
+mix; containers "$(running5)$(ctr sha256:abab)" "$(ctr '' docker.io/library/nginx:1.0)" "$(ctr sha256:9898 '')" > "$T/ps.json"; run
+check "one running container whose image is gone: goes ahead, and says so" '[ $rc = 0 ] && removed "sha256:6666 sha256:7777 sha256:8888 sha256:bbbb " && echo "$out" | grep -q "1 running containers. images are not listed"'
+mix; containers "$(running5)$(ctr sha256:abab)" "$(ctr sha256:abab)" > "$T/ps.json"; run
+check "a third of running containers with unlisted images: refuses" 'refused "2 of 7 running containers have an image not among the images"'
 mix; for v in 0 x 08 -1; do conf MIN_AGE_DAYS "$v"; run; refused "MIN_AGE_DAYS" || { echo "FAIL MIN_AGE_DAYS=$v accepted"; fail=1; }; done; echo "ok   MIN_AGE_DAYS 0, x, 08, -1: refused"
 mix; conf MAX_PER_RUN 0; run
 check "MAX_PER_RUN=0: refuses" 'refused "MAX_PER_RUN"'

@@ -99,7 +99,8 @@ jobs:
           tailscale ssh "root@${CONTROL}" "MODE=${MODE} bash -s" <<'EOS'
             test -x /usr/local/sbin/homelab-disk-hygiene || { echo "not installed: run deploy-infra.yml with tags=disk-hygiene, limit=control"; exit 1; }
             if [ "$MODE" = dry-run ]; then
-              /usr/local/sbin/homelab-disk-hygiene --dry-run | grep -E '^(summary|refused|aborted):'
+              # 2>&1: stderr goes through the same filter, never raw into this public log.
+              /usr/local/sbin/homelab-disk-hygiene --dry-run 2>&1 | grep -E '^(summary|refused|aborted):'
               exit "${PIPESTATUS[0]}"
             fi
             log=/var/log/homelab-disk-hygiene.log
