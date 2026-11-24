@@ -18,6 +18,11 @@ push:
 # node agent on it (nodes.yaml). Pushed as one result per node, named by the
 # node; a node that stays not ready for `for` alerts. Where each node is comes
 # from the labels the inventory gives it (deploy-infra.yml), read hourly.
+# A node's disk warns once it is `full_at` % full, or when the last week's
+# trend fills it within `fills_within` ("disk sda2 fills about Thu 10 Dec at
+# 1.8 GB a day (81% full)"); the trend needs a week of readings after an
+# agent starts (until then only the level speaks). Added after kanmani sat at
+# 81-83% on 24 Nov 2026.
 nodes:
   api: https://kubernetes.default.svc
   bearer_file: /secrets/kube/token
@@ -27,6 +32,7 @@ nodes:
   every: 1m
   timeout: 10s
   for: 3m
+  disk: {fills_within: 14d, full_at: 90}
 
 checks:
   # ---- Agentfest: is the Paseo computer up? ---------------------------------
