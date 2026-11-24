@@ -1,5 +1,5 @@
 ---
-# Who may talk to TowerOfHan, and whom it may talk to. It is a public app that parses
+# Who may talk to Tower of HN, and whom it may talk to. It is a public app that parses
 # what strangers write on Hacker News; if it were ever compromised it must not become a
 # way into the rest of the cluster, the home network or the tailnet.
 #
