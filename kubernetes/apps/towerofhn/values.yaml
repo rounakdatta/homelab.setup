@@ -57,13 +57,18 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.7@sha256:e19b5888e1fef070a3a39156dcd105e379ec5137aa50c473a5d5d7cf4726eea5"
+          tag: "0.5.8@sha256:9689b00959b8fa97a5327aa3fa2a458f3c3fb66d160f1eca55376f0c7301f5b9"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
           # Audio is voiced again if it is ever wanted; stories leave the front page
           # within a day or two.
           RETENTION_DAYS: "7"
+          # Which audio is kept (the app's docs/AUDIO.md): only what a floor on the tower
+          # can still play, and for a day after it could; at most 1 GB; nothing new voiced
+          # while the disk has under 15% free. tower-dry only logs what it would do.
+          # Roll back: age (RETENTION_DAYS alone).
+          AUDIO_POLICY: "tower-dry"
           # Commenter cards (a one-line summary of someone's public comments, cached three
           # days per person) and the tags every comment is performed with (emotion,
           # stance, intensity, cues; one call per table batch): Claude Haiku through
