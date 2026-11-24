@@ -1,0 +1,12 @@
+# Managed by homelab.setup (ansible/roles/disk-hygiene).
+[Unit]
+Description=Remove container images that nothing on this node uses (homelab.setup)
+After=k3s.service
+ConditionPathExists=/usr/local/bin/k3s
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/homelab-disk-hygiene
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=3h
