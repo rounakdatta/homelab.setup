@@ -162,6 +162,13 @@ jobs:
             echo
           done
 
+      # Run from the prober's own pod, so a NetworkPolicy that shuts the prober
+      # out fails here too. Check ids, states and workload names only: no hosts,
+      # no URLs. Red when something runs with no check or a discovered check fails.
+      - name: Monitoring (nightwatch discovery)
+        continue-on-error: true
+        run: timeout 120 kubectl -n apps exec deploy/nightwatch-prober -- /prober -discover -once -config=/config/checks.yaml
+
       - name: Volumes and where they live
         continue-on-error: true
         run: |

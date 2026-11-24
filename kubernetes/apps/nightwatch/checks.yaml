@@ -6,6 +6,10 @@
 # hostnames or bodies (see prober/check.go). Values: http checks report their
 # response time; prom and json checks report what `value`/`age`/`until` says,
 # in seconds when unit is s. Thresholds take numbers or durations.
+#
+# Apps need no entry here to be watched: `discover` (at the end) gives every
+# Service an Ingress routes to a check of its own, and names any workload no
+# check reaches. Write a check here when an app needs more than "it answers".
 agent: homelab
 push:
   url: https://watch.taptappers.club/v1/push
@@ -376,6 +380,39 @@ checks:
   - {id: app-warren, name: Warren hub, group: apps, every: 1m, for: 3m, warn_above: 3s,
      display: {repo: rounakdatta/warren, link: 'https://warren.taptappers.club/'},
      http: {url: "http://warren-hub.apps.svc.cluster.local:9000/", expect_status: [401]}}
+  # Workers with no Service are read from the API, as agentfest's pod is (the
+  # token may get any Deployment, rbac.yaml): at least one pod ready, over 10
+  # minutes so a rollout or a node's short blip stays quiet.
+  - id: app-warren-node
+    name: Warren exit node (pxin)
+    group: apps
+    every: 1m
+    for: 10m
+    unit: ""
+    absent: fail
+    fail_below: 1
+    fail_reason: no ready pod
+    display: {yes: ready, no: no ready pod, repo: rounakdatta/warren}
+    json:
+      url: https://kubernetes.default.svc/apis/apps/v1/namespaces/apps/deployments/warren-node
+      bearer_file: /secrets/kube/token
+      ca_file: /secrets/kube/ca.crt
+      value: $.status.readyReplicas
+  - id: app-towerofhn-runners
+    name: Tower of HN voice runners
+    group: apps
+    every: 1m
+    for: 10m
+    unit: ""
+    absent: fail
+    fail_below: 1
+    fail_reason: no ready runner
+    display: {template: "{v} ready", repo: rounakdatta/tower-of-hn.io}
+    json:
+      url: https://kubernetes.default.svc/apis/apps/v1/namespaces/apps/deployments/towerofhan-runner
+      bearer_file: /secrets/kube/token
+      ca_file: /secrets/kube/ca.crt
+      value: $.status.readyReplicas
   - {id: app-webtrees, name: webtrees, group: apps, every: 1m, for: 3m, warn_above: 3s,
      display: {link: 'https://webtrees.taptappers.club/'},
      http: {url: "http://webtrees.apps.svc.cluster.local/", expect_status: [302]}}
@@ -394,3 +431,32 @@ checks:
   - {id: site-rounak2025, name: rounak2025, group: sites, every: 5m, for: 10m, warn_above: 3s,
      display: {repo: rounakdatta/rounakdatta.github.io/tree/2025, link: 'https://rounak2025.taptappers.club/'},
      http: {url: "http://rounak2025-static-site.sites.svc.cluster.local/"}}
+
+# ---- Discovery: nothing runs unwatched ------------------------------------
+# Every 2 minutes the prober lists the cluster (rbac.yaml: get and list
+# Ingresses, Services and workloads, nothing else):
+# - every Service an Ingress routes to that no check above calls gets a check
+#   of its own: GET the Service at the Ingress's path every minute, up while
+#   it answers below 500, alerting after 3 minutes, in Apps, named after the
+#   host. nightwatch/* annotations on the Ingress tune it (name, group, path,
+#   expect, every, for, repo); see rounakdatta/nightwatch's README.
+# - every Deployment, StatefulSet and DaemonSet must be reached by some check
+#   (a Service that selects it, or the API), or say why it needs none: the
+#   annotation `nightwatch/unmonitored: <why>` on it, or, for what this repo
+#   doesn't write itself, a line below. The row "Every workload monitored"
+#   names the rest and warns after `for`.
+# Dry run: `prober -discover -config checks.yaml [-manifest rendered.yaml]`.
+discover:
+  api: https://kubernetes.default.svc
+  bearer_file: /secrets/kube/token
+  ca_file: /secrets/kube/ca.crt
+  every: 2m
+  for: 30m
+  ignore:
+    kube-system: k3s's own add-ons (Traefik, CoreDNS, local-path, metrics-server); the doors go through Traefik and every check needs CoreDNS
+    cert-manager: issues the certificates; no page of its own, and a renewal stuck for weeks would show as an expired certificate
+    databases: shared databases; each app that uses one fails its own check when it is down
+    velero/node-agent: Velero's file-system backup agent; the nightly backup checks fail when it does
+    authelia/authelia: left over from before tinyauth (#105, May 2026), not in this repo any more; delete it or adopt it
+    apps/applet: experimental (applet); its controller has not become ready yet. Give it a check when it is in use
+    apps/applet-phone-rounak: experimental (applet); see apps/applet

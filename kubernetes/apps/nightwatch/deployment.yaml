@@ -5,6 +5,8 @@ metadata:
   name: nightwatch-prober
   labels:
     app.kubernetes.io/name: nightwatch-prober
+  annotations:
+    nightwatch/unmonitored: it is the monitoring; the watcher alerts when its pushes stop
 spec:
   replicas: 1
   # Exactly one prober: a rolling update would briefly push from two.
@@ -39,7 +41,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: prober
-          image: ghcr.io/rounakdatta/nightwatch-prober:0.8.0
+          image: ghcr.io/rounakdatta/nightwatch-prober:0.9.0
           args:
             - -config=/config/checks.yaml
             - -listen=127.0.0.1:8080
