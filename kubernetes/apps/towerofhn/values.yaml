@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.9@sha256:8e2b4808c54b35094395bba7cf89dbe80970b74e6335fadf648bd09401bcbcfa"
+          tag: "0.5.10@sha256:15c5238e984dd9bc84cc21a3b2b369a258af64b9c56fcde7032700d0a376f0ee"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
