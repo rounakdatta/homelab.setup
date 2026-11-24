@@ -35,11 +35,15 @@
       when: tailscale_check.rc != 0
       tags: [always]
 
+    # no_log: when the node has other non-default flags, `tailscale up`
+    # refuses and its error repeats them (ACL tags included) into the public
+    # Actions log.
     - name: Ensure Tailscale SSH is enabled
       ansible.builtin.command: tailscale up --ssh --accept-risk=lose-ssh
       register: tailscale_ssh
       changed_when: "'Success' in tailscale_ssh.stdout or tailscale_ssh.rc == 0"
       failed_when: false
+      no_log: true
       tags: [always]
 
     # no_log here and below: `-v` would print this host's addresses to the
@@ -126,11 +130,15 @@
       when: tailscale_check.rc != 0
       tags: [always]
 
+    # no_log: when the node has other non-default flags, `tailscale up`
+    # refuses and its error repeats them (ACL tags included) into the public
+    # Actions log.
     - name: Ensure Tailscale SSH is enabled
       ansible.builtin.command: tailscale up --ssh --accept-risk=lose-ssh
       register: tailscale_ssh
       changed_when: "'Success' in tailscale_ssh.stdout or tailscale_ssh.rc == 0"
       failed_when: false
+      no_log: true
       tags: [always]
 
     - name: Get Tailscale IP address
