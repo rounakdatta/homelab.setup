@@ -1,0 +1,15 @@
+---
+# The old name to the new one: towerofhan.taptappers.club (the misspelling Tower of HN
+# first went out under) -> the same path and query on towerofhn.taptappers.club, for
+# good (301; 308 for anything but GET and HEAD). Named by the old name's Ingress only
+# (ingress.yaml); a URL that doesn't match passes through untouched.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: towerofhn-redirect
+  namespace: apps
+spec:
+  redirectRegex:
+    regex: ^https?://towerofhan\.taptappers\.club(?::[0-9]+)?/(.*)
+    replacement: https://towerofhn.taptappers.club/${1}
+    permanent: true
