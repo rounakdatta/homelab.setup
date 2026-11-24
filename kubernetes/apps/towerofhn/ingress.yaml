@@ -12,6 +12,8 @@ metadata:
   namespace: apps
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    nightwatch/name: Tower of HN
+    nightwatch/repo: rounakdatta/tower-of-hn.io
     traefik.ingress.kubernetes.io/router.entrypoints: tailnet
 spec:
   ingressClassName: traefik
@@ -42,6 +44,7 @@ metadata:
   namespace: apps
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    nightwatch/unmonitored: only redirects to towerofhn.taptappers.club, whose Ingress is checked
     traefik.ingress.kubernetes.io/router.entrypoints: tailnet
     traefik.ingress.kubernetes.io/router.middlewares: apps-towerofhn-redirect@kubernetescrd
 spec:

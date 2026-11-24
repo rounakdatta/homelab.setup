@@ -55,3 +55,35 @@ subjects:
   - kind: ServiceAccount
     name: nightwatch-prober
     namespace: apps
+---
+# Discovery (checks.yaml `discover`): read what runs, to check every app an
+# Ingress serves and to name any workload no check reaches; `get` also lets a
+# check read one worker's readiness, as agentfest's. Never Secrets, never pods,
+# never anything that writes. No workload here carries a secret in plain env.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nightwatch-discover
+rules:
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: nightwatch-discover
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nightwatch-discover
+subjects:
+  - kind: ServiceAccount
+    name: nightwatch-prober
+    namespace: apps
