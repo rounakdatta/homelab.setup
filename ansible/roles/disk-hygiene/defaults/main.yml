@@ -1,6 +1,7 @@
 ---
-# Only log what would be removed. Switch off once a dry run has been read.
-disk_hygiene_dry_run: true
+# Only log what would be removed. Off since 24 Nov 2026, after the dry run
+# (124 of 201 images, all old versions) was read.
+disk_hygiene_dry_run: false
 # Keep any image pulled less than this many days ago.
 disk_hygiene_min_age_days: 3
 # Seconds between removals, to spread the disk I/O (the first run removes many).
