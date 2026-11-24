@@ -63,6 +63,12 @@
     - role: node-tuning
       tags: [node-tuning, infra]
 
+    # A daily timer that removes container images no container uses, once
+    # they are a few days old (dry run until disk_hygiene_dry_run is false).
+    # Applies live, no restarts.
+    - role: disk-hygiene
+      tags: [disk-hygiene, infra]
+
     # k3s restarts with tailscaled, and tailscale0's MTU leaves pods room for
     # IPv6. Before k3s, so a fresh machine starts flannel at the right size.
     - role: tailscale-link

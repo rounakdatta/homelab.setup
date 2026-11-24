@@ -1,0 +1,7 @@
+---
+# Only log what would be removed. Switch off once a dry run has been read.
+disk_hygiene_dry_run: true
+# Keep any image pulled less than this many days ago.
+disk_hygiene_min_age_days: 3
+# Seconds between removals, to spread the disk I/O (the first run removes many).
+disk_hygiene_pause_s: 10

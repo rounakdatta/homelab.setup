@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# Managed by homelab.setup (ansible/roles/disk-hygiene). Edits here are lost.
+#
+# Removes the container images that nothing on this node uses, so the disk
+# shows what is really kept. An image goes only when ALL of these hold:
+#   - no container on this node, running or stopped, was made from it;
+#   - it is not pinned (the pod sandbox image is);
+#   - it was pulled at least MIN_AGE_DAYS ago, so an image pulled for a pod
+#     that is about to start, or for a rollout in progress, is never touched.
+# A removed image is pulled again from its registry if a pod ever needs it.
+# Nothing else is deleted: no files, no volumes, no logs. Removal goes through
+# the container runtime (crictl rmi), never through a path.
+#
+# Usage: homelab-disk-hygiene [--dry-run]
+# /etc/default/homelab-disk-hygiene sets DRY_RUN (1: only say what would go),
+# MIN_AGE_DAYS and PAUSE_S (seconds between removals, to spread the I/O).
+# Each image is logged to the journal; each run ends with one summary line,
+# also appended to /var/log/homelab-disk-hygiene.log. Summary lines hold
+# counts and sizes only, so they can be shown in public CI logs.
+set -euo pipefail
+export LC_ALL=C
+
+DRY_RUN=1
+MIN_AGE_DAYS=3
+PAUSE_S=10
+if [ -r /etc/default/homelab-disk-hygiene ]; then
+  # shellcheck disable=SC1091
+  . /etc/default/homelab-disk-hygiene
+fi
+if [ "${1:-}" = "--dry-run" ]; then DRY_RUN=1; fi
+
+LOG=/var/log/homelab-disk-hygiene.log
+CONTAINERD=/var/lib/rancher/k3s/agent/containerd
+BLOBS=$CONTAINERD/io.containerd.content.v1.content/blobs/sha256
+K3S=/usr/local/bin/k3s
+crictl() { "$K3S" crictl --timeout 600s "$@"; }
+
+stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+summary() { echo "summary: $*"; echo "$(stamp) $*" >> "$LOG"; }
+refuse() { echo "refused: $*"; echo "$(stamp) refused: $*" >> "$LOG"; exit 1; }
+gib() { awk -v b="$1" 'BEGIN { v = b / 1073741824; if (v > -0.05 && v < 0.05) v = 0; printf "%.1f", v }'; }
+
+# Refuse unless everything is what it should be.
+[ "$(id -u)" = 0 ] || refuse "not root"
+case "$MIN_AGE_DAYS" in '' | *[!0-9]*) refuse "MIN_AGE_DAYS is not a whole number" ;; esac
+case "$PAUSE_S" in '' | *[!0-9]*) refuse "PAUSE_S is not a whole number" ;; esac
+[ "$MIN_AGE_DAYS" -ge 1 ] || refuse "MIN_AGE_DAYS must be at least 1"
+[ -x "$K3S" ] || refuse "no k3s at $K3S"
+command -v jq > /dev/null || refuse "no jq"
+# The content store is read for pull times only; it must be the real
+# directory, with no symlink on the way that could point somewhere else.
+p=/
+for part in var lib rancher k3s agent containerd io.containerd.content.v1.content blobs sha256; do
+  p=${p%/}/$part
+  [ -d "$p" ] && [ ! -L "$p" ] || refuse "$p is not a plain directory"
+done
+
+exec 9> /run/homelab-disk-hygiene.lock
+flock -n 9 || refuse "another run is in progress"
+work=$(mktemp -d /run/homelab-disk-hygiene.XXXXXX)
+trap 'rm -rf "$work"' EXIT
+
+# Every image reference any container on this node was made from. Fails when
+# the runtime can't say, or says there are no containers at all (a runtime
+# that is restarting): then nothing can be judged unused.
+list_used() {
+  crictl ps -a -o json > "$work/ps.json" 2> /dev/null || return 1
+  jq -e '.containers | length > 0' "$work/ps.json" > /dev/null || return 1
+  jq -r '.containers[] | (.imageRef // empty), (.image.image // empty), (.imageId // empty)' "$work/ps.json" | sort -u > "$work/used"
+}
+is_used() { # refs...
+  local r
+  for r in "$@"; do grep -qxF -- "$r" "$work/used" && return 0; done
+  return 1
+}
+
+list_used || refuse "could not list this node's containers"
+running=$(jq '[.containers[] | select(.state == "CONTAINER_RUNNING")] | length' "$work/ps.json")
+[ "$running" -ge 5 ] || refuse "only $running containers running: the runtime may be starting"
+crictl images -o json > "$work/images.json" 2> /dev/null || refuse "could not list images"
+total=$(jq '.images | length' "$work/images.json")
+[ "$total" -ge 1 ] || refuse "no images listed"
+
+# id, size, pinned, a name to log, every reference
+jq -r '.images[] | [.id, (.size | tostring), ((.pinned // false) | tostring),
+    (.repoTags[0] // .repoDigests[0] // .id),
+    (([.id] + (.repoTags // []) + (.repoDigests // [])) | join(" "))] | @tsv' \
+  "$work/images.json" > "$work/images.tsv"
+
+now=$(date +%s)
+min_age=$((MIN_AGE_DAYS * 86400))
+kept_used=0 kept_pinned=0 kept_recent=0 kept_unknown=0
+: > "$work/candidates"
+while IFS=$'\t' read -r id size pinned name refs; do
+  # shellcheck disable=SC2086 # refs is a space-separated list
+  if is_used $refs; then
+    kept_used=$((kept_used + 1)); continue
+  fi
+  case "$pinned:$name" in
+    true:* | */pause:* | */mirrored-pause:*) kept_pinned=$((kept_pinned + 1)); continue ;;
+  esac
+  # When it was pulled: the time its config blob was written. No blob, or not
+  # a plain file: age unknown, keep it.
+  blob=$BLOBS/${id#sha256:}
+  if [[ $id != sha256:* ]] || [[ ! $size =~ ^[0-9]+$ ]] || [ ! -f "$blob" ] || [ -L "$blob" ]; then
+    kept_unknown=$((kept_unknown + 1)); continue
+  fi
+  pulled=$(stat -c %Y -- "$blob")
+  if [ $((now - pulled)) -lt "$min_age" ]; then
+    kept_recent=$((kept_recent + 1)); continue
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$size" "$pulled" "$name" "$refs" >> "$work/candidates"
+done < "$work/images.tsv"
+
+avail_before=$(df -B1 --output=avail / | tail -1 | tr -d ' ')
+count=0 bytes=0 failed=0
+while IFS=$'\t' read -r id size pulled name refs; do
+  line="$name ($((size / 1048576)) MB, pulled $(date -u -d "@$pulled" +%Y-%m-%d))"
+  if [ "$DRY_RUN" != 0 ]; then
+    echo "  would remove $line"
+    count=$((count + 1)) bytes=$((bytes + size))
+    continue
+  fi
+  # Look again right before removing: a pod may have started on it since.
+  if ! list_used; then
+    echo "  stopping: could not list containers"; failed=$((failed + 1)); break
+  fi
+  # shellcheck disable=SC2086
+  if is_used $refs; then
+    echo "  kept $line: a container now uses it"; kept_used=$((kept_used + 1)); continue
+  fi
+  if crictl rmi "$id" > /dev/null 2>&1; then
+    echo "  removed $line"
+    count=$((count + 1)) bytes=$((bytes + size))
+    sleep "$PAUSE_S"
+  else
+    echo "  could not remove $line"; failed=$((failed + 1))
+  fi
+done < <(sort -t$'\t' -k2,2nr "$work/candidates")
+
+avail_after=$(df -B1 --output=avail / | tail -1 | tr -d ' ')
+pct=$(df --output=pcent / | tail -1 | tr -d ' %')
+kept="kept $kept_used in use, $kept_pinned pinned, $kept_recent pulled under $MIN_AGE_DAYS d ago, $kept_unknown of unknown age"
+if [ "$DRY_RUN" != 0 ]; then
+  summary "dry run: would remove $count of $total images ($(gib "$bytes") GiB of image layers, some shared); $kept; disk $pct% used"
+else
+  summary "removed $count of $total images ($(gib "$bytes") GiB of image layers, some shared), $failed failed; $kept; freed $(gib $((avail_after - avail_before))) GiB, disk $pct% used"
+fi
+[ "$failed" = 0 ]
