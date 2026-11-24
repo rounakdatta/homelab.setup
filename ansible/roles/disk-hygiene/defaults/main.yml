@@ -5,3 +5,8 @@ disk_hygiene_dry_run: true
 disk_hygiene_min_age_days: 3
 # Seconds between removals, to spread the disk I/O (the first run removes many).
 disk_hygiene_pause_s: 10
+# containerd deletes inside k3s, on etcd's disk: at most this many images a
+# run, biggest first, and wait (then stop) while I/O pressure is above this
+# share (/proc/pressure/io, some avg10, %). The rest goes the next night.
+disk_hygiene_max_per_run: 40
+disk_hygiene_io_pressure_max: 25

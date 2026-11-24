@@ -15,12 +15,14 @@
 # Takes effect live and restarts nothing. Dry run until disk_hygiene_dry_run
 # is false. Run it now, or a dry run, with node-maintenance.yml.
 
+# no_log: with -v, apt's answer lists package versions into the public log.
 - name: jq, which the script reads the runtime's answers with
   ansible.builtin.apt:
     name: jq
     state: present
     update_cache: true
     cache_valid_time: 3600
+  no_log: true
 
 - name: The disk hygiene script
   ansible.builtin.copy:
@@ -38,6 +40,8 @@
       DRY_RUN={{ 1 if disk_hygiene_dry_run | bool else 0 }}
       MIN_AGE_DAYS={{ disk_hygiene_min_age_days | int }}
       PAUSE_S={{ disk_hygiene_pause_s | int }}
+      MAX_PER_RUN={{ disk_hygiene_max_per_run | int }}
+      IO_PRESSURE_MAX={{ disk_hygiene_io_pressure_max | int }}
 
 - name: Its service and daily timer
   ansible.builtin.copy:
@@ -57,7 +61,7 @@
 
 - name: Report the mode and the next run
   ansible.builtin.shell: |
-    grep -E '^(DRY_RUN|MIN_AGE_DAYS)=' /etc/default/homelab-disk-hygiene
+    grep -E '^(DRY_RUN|MIN_AGE_DAYS|MAX_PER_RUN)=' /etc/default/homelab-disk-hygiene
     echo "timer: $(systemctl is-enabled homelab-disk-hygiene.timer) $(systemctl is-active homelab-disk-hygiene.timer); next $(systemctl show homelab-disk-hygiene.timer -p NextElapseUSecRealtime --value)"
   register: disk_hygiene_report
   changed_when: false

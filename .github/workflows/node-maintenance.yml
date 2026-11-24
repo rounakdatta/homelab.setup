@@ -99,12 +99,15 @@ jobs:
           tailscale ssh "root@${CONTROL}" "MODE=${MODE} bash -s" <<'EOS'
             test -x /usr/local/sbin/homelab-disk-hygiene || { echo "not installed: run deploy-infra.yml with tags=disk-hygiene, limit=control"; exit 1; }
             if [ "$MODE" = dry-run ]; then
-              /usr/local/sbin/homelab-disk-hygiene --dry-run | grep -E '^(summary|refused):'
+              /usr/local/sbin/homelab-disk-hygiene --dry-run | grep -E '^(summary|refused|aborted):'
               exit "${PIPESTATUS[0]}"
             fi
-            since="$(date '+%Y-%m-%d %H:%M:%S')"
+            log=/var/log/homelab-disk-hygiene.log
+            before=$(cat "$log" 2>/dev/null | wc -l)
             systemctl start homelab-disk-hygiene.service; rc=$?
-            journalctl -u homelab-disk-hygiene --since "$since" -o cat --no-pager | grep -E '^(summary|refused):'
+            # The run's own last line (summary, refused or aborted), written as it ends.
+            new=$(tail -n +"$((before + 1))" "$log" 2>/dev/null)
+            [ -n "$new" ] && echo "$new" || { echo "no line from this run in the log"; exit 1; }
             exit "$rc"
           EOS
 

@@ -6,7 +6,8 @@ Description=Daily: remove container images that nothing on this node uses
 [Timer]
 OnCalendar=*-*-* 21:40:00 UTC
 RandomizedDelaySec=10min
-Persistent=true
+# No catch-up after a missed day (Persistent): at boot the pods are still
+# being recreated, and tomorrow's run does the same work.
 
 [Install]
 WantedBy=timers.target
