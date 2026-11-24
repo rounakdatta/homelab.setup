@@ -43,6 +43,7 @@ metadata:
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
     traefik.ingress.kubernetes.io/router.entrypoints: tailnet
+    traefik.ingress.kubernetes.io/router.middlewares: apps-towerofhn-redirect@kubernetescrd
 spec:
   ingressClassName: traefik
   rules:
