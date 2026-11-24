@@ -28,6 +28,10 @@ spec:
           podSelector:
             matchLabels:
               app.kubernetes.io/name: traefik
+        # nightwatch's prober: the check discovery gives telly's Ingress
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: nightwatch-prober
       ports:
         - protocol: TCP
           port: 8080
