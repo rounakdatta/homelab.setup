@@ -1,7 +1,7 @@
 # Values for bjw-s app-template 5.1.0.
 # Chart source: https://github.com/bjw-s-labs/helm-charts
 #
-# TowerOfHan: the HN front page as a tower; every table a thread, voiced.
+# Tower of HN: the HN front page as a tower; every table a thread, voiced.
 #
 #   browser --(cached JSON + clips)--> Traefik --> web :8787 (towerd) ---- HN Firebase API, auth2api (tags)
 #                                                   :8788 (voice port, in-cluster only)
@@ -39,7 +39,8 @@ defaultPodOptions:
 controllers:
   towerofhan:
     # Names are pinned (here, on the Service and the PVC): kubectl apply never
-    # prunes, so a rename would leave the old object running.
+    # prunes, so a rename would leave the old object running. That is why they keep
+    # the misspelling the project first went out under (see kustomization.yaml).
     forceRename: towerofhan
     type: deployment
     replicas: 1
@@ -56,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.6@sha256:5e02a5f87f7898ebf555d18813aeaf4ae72510be3206dcf5a20a35d5f28a4db6"
+          tag: "0.5.7@sha256:e19b5888e1fef070a3a39156dcd105e379ec5137aa50c473a5d5d7cf4726eea5"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
