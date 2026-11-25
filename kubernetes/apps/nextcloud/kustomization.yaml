@@ -21,6 +21,7 @@ resources:
   - migrate-config-job.yaml
   - ingress.yaml
   - middleware.yaml
+  - android-app-links.yaml
 
 # The chart's data volumeMount carries a hardcoded `subPath: data`, but our
 # existing nextcloud-data-pvc has files at the root (not under a `data/`
