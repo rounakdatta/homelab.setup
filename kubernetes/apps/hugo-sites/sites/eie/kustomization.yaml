@@ -34,7 +34,7 @@ patches:
         value: https://github.com/rounakdatta/eie
       - op: replace
         path: /spec/template/spec/initContainers/0/env/1/value
-        value: site-v0.4.0
+        value: site-v0.5.0
       - op: replace
         path: /spec/template/spec/initContainers/0/env/2/value
         value: site
@@ -102,6 +102,12 @@ patches:
                   name: eie-search-credentials
                   key: api-key
                   optional: true
+            # The newsreel (/reels/, its feed at /api/reels): "off" here turns it off for good, at the next
+            # deploy. To turn it off at once, with no deploy, put a file on the desk's volume:
+            #   kubectl --context <ctx> -n sites exec deploy/eie-static-site -c desk -- touch /data/reels.off
+            # and rm it to turn the reel back on. Off, the feed answers 503 and no page offers the reel.
+            - name: REELS
+              value: "on"
           ports:
             - containerPort: 8090
           volumeMounts:
