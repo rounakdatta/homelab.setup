@@ -3,7 +3,7 @@ image:
   # Pinned to the same tag as Chart.appVersion so a chart upgrade
   # always corresponds to one specific image. Override at install
   # time if you need to roll forward without bumping the chart.
-  tag: "0.26.0"
+  tag: "0.26.1"
   pullPolicy: IfNotPresent
 
 # Single writer by design — do not scale beyond 1
@@ -32,9 +32,12 @@ secret:
   existingSecret: ""
 
 env:
-  TEXAS_FOLDEM_REFRESH_LEAD: 2m
+  # A refresh is waited out, never abandoned for a retry (fold rotates the
+  # token as it answers): the timeout outlasts a network stall, and the lead
+  # leaves room for it before the 15-minute access token runs out.
+  TEXAS_FOLDEM_REFRESH_LEAD: 5m
   TEXAS_FOLDEM_KEEPWARM_EVERY: 30s
-  TEXAS_FOLDEM_HTTP_TIMEOUT: 15s
+  TEXAS_FOLDEM_HTTP_TIMEOUT: 90s
   TEXAS_FOLDEM_SHUTDOWN_GRACE: 10s
   TEXAS_FOLDEM_LOG_LEVEL: info
 
