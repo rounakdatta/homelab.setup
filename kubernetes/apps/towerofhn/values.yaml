@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.10@sha256:15c5238e984dd9bc84cc21a3b2b369a258af64b9c56fcde7032700d0a376f0ee"
+          tag: "0.5.11@sha256:c132257c94a65abe31dcd55f5ef25c118f4042dbf6e52d17385c3119fd00094f"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -69,6 +69,13 @@ controllers:
           # while the disk has under 15% free (tower-dry only logs what it would do; it
           # ran first, 25 Nov). Roll back: age (RETENTION_DAYS alone).
           AUDIO_POLICY: "tower"
+          # Sponsoring (the app's apps/towerd/src/support.ts). Empty: nothing of it is in the
+          # page, byte for byte. Set to the GitHub Sponsors page once GitHub has approved
+          # the profile, https://github.com/sponsors/rounakdatta, and deploy: a quiet line
+          # on the door, a credit at a table on wide screens, and /support. Only a
+          # github.com/sponsors/<name> URL is accepted (anything else stays off, logged).
+          # SPONSOR_UPI (a UPI ID, name@bank) would add a UPI line to /support.
+          SPONSOR_URL: ""
           # Commenter cards (a one-line summary of someone's public comments, cached three
           # days per person) and the tags every comment is performed with (emotion,
           # stance, intensity, cues; one call per table batch): Claude Haiku through
