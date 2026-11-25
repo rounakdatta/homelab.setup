@@ -57,13 +57,18 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.7@sha256:e19b5888e1fef070a3a39156dcd105e379ec5137aa50c473a5d5d7cf4726eea5"
+          tag: "0.5.10@sha256:15c5238e984dd9bc84cc21a3b2b369a258af64b9c56fcde7032700d0a376f0ee"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
           # Audio is voiced again if it is ever wanted; stories leave the front page
           # within a day or two.
           RETENTION_DAYS: "7"
+          # Which audio is kept (the app's docs/AUDIO.md): only what a floor on the tower
+          # can still play, and for a day after it could; at most 1 GB; nothing new voiced
+          # while the disk has under 15% free (tower-dry only logs what it would do; it
+          # ran first, 25 Nov). Roll back: age (RETENTION_DAYS alone).
+          AUDIO_POLICY: "tower"
           # Commenter cards (a one-line summary of someone's public comments, cached three
           # days per person) and the tags every comment is performed with (emotion,
           # stance, intensity, cues; one call per table batch): Claude Haiku through
@@ -127,7 +132,7 @@ controllers:
       voice:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.5.5@sha256:6132140b4b3b3f497c30a00bd1c5b2d0a82dea3dc715ca6665b12a2ba2cab699"
+          tag: "0.5.9@sha256:a8dab777ab311b57a6a6c2e58f92d637173f90445ba482f859cfb148bdecdb77"
           pullPolicy: IfNotPresent
         # The standby lane: one thread (this VPS throttles sustained multi-core load
         # for every process on it). It takes nothing while any runner has been heard
@@ -204,7 +209,7 @@ controllers:
       main:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-voice
-          tag: "0.5.5@sha256:6132140b4b3b3f497c30a00bd1c5b2d0a82dea3dc715ca6665b12a2ba2cab699"
+          tag: "0.5.9@sha256:a8dab777ab311b57a6a6c2e58f92d637173f90445ba482f859cfb148bdecdb77"
           pullPolicy: IfNotPresent
         env:
           VOICE_URL: http://towerofhan.apps.svc.cluster.local:8788

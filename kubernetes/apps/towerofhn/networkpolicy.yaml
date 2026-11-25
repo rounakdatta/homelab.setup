@@ -36,6 +36,10 @@ spec:
             matchLabels:
               app.kubernetes.io/name: agentfest
               app.kubernetes.io/instance: agentfest
+        # nightwatch's prober: the check discovery gives the towerofhn Ingress
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: nightwatch-prober
       ports:
         - protocol: TCP
           port: 8787

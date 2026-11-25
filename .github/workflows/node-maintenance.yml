@@ -6,6 +6,8 @@ name: Node maintenance (control plane)
 #   prune_images   removes container images no running/stopped container uses
 #                  (they are pulled again on demand)
 #   vacuum_journal trims the systemd journal to 300 MB
+#   disk_hygiene   runs the daily image cleanup (ansible/roles/disk-hygiene)
+#                  now, or as a dry run that only lists what it would remove
 # Reports disk usage before and after.
 
 on:
@@ -19,6 +21,11 @@ on:
         description: 'Trim the systemd journal to 300M'
         type: boolean
         default: false
+      disk_hygiene:
+        description: 'Image cleanup (role disk-hygiene): dry-run lists what would go; now runs the daily job in the mode ansible set'
+        type: choice
+        options: ['no', 'dry-run', 'now']
+        default: 'no'
       rollout_restart:
         description: 'Restart one deployment (namespace/name, e.g. apps/itineris) so it picks up a changed Secret or ConfigMap'
         type: string
@@ -80,6 +87,30 @@ jobs:
         if: ${{ inputs.vacuum_journal }}
         run: |
           tailscale ssh "root@${CONTROL}" 'journalctl --vacuum-size=300M 2>&1 | tail -n 2'
+
+      # The daily image cleanup, on demand. The image names stay in the node's
+      # journal (journalctl -u homelab-disk-hygiene); this public log gets only
+      # the summary line: counts and sizes.
+      - name: Disk hygiene (${{ inputs.disk_hygiene }})
+        if: ${{ inputs.disk_hygiene == 'dry-run' || inputs.disk_hygiene == 'now' }}
+        env:
+          MODE: ${{ inputs.disk_hygiene }}
+        run: |
+          tailscale ssh "root@${CONTROL}" "MODE=${MODE} bash -s" <<'EOS'
+            test -x /usr/local/sbin/homelab-disk-hygiene || { echo "not installed: run deploy-infra.yml with tags=disk-hygiene, limit=control"; exit 1; }
+            if [ "$MODE" = dry-run ]; then
+              # 2>&1: stderr goes through the same filter, never raw into this public log.
+              /usr/local/sbin/homelab-disk-hygiene --dry-run 2>&1 | grep -E '^(summary|refused|aborted):'
+              exit "${PIPESTATUS[0]}"
+            fi
+            log=/var/log/homelab-disk-hygiene.log
+            before=$(cat "$log" 2>/dev/null | wc -l)
+            systemctl start homelab-disk-hygiene.service; rc=$?
+            # The run's own last line (summary, refused or aborted), written as it ends.
+            new=$(tail -n +"$((before + 1))" "$log" 2>/dev/null)
+            [ -n "$new" ] && echo "$new" || { echo "no line from this run in the log"; exit 1; }
+            exit "$rc"
+          EOS
 
       # The controllers embedded in k3s renew a 15 s lease every 10 s; when etcd
       # takes seconds per request they lose it and k3s exits ("leaderelection

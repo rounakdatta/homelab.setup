@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# Managed by homelab.setup (ansible/roles/disk-hygiene). Edits here are lost.
+#
+# Removes the container images that nothing on this node uses, so the disk
+# shows what is really kept. An image goes only when ALL of these hold:
+#   - no container on this node, running or stopped, was made from it;
+#   - it is not pinned (the pod sandbox image is);
+#   - it was pulled at least MIN_AGE_DAYS ago, so an image pulled for a pod
+#     that is about to start, or for a rollout in progress, is never touched.
+# A removed image is pulled again from its registry if a pod ever needs it.
+# Nothing else is deleted: no files, no volumes, no logs. Removal goes through
+# the container runtime (crictl rmi), never through a path.
+#
+# containerd does the deleting inside k3s, beyond this script's nice and I/O
+# class, on the disk etcd lives on. So a run removes at most MAX_PER_RUN
+# images, biggest first, PAUSE_S apart, and waits (then stops) while the
+# kernel reports I/O pressure above IO_PRESSURE_MAX (/proc/pressure/io, some
+# avg10, %). What is left goes in the next run.
+#
+# Usage: homelab-disk-hygiene [--dry-run]
+# /etc/default/homelab-disk-hygiene sets DRY_RUN (1: only say what would go),
+# MIN_AGE_DAYS, PAUSE_S, MAX_PER_RUN and IO_PRESSURE_MAX.
+# Each image is logged to the journal; each run ends with one summary,
+# refused or aborted line, also appended to /var/log/homelab-disk-hygiene.log.
+# Those lines hold counts and sizes only, so public CI logs may show them.
+set -euo pipefail
+export LC_ALL=C
+
+LOG=/var/log/homelab-disk-hygiene.log
+CONTAINERD=/var/lib/rancher/k3s/agent/containerd
+BLOBS=$CONTAINERD/io.containerd.content.v1.content/blobs/sha256
+K3S=/usr/local/bin/k3s
+PRESSURE=/proc/pressure/io
+crictl() { "$K3S" crictl --timeout 600s "$@"; }
+
+stamp() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+logged=0
+say_last() { logged=1; echo "$1: $2"; echo "$(stamp) $1: $2" >> "$LOG"; }
+summary() { say_last summary "$*"; }
+refuse() { say_last refused "$*"; exit 1; }
+work=
+finish() {
+  rc=$?
+  if [ -n "$work" ]; then rm -rf -- "$work"; fi
+  if [ "$logged" = 0 ]; then say_last aborted "exit $rc before a summary"; fi
+}
+trap finish EXIT
+trap 'exit 143' TERM INT HUP
+gib() { awk -v b="$1" 'BEGIN { v = b / 1073741824; if (v > -0.05 && v < 0.05) v = 0; printf "%.1f", v }'; }
+
+DRY_RUN=1 MIN_AGE_DAYS=3 PAUSE_S=10 MAX_PER_RUN=40 IO_PRESSURE_MAX=25
+if [ -r /etc/default/homelab-disk-hygiene ]; then
+  # shellcheck disable=SC1091
+  . /etc/default/homelab-disk-hygiene
+fi
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=1 ;;
+    *) logged=1; echo "usage: homelab-disk-hygiene [--dry-run]" >&2; exit 2 ;;
+  esac
+done
+
+# Refuse unless everything is what it should be.
+[ "$(id -u)" = 0 ] || refuse "not root"
+[[ $DRY_RUN =~ ^[01]$ ]] || refuse "DRY_RUN must be 0 or 1"
+[[ $MIN_AGE_DAYS =~ ^[1-9][0-9]{0,2}$ ]] || refuse "MIN_AGE_DAYS must be a whole number of days, 1 or more"
+[[ $PAUSE_S =~ ^[0-9]{1,4}$ ]] || refuse "PAUSE_S must be whole seconds"
+[[ $MAX_PER_RUN =~ ^[1-9][0-9]{0,3}$ ]] || refuse "MAX_PER_RUN must be 1 or more"
+[[ $IO_PRESSURE_MAX =~ ^[1-9][0-9]?$ ]] || refuse "IO_PRESSURE_MAX must be 1-99"
+[ -x "$K3S" ] || refuse "no k3s at $K3S"
+command -v jq > /dev/null || refuse "no jq"
+# The content store is read for pull times only; it must be the real
+# directory, with no symlink on the way that could point somewhere else.
+p=/
+for part in var lib rancher k3s agent containerd io.containerd.content.v1.content blobs sha256; do
+  p=${p%/}/$part
+  [ -d "$p" ] && [ ! -L "$p" ] || refuse "$p is not a plain directory"
+done
+
+exec 9> /run/homelab-disk-hygiene.lock
+flock -n 9 || refuse "another run is in progress"
+work=$(mktemp -d /run/homelab-disk-hygiene.XXXXXX)
+
+# Reads the runtime: every image, and every reference any container on this
+# node was made from. Fails unless the answers hang together: at least 5
+# containers running (else the runtime may be starting), and each running
+# container's image found among the images. If the runtime's JSON ever names
+# things differently, that last check fails and nothing is judged unused.
+why='' unmatched=0
+look() {
+  why="could not list containers or images"
+  crictl ps -a -o json > "$work/ps.json" 2> /dev/null || return 1
+  crictl images -o json > "$work/images.json" 2> /dev/null || return 1
+  jq -e '.containers | type == "array"' "$work/ps.json" > /dev/null 2>&1 || return 1
+  jq -e '.images | type == "array" and length > 0' "$work/images.json" > /dev/null 2>&1 || return 1
+  jq -r '.containers[] | (.imageRef // empty), (.image.image // empty), (.imageId // empty)' "$work/ps.json" | sort -u > "$work/used" || return 1
+  jq -r '.images[] | .id, (.repoTags // [])[], (.repoDigests // [])[]' "$work/images.json" | sort -u > "$work/known" || return 1
+  local running
+  running=$(jq '[.containers[] | select(.state == "CONTAINER_RUNNING")] | length' "$work/ps.json") || return 1
+  why="only $running containers running: the runtime may be starting"
+  [ "$running" -ge 5 ] || return 1
+  why="could not match running containers to images"
+  unmatched=$(jq --rawfile known "$work/known" '
+      ($known | split("\n") | map(select(length > 0)) | INDEX(.)) as $k
+      | [.containers[] | select(.state == "CONTAINER_RUNNING")
+         | [(.imageRef // empty), (.image.image // empty), (.imageId // empty)]
+         | select(any(.[]; $k[.] != null) | not)] | length' "$work/ps.json") || return 1
+  # One whose image record is gone (a hand-run rmi) is harmless: an unlisted
+  # image is never a candidate. Many means the answers are misread.
+  why="$unmatched of $running running containers have an image not among the images: the runtime's answers can't be trusted"
+  [ $((unmatched * 4)) -le "$running" ] || return 1
+  why=
+}
+is_used() { # refs...
+  local r
+  for r in "$@"; do grep -qxF -- "$r" "$work/used" && return 0; done
+  return 1
+}
+io_pressure() { # whole percent, some avg10; 0 when the kernel doesn't say
+  local v=
+  if [ -r "$PRESSURE" ]; then v=$(sed -n 's/^some avg10=\([0-9]*\).*/\1/p' "$PRESSURE"); fi
+  echo "${v:-0}"
+}
+
+look || refuse "$why"
+total=$(jq '.images | length' "$work/images.json")
+
+# id, size, pinned, a name to log, every reference
+jq -r '.images[] | [.id, (.size | tostring), ((.pinned // false) | tostring),
+    (.repoTags[0] // .repoDigests[0] // .id),
+    (([.id] + (.repoTags // []) + (.repoDigests // [])) | join(" "))] | @tsv' \
+  "$work/images.json" > "$work/images.tsv"
+
+now=$(date +%s)
+min_age=$((MIN_AGE_DAYS * 86400))
+kept_used=0 kept_pinned=0 kept_recent=0 kept_unknown=0
+: > "$work/candidates"
+while IFS=$'\t' read -r id size pinned name refs; do
+  # shellcheck disable=SC2086 # refs is a space-separated list
+  if is_used $refs; then
+    kept_used=$((kept_used + 1)); continue
+  fi
+  case "$pinned:$name" in
+    true:* | */pause:* | */mirrored-pause:*) kept_pinned=$((kept_pinned + 1)); continue ;;
+  esac
+  # When it was pulled: the time its config blob was written. No blob, or not
+  # a plain file: age unknown, keep it.
+  blob=$BLOBS/${id#sha256:}
+  if [[ $id != sha256:* ]] || [[ ! $size =~ ^[0-9]+$ ]] || [ ! -f "$blob" ] || [ -L "$blob" ]; then
+    kept_unknown=$((kept_unknown + 1)); continue
+  fi
+  pulled=$(stat -c %Y -- "$blob")
+  if [ $((now - pulled)) -lt "$min_age" ]; then
+    kept_recent=$((kept_recent + 1)); continue
+  fi
+  printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$size" "$pulled" "$name" "$refs" >> "$work/candidates"
+done < "$work/images.tsv"
+
+candidates=$(wc -l < "$work/candidates")
+avail_before=$(df -B1 --output=avail / | tail -1 | tr -d ' ')
+count=0 bytes=0 failed=0 stopped='' in_a_row=0
+while IFS=$'\t' read -r id size pulled name refs; do
+  line="$name ($((size / 1048576)) MB, pulled $(date -u -d "@$pulled" +%Y-%m-%d))"
+  if [ "$count" -ge "$MAX_PER_RUN" ]; then
+    stopped="reached MAX_PER_RUN"; break
+  fi
+  if [ "$DRY_RUN" != 0 ]; then
+    echo "  would remove $line"
+    count=$((count + 1)) bytes=$((bytes + size))
+    continue
+  fi
+  # Let the disk settle: wait out I/O pressure, or stop for today.
+  waited=0
+  while [ "$(io_pressure)" -gt "$IO_PRESSURE_MAX" ] && [ "$waited" -lt 5 ]; do
+    sleep 60; waited=$((waited + 1))
+  done
+  if [ "$(io_pressure)" -gt "$IO_PRESSURE_MAX" ]; then
+    stopped="I/O pressure stayed above $IO_PRESSURE_MAX%"; break
+  fi
+  # Look again right before removing: a pod may have started on it since.
+  if ! look; then
+    echo "  stopping: $why"; failed=$((failed + 1)); stopped="the runtime's answers changed"; break
+  fi
+  # shellcheck disable=SC2086
+  if is_used $refs; then
+    echo "  kept $line: a container now uses it"; kept_used=$((kept_used + 1)); continue
+  fi
+  if crictl rmi "$id" > /dev/null 2>&1; then
+    echo "  removed $line"
+    count=$((count + 1)) bytes=$((bytes + size)) in_a_row=0
+    sleep "$PAUSE_S"
+  else
+    echo "  could not remove $line"; failed=$((failed + 1)) in_a_row=$((in_a_row + 1))
+    if [ "$in_a_row" -ge 3 ]; then stopped="3 removals failed in a row"; break; fi
+  fi
+done < <(sort -t$'\t' -k2,2nr "$work/candidates")
+
+avail_after=$(df -B1 --output=avail / | tail -1 | tr -d ' ')
+pct=$(df --output=pcent / | tail -1 | tr -d ' %')
+kept="kept $kept_used in use, $kept_pinned pinned, $kept_recent pulled under $MIN_AGE_DAYS d ago, $kept_unknown of unknown age"
+if [ "$unmatched" -gt 0 ]; then kept="$kept; $unmatched running containers' images are not listed"; fi
+left=""
+if [ -n "$stopped" ]; then left="; stopped ($stopped) with $((candidates - count)) left for the next run"; fi
+if [ "$DRY_RUN" != 0 ]; then
+  summary "dry run: would remove $count of $total images ($(gib "$bytes") GiB of image layers, some shared)$left; $kept; disk $pct% used"
+else
+  summary "removed $count of $total images ($(gib "$bytes") GiB of image layers, some shared), $failed failed$left; $kept; freed $(gib $((avail_after - avail_before))) GiB, disk $pct% used"
+fi
+[ "$failed" = 0 ]

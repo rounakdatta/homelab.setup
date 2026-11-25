@@ -15,6 +15,7 @@ metadata:
   namespace: apps
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
+    nightwatch/name: Bookshelf
     traefik.ingress.kubernetes.io/router.entrypoints: websecure
 spec:
   ingressClassName: traefik

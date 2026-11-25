@@ -35,11 +35,15 @@
       when: tailscale_check.rc != 0
       tags: [always]
 
+    # no_log: when the node has other non-default flags, `tailscale up`
+    # refuses and its error repeats them (ACL tags included) into the public
+    # Actions log.
     - name: Ensure Tailscale SSH is enabled
       ansible.builtin.command: tailscale up --ssh --accept-risk=lose-ssh
       register: tailscale_ssh
       changed_when: "'Success' in tailscale_ssh.stdout or tailscale_ssh.rc == 0"
       failed_when: false
+      no_log: true
       tags: [always]
 
     # no_log here and below: `-v` would print this host's addresses to the
@@ -62,6 +66,12 @@
     # so a fresh machine has it before k3s starts; applies live, no restarts.
     - role: node-tuning
       tags: [node-tuning, infra]
+
+    # A daily timer that removes container images no container uses, once
+    # they are a few days old (dry run until disk_hygiene_dry_run is false).
+    # Applies live, no restarts.
+    - role: disk-hygiene
+      tags: [disk-hygiene, infra]
 
     # k3s restarts with tailscaled, and tailscale0's MTU leaves pods room for
     # IPv6. Before k3s, so a fresh machine starts flannel at the right size.
@@ -120,11 +130,15 @@
       when: tailscale_check.rc != 0
       tags: [always]
 
+    # no_log: when the node has other non-default flags, `tailscale up`
+    # refuses and its error repeats them (ACL tags included) into the public
+    # Actions log.
     - name: Ensure Tailscale SSH is enabled
       ansible.builtin.command: tailscale up --ssh --accept-risk=lose-ssh
       register: tailscale_ssh
       changed_when: "'Success' in tailscale_ssh.stdout or tailscale_ssh.rc == 0"
       failed_when: false
+      no_log: true
       tags: [always]
 
     - name: Get Tailscale IP address
