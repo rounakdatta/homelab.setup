@@ -38,6 +38,7 @@ metadata:
   name: nextcloud-android-app
   namespace: apps
 spec:
+  # The same door as the Ingress (ingress.yaml): should Nextcloud move to the tailnet, move this too.
   entryPoints:
     - websecure
   routes:
