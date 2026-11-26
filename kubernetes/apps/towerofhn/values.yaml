@@ -102,6 +102,12 @@ controllers:
           # /status reports cover. Roll back: remove it (voicing as before: first words
           # everywhere, whole turns of the best tables while anyone has the page open).
           VOICE_AHEAD: "all"
+          # How the room plays (0.5.13's play flags, carried to every client in head.json):
+          # stream: a comment plays from its first decoded clip; cue: whoever speaks next is
+          # called over while the turn before is said, and nobody is waited on for long;
+          # quick: the first voice comes 0.6 s after you sit, not 1.6 s. Chosen by an A/B run
+          # on the live site (the app's tools/scale). Roll back: remove it, or drop one flag.
+          CLIENT_FLAGS: "stream,cue,quick"
         ports:
           - name: http
             containerPort: 8787
