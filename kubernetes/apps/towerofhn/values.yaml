@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.14@sha256:13a88ffbd8f779f1a3dd4b186fa37b9ee0ad6619d81a720eb9dc193aad1b17b6"
+          tag: "0.5.15@sha256:768ec7dc28155e63a8f6796e07b677559acac25b1776e37aeeba52d48847f149"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -108,7 +108,13 @@ controllers:
           # voice comes 0.6 s after you sit, not 1.6 s. A/B on the live site, 26 Nov, same tables
           # (the app's tools/scale): first voice p95 2.64 -> 1.99 s desktop, 2.32 -> 1.54 s phone;
           # silences over 1.5 s too long 8 -> 0. Roll back: remove it, or drop one flag.
-          CLIENT_FLAGS: "stream,cue,quick"
+          # crowd (CROWD_V2, 0.5.15): a room that fits any crowd: tables keep a few people at
+          # their front, everyone else stands in the audience (galleries above the room when a
+          # floor needs them) and steps forward to speak; the camera never sits in the crowd.
+          # timeline (needs crowd): at a table, a line along the bottom to scrub through the
+          # conversation, watch people join it, and listen from any point (?t= links a moment).
+          # Roll back either: drop it from the list (a page can also try ?play=stream,cue,quick).
+          CLIENT_FLAGS: "stream,cue,quick,crowd,timeline"
         ports:
           - name: http
             containerPort: 8787
