@@ -202,7 +202,10 @@ controllers:
   runner:
     forceRename: towerofhan-runner
     type: deployment
-    replicas: 2
+    # One runner, in Paris (26 Nov): voice-ahead keeps it busy for hours at a stretch, and
+    # the Rishra home box (i5-7400) can't cool that. At four busy cores it reset abruptly;
+    # at two it climbed to 87-89 °C. Paris is a VPS that idles 91-97% of the day.
+    replicas: 1
     pod:
       affinity:
         nodeAffinity:
@@ -211,6 +214,9 @@ controllers:
               - matchExpressions:
                   - key: node-role.kubernetes.io/control-plane
                     operator: DoesNotExist
+                  - key: homelab.setup/city
+                    operator: NotIn
+                    values: [rishra]
         # one per node: two on one node would only fight over its cores
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -238,7 +244,9 @@ controllers:
         env:
           VOICE_URL: http://towerofhan.apps.svc.cluster.local:8788
           THREADS: "2"
-          MAX_LANES: "4"
+          # Two lanes of two threads: all four of Paris's cores (~3x real time, against ~0.9-3 h
+          # of new speech an hour). The runner no longer runs on the Rishra box (see above).
+          MAX_LANES: "2"
           NODE_NAME:
             valueFrom:
               fieldRef:
