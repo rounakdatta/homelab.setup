@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.13@sha256:03bfc6b20cbf3727ea3c76167ba69a95308624850540e78fd78a307bf7681ab4"
+          tag: "0.5.14@sha256:13a88ffbd8f779f1a3dd4b186fa37b9ee0ad6619d81a720eb9dc193aad1b17b6"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -102,6 +102,13 @@ controllers:
           # /status reports cover. Roll back: remove it (voicing as before: first words
           # everywhere, whole turns of the best tables while anyone has the page open).
           VOICE_AHEAD: "all"
+          # How the room plays (the play flags, carried to every client in head.json): stream,
+          # a comment plays from its first decoded clip; cue, whoever speaks next is called over
+          # while the turn before is said, and nobody is waited on for long; quick, the first
+          # voice comes 0.6 s after you sit, not 1.6 s. A/B on the live site, 26 Nov, same tables
+          # (the app's tools/scale): first voice p95 2.64 -> 1.99 s desktop, 2.32 -> 1.54 s phone;
+          # silences over 1.5 s too long 8 -> 0. Roll back: remove it, or drop one flag.
+          CLIENT_FLAGS: "stream,cue,quick"
         ports:
           - name: http
             containerPort: 8787
