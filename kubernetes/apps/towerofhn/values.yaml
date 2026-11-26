@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.12@sha256:14325f012282cba5d1e5b136e5f11831134e5ddee788d393769255dabcc5a638"
+          tag: "0.5.13@sha256:03bfc6b20cbf3727ea3c76167ba69a95308624850540e78fd78a307bf7681ab4"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -95,6 +95,13 @@ controllers:
           # voiced; towerd stays the only writer of /data. Not on the ingress; the
           # NetworkPolicy admits the runners (and agentfest, for checks) only.
           VOICE_PORT: "8788"
+          # Voice everything on the tower ahead of listeners, as it arrives (0.5.13): the
+          # runners' spare cores voice the whole front page (~15 h of speech; ~2 h to catch
+          # up, then only new comments), so a listener finds a table voiced instead of
+          # waiting on it. The standby beside the data takes only listeners and first words.
+          # /status reports cover. Roll back: remove it (voicing as before: first words
+          # everywhere, whole turns of the best tables while anyone has the page open).
+          VOICE_AHEAD: "all"
         ports:
           - name: http
             containerPort: 8787
@@ -130,9 +137,13 @@ controllers:
           capabilities:
             drop:
               - ALL
-        # No CPU request: this node's CPU requests are full (its usage isn't).
+        # A CPU request of its own (0.5.13): without one its cgroup weight was 1 against
+        # agentfest's ~39, so agent bursts starved the site (probes timed out at high steal).
+        # 300m gives it weight ~12; the node's requests go from 3.03 to 3.33 of 6 CPUs.
+        # No CPU limit: it may use more when there's room.
         resources:
           requests:
+            cpu: 300m
             memory: 192Mi
           limits:
             memory: 768Mi
