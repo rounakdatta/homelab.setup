@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.16@sha256:8c64363f7e8a5aa3e2f3384698925c1ca43fad380afc34930da1ecd898fa2faf"
+          tag: "0.5.17@sha256:d688f2ecfa6a5fad87c419a2aeed0d5ea5b4603c2a6cc1f0357f87f2869f09a1"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -121,8 +121,11 @@ controllers:
           # everyone on it, and one line for the floor's own clock: drag it and the whole room goes
           # to that moment (people arrive with their first comment, leave an hour after their last),
           # let go and the floor plays from there in the order comments were written (?t= links it).
+          # fast (0.5.17): in a room, or seated, head.json every 1 s instead of 2 s. Behind Cloudflare
+          # (apps/cloudflared) the edge answers these polls and is ~1 s behind towerd (27 Nov: p50
+          # 1.04 s); this wins that second back for new comments, at no cost to towerd.
           # Roll back either: drop it from the list (a page can also try ?play=stream,cue,quick).
-          CLIENT_FLAGS: "stream,cue,quick,crowd,timeline,floor"
+          CLIENT_FLAGS: "stream,cue,quick,crowd,timeline,floor,fast"
         ports:
           - name: http
             containerPort: 8787
