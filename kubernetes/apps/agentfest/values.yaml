@@ -63,16 +63,23 @@ ssh:
   existingSecret: festie-secrets
 
 # festie's 10Gi, on the 16 GB node it no longer shares (festie was retired
-# on 5 Oct 2026). Reaching the cap kills the whole container, every agent and
-# terminal with it, not only the largest process: kubelet sets
-# memory.oom.group on cgroup v2, and the pod cannot swap.
+# on 5 Oct 2026). Since 27 Nov the kubelet runs with singleProcessOOMKill
+# (node-maintenance kubelet_memory_safety): reaching the cap kills only the
+# largest process, not every agent, terminal and gpg-agent with it. With
+# LimitedSwap the pod may also page ~1 GiB of cold memory out to the zram (its
+# 2Gi request's share).
 #
-# The CPU request fits: the node's requests sat at 3805m of 6000m on 29 Sep.
+# The CPU limit (27 Nov, A3 of the 25 Nov kanmani report): the node has ~1.5
+# real cores under steal, and agent bursts (builds, test suites, nix) took it
+# all, starving k3s and every site; the provider throttles the VM harder the
+# longer it runs hot. Three of six vCPUs still lets a build use the node when
+# it is idle. The CPU request fits: requests sat at 3.4 of 5 allocatable.
 resources:
   requests:
     cpu: "1"
     memory: 2Gi
   limits:
+    cpu: "3"
     memory: 10Gi
 
 # dshm cannot outlive the pod, and home is regenerable state whose durable parts live
