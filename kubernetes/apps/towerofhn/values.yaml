@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.17@sha256:d688f2ecfa6a5fad87c419a2aeed0d5ea5b4603c2a6cc1f0357f87f2869f09a1"
+          tag: "0.5.18@sha256:aa52a87aca9ae8514bbea8959b8bcb9011e9b2a437b2819e8a21e14d10956259"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -69,13 +69,15 @@ controllers:
           # while the disk has under 15% free (tower-dry only logs what it would do; it
           # ran first, 25 Nov). Roll back: age (RETENTION_DAYS alone).
           AUDIO_POLICY: "tower"
-          # Sponsoring (the app's apps/towerd/src/support.ts). Empty: nothing of it is in the
-          # page, byte for byte. Set to the GitHub Sponsors page once GitHub has approved
-          # the profile, https://github.com/sponsors/rounakdatta, and deploy: a quiet line
-          # on the door, a credit at a table on wide screens, and /support. Only a
-          # github.com/sponsors/<name> URL is accepted (anything else stays off, logged).
-          # SPONSOR_UPI (a UPI ID, name@bank) would add a UPI line to /support.
-          SPONSOR_URL: ""
+          # Sponsoring (the app's apps/towerd/src/support.ts; on since 0.5.18, Rounak's ask on 27 Nov):
+          # two small icons after the name in the corner (GitHub Sponsors' heart, a coffee cup), a
+          # quiet line at the foot of the door, the icons in a table's letterbox on wide screens,
+          # and /support. Only a github.com/sponsors/<name> URL turns it on (anything else stays
+          # off, logged); SPONSOR_COFFEE (a buymeacoffee.com/<name> page) adds the cup beside it.
+          # Empty SPONSOR_URL: nothing of it is in the page, byte for byte. SPONSOR_UPI (a UPI ID,
+          # name@bank) would add a UPI line to /support.
+          SPONSOR_URL: "https://github.com/sponsors/rounakdatta"
+          SPONSOR_COFFEE: "https://buymeacoffee.com/rounakdatta"
           # Commenter cards (a one-line summary of someone's public comments, cached three
           # days per person) and the tags every comment is performed with (emotion,
           # stance, intensity, cues; one call per table batch): Claude Haiku through
@@ -125,6 +127,9 @@ controllers:
           # (apps/cloudflared) the edge answers these polls and is ~1 s behind towerd (27 Nov: p50
           # 1.04 s); this wins that second back for new comments, at no cost to towerd.
           # Roll back either: drop it from the list (a page can also try ?play=stream,cue,quick).
+          # reply (0.5.18) is deliberately NOT listed: replying to HN from the tower (the Reply button,
+          # R, the reply sheet, the page knowing your HN name, notes of replies to you) is off until
+          # Rounak turns it on. Add `reply` to the list to bring all of it back.
           CLIENT_FLAGS: "stream,cue,quick,crowd,timeline,floor,fast"
         ports:
           - name: http
