@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.15@sha256:768ec7dc28155e63a8f6796e07b677559acac25b1776e37aeeba52d48847f149"
+          tag: "0.5.16@sha256:8c64363f7e8a5aa3e2f3384698925c1ca43fad380afc34930da1ecd898fa2faf"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -117,8 +117,12 @@ controllers:
           # floor needs them) and steps forward to speak; the camera never sits in the crowd.
           # timeline (needs crowd): at a table, a line along the bottom to scrub through the
           # conversation, watch people join it, and listen from any point (?t= links a moment).
+          # floor (FLOOR_TIMELINE, 0.5.16; needs crowd): the floor is one building with every table and
+          # everyone on it, and one line for the floor's own clock: drag it and the whole room goes
+          # to that moment (people arrive with their first comment, leave an hour after their last),
+          # let go and the floor plays from there in the order comments were written (?t= links it).
           # Roll back either: drop it from the list (a page can also try ?play=stream,cue,quick).
-          CLIENT_FLAGS: "stream,cue,quick,crowd,timeline"
+          CLIENT_FLAGS: "stream,cue,quick,crowd,timeline,floor"
         ports:
           - name: http
             containerPort: 8787
