@@ -66,6 +66,24 @@
   ansible.builtin.command: sysctl --load /etc/sysctl.d/90-homelab-memory.conf
   when: memory_sysctl.changed
 
+# inotify: on 2026-11-25 root's inotify instances sat at the default limit,
+# 128 of 128 (k3s, containerd, systemd and every pod's watchers share it).
+# Restarting k3s then fails with "inotify_init: too many open files". The
+# limits are kernel bookkeeping: raising them costs nothing until used.
+- name: Kernel inotify limits
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/90-homelab-inotify.conf
+    mode: "0644"
+    content: |
+      # Managed by homelab.setup (ansible/roles/node-tuning).
+      fs.inotify.max_user_instances = 8192
+      fs.inotify.max_user_watches = 524288
+  register: inotify_sysctl
+
+- name: Apply the kernel inotify limits
+  ansible.builtin.command: sysctl --load /etc/sysctl.d/90-homelab-inotify.conf
+  when: inotify_sysctl.changed
+
 # Under CPU contention, the control plane comes first. cgroup v2 splits a busy
 # CPU between siblings by weight:
 # - The kubelet gives kubepods.slice a weight of 235 (for 6 CPUs).
@@ -99,7 +117,7 @@
 - name: Report swap, memory settings and CPU weights
   ansible.builtin.shell: |
     swapon --show
-    sysctl vm.swappiness vm.page-cluster vm.watermark_scale_factor
+    sysctl vm.swappiness vm.page-cluster vm.watermark_scale_factor fs.inotify.max_user_instances fs.inotify.max_user_watches
     echo "system.slice cpu.weight=$(cat /sys/fs/cgroup/system.slice/cpu.weight) kubepods.slice cpu.weight=$(cat /sys/fs/cgroup/kubepods.slice/cpu.weight 2>/dev/null)"
   register: node_tuning_report
   changed_when: false
