@@ -1,0 +1,117 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  labels:
+    app.kubernetes.io/name: cloudflared
+data:
+  config.yaml: |
+    # The tunnel (its id is public anyway: it is the DNS target <id>.cfargotunnel.com).
+    tunnel: e7745e3b-686a-4484-8aeb-772e922700d7
+    credentials-file: /etc/cloudflared/creds/credentials.json
+    no-autoupdate: true
+    originRequest:
+      connectTimeout: 5s
+      # Shorter than towerd's 120 s keep-alive, so towerd never closes a connection under a request (a 502)
+      keepAliveTimeout: 60s
+      keepAliveConnections: 100
+    ingress:
+      - hostname: towerofhn.taptappers.club
+        service: http://towerofhan.apps.svc.cluster.local:8790
+      - service: http_status:404
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  labels:
+    app.kubernetes.io/name: cloudflared
+spec:
+  # Two connectors: a restart or a lost connection on one never takes the site off the internet.
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cloudflared
+      annotations:
+        # stateless: nothing to back up
+        backup.velero.io/backup-volumes-excludes: "config,creds"
+    spec:
+      # Beside towerd, on the always-there node: the tunnel then lands at Cloudflare's Singapore edge, next to the
+      # visitors in India, and reaches towerd without crossing to another node.
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: "true"
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:2026.11.2@sha256:55c7e3e8d89d5e8d20b75a82f3602cbf98e06db406e73e282073cfdc5a9a3af6
+          args:
+            - tunnel
+            - --no-autoupdate
+            - --metrics
+            - 0.0.0.0:2000
+            - --config
+            - /etc/cloudflared/config/config.yaml
+            - run
+          ports:
+            - name: metrics
+              containerPort: 2000
+              protocol: TCP
+          # /ready answers 200 once this connector holds at least one connection to Cloudflare's edge.
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: metrics
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: metrics
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 20m
+              memory: 48Mi
+            limits:
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cloudflared/config
+              readOnly: true
+            - name: creds
+              mountPath: /etc/cloudflared/creds
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: cloudflared-config
+        - name: creds
+          secret:
+            secretName: cloudflared-credentials
+            defaultMode: 0440

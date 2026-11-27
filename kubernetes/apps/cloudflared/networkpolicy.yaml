@@ -1,0 +1,62 @@
+---
+# In: only the metrics port, from the pod network: the kubelet probes /ready from the node's bridge address
+# (10.42.x.1), and in this cluster the policy filters that too (towerd and telly use exec probes for it; this
+# image has no shell). Metrics are all that port serves.
+# Out: DNS, towerd's edge port, and Cloudflare's tunnel edge on the public internet (7844, QUIC or TCP; 443 for
+# what cloudflared asks of Cloudflare's API). Nothing else in the cluster, the home network or the tailnet.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cloudflared-netpol
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 10.42.0.0/16
+      ports:
+        - protocol: TCP
+          port: 2000
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: towerofhan
+              app.kubernetes.io/controller: towerofhan
+      ports:
+        - protocol: TCP
+          port: 8790
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 100.64.0.0/10
+              - 169.254.0.0/16
+              - 127.0.0.0/8
+      ports:
+        - protocol: UDP
+          port: 7844
+        - protocol: TCP
+          port: 7844
+        - protocol: TCP
+          port: 443

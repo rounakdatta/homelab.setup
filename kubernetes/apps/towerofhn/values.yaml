@@ -95,6 +95,10 @@ controllers:
           # voiced; towerd stays the only writer of /data. Not on the ingress; the
           # NetworkPolicy admits the runners (and agentfest, for checks) only.
           VOICE_PORT: "8788"
+          # The edge's way in (0.5.16): the Cloudflare Tunnel's connector (apps/cloudflared) reaches towerd here,
+          # and only it (the NetworkPolicy). CF-Connecting-IP names each visitor on this port, so listener counts
+          # and per-visitor limits work behind the CDN; /status is not served on it. Roll back: remove it.
+          EDGE_PORT: "8790"
           # Voice everything on the tower ahead of listeners, as it arrives (0.5.13): the
           # runners' spare cores voice the whole front page (~15 h of speech; ~2 h to catch
           # up, then only new comments), so a listener finds a table voiced instead of
@@ -121,6 +125,9 @@ controllers:
             protocol: TCP
           - name: voice
             containerPort: 8788
+            protocol: TCP
+          - name: edge
+            containerPort: 8790
             protocol: TCP
         # Exec probes: the NetworkPolicy admits only Traefik and agentfest, as telly's.
         probes:
@@ -315,4 +322,8 @@ service:
       # runners only (the NetworkPolicy); the ingress routes to http alone
       voice:
         port: 8788
+        protocol: TCP
+      # the Cloudflare Tunnel's connector only (the NetworkPolicy)
+      edge:
+        port: 8790
         protocol: TCP

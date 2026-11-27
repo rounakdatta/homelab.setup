@@ -1,0 +1,24 @@
+---
+# cloudflared: the connector of the Cloudflare Tunnel `homelab-towerofhn` (locally managed: the routing below is
+# the whole configuration). It dials OUT to Cloudflare, so the public reaches Tower of HN through Cloudflare's
+# edge and cache without a new door on the host: no port is opened, and towerd's public face is the edge port
+# alone (towerofhn's NetworkPolicy admits this connector, and only it, to :8790).
+#
+#   visitor --https--> Cloudflare edge (cache: /live/*, /assets/*) --tunnel--> cloudflared (here, x2)
+#           --http--> towerofhan :8790 (EDGE_PORT: CF-Connecting-IP names the visitor; /status not served)
+#
+# The tunnel's credentials (Secret cloudflared-credentials, key credentials.json) come from this repository's
+# encrypted secret CLOUDFLARED_TOWEROFHN_CREDENTIALS, written by deploy-stuff.yml (interim, like the GHCR token:
+# move to Bitwarden when convenient). The Cloudflare side (the tunnel, the cache, security and redirect rules,
+# and DNS: towerofhn CNAME <tunnel id>.cfargotunnel.com, proxied) is described in config.yaml's comments.
+#
+# Roll back: point the towerofhn DNS record back at the tailnet address (oh-my-dns) and scale this to 0; the
+# tailnet door (Traefik `tailnet`) never stopped serving.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: apps
+
+resources:
+  - deployment.yaml
+  - networkpolicy.yaml

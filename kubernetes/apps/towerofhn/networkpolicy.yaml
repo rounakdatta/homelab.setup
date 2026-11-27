@@ -55,6 +55,14 @@ spec:
       ports:
         - protocol: TCP
           port: 8788
+    # The edge port: the Cloudflare Tunnel's connector, and nothing else (apps/cloudflared)
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: cloudflared
+      ports:
+        - protocol: TCP
+          port: 8790
   egress:
     - to:
         - namespaceSelector:
