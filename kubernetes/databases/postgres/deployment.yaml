@@ -20,6 +20,13 @@ metadata:
     app: postgres
 spec:
   replicas: 1
+  # Never two at once: a rolling update would start a second postgres on the same data directory while the
+  # first still runs, and in separate containers the lock file cannot stop it (each sees its own PID 1).
+  strategy:
+    type: Recreate
+    # Clears the live object's defaulted rollingUpdate block: without it `kubectl apply` fails validation
+    # ("may not be specified when strategy type is 'Recreate'").
+    rollingUpdate: null
   selector:
     matchLabels:
       app: postgres
@@ -52,14 +59,15 @@ spec:
           limits:
             memory: "1Gi"
             cpu: "1000m"
+        # Probes that survive a CPU storm on this node (24 Nov: 1 s exec probes timed out). Liveness is a TCP
+        # connect made by the kubelet (no process spawned), and restarts postgres only after 2 minutes dead.
         livenessProbe:
-          exec:
-            command:
-            - pg_isready
-            - -U
-            - postgres
+          tcpSocket:
+            port: 5432
           initialDelaySeconds: 30
-          periodSeconds: 10
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 6
         readinessProbe:
           exec:
             command:
@@ -67,7 +75,16 @@ spec:
             - -U
             - postgres
           initialDelaySeconds: 5
-          periodSeconds: 5
+          periodSeconds: 15
+          timeoutSeconds: 5
+        # On SIGTERM postgres does a "smart" shutdown, which waits for every client to leave; the apps' pools
+        # never do, so it would end in SIGKILL and crash recovery. A fast shutdown disconnects them,
+        # checkpoints and exits cleanly.
+        lifecycle:
+          preStop:
+            exec:
+              command: ["sh", "-c", "su-exec postgres pg_ctl -D \"$PGDATA\" -m fast -w -t 50 stop"]
+      terminationGracePeriodSeconds: 60
       volumes:
       - name: postgres-storage
         persistentVolumeClaim:
