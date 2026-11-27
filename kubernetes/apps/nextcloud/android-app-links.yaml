@@ -1,0 +1,56 @@
+---
+# Nextcloud file links (https://nextcloud.taptappers.club/f/<file id>) open in the
+# Nextcloud app on Android, and on the web everywhere else, from the same link.
+#
+# Why this is needed: the Android app already opens these links (FileDisplayActivity
+# takes VIEW intents for any host with path /f/<id>, and its DeepLinkHandler reads
+# /f/<id> with or without /index.php). But since Android 12 a link tapped in another
+# app, such as a chat, only goes to an app that is verified or user-approved for its
+# domain. The app declares host "*", which Android can neither verify nor offer in
+# "Open by default", so every tap lands in the browser instead.
+#
+# What this does: an Android browser asking for /f/<id> gets a 302 to an intent://
+# address that names the app (com.nextcloud.client: the Play, F-Droid and Huawei
+# builds). Chrome then opens the app with https://nextcloud.taptappers.club/index.php/f/<id>,
+# and the app shows that file or folder. When the app isn't installed, Chrome loads that
+# same address on the web instead (S.browser_fallback_url). The /index.php/ form never
+# matches this route, so nothing can loop.
+#
+# Everything else is untouched: desktop browsers, in-app WebViews (`; wv)` in the
+# User-Agent, which can't follow intent://), other paths and every other client get
+# Nextcloud exactly as before, through its Ingress. Nothing becomes public: the app and
+# the web both still need the login. The rule and the regex agree on every request (the
+# regex also takes a trailing slash or a query), and should they ever disagree the
+# request simply goes on to Nextcloud.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: nextcloud-android-app
+  namespace: apps
+spec:
+  redirectRegex:
+    regex: ^https?://[^/]+/f/([0-9]+)/?(?:\?.*)?$
+    replacement: intent://nextcloud.taptappers.club/index.php/f/${1}#Intent;scheme=https;package=com.nextcloud.client;S.browser_fallback_url=https%3A%2F%2Fnextcloud.taptappers.club%2Findex.php%2Ff%2F${1};end
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: nextcloud-android-app
+  namespace: apps
+spec:
+  # The same door as the Ingress (ingress.yaml): should Nextcloud move to the tailnet, move this too.
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`nextcloud.taptappers.club`) && PathRegexp(`^/f/[0-9]+/?$`) && HeaderRegexp(`User-Agent`, `Android`) && !HeaderRegexp(`User-Agent`, `; wv\)`)
+      # Ahead of the Ingress's own router, whose priority is the length of its rule.
+      priority: 1000
+      middlewares:
+        - name: nextcloud-android-app
+        - name: nextcloud-headers
+      services:
+        - name: nextcloud
+          port: 80
+  tls:
+    secretName: nextcloud-tls-secret

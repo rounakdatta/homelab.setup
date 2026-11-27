@@ -55,18 +55,23 @@ spec:
           limits:
             memory: "256Mi"
             cpu: "500m"
+        # Probes that survive a CPU storm on this node (24 Nov: 1 s exec probes timed out); liveness restarts
+        # redis only after 2 minutes dead.
         livenessProbe:
           tcpSocket:
             port: 6379
           initialDelaySeconds: 30
-          periodSeconds: 10
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 6
         readinessProbe:
           exec:
             command:
               - redis-cli
               - ping
           initialDelaySeconds: 5
-          periodSeconds: 5
+          periodSeconds: 15
+          timeoutSeconds: 5
       volumes:
       - name: redis-data
         persistentVolumeClaim:

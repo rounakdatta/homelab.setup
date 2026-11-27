@@ -21,6 +21,15 @@ spec:
     # there.
     nodeSelector:
       node-role.kubernetes.io/control-plane: "true"
+    # A CPU share of its own. Without a request Traefik, the door to every
+    # site, is BestEffort: its slice is weighted 1 against the other pods' ~119,
+    # so in a storm on this node (2% idle, 26 Nov) the door got close to
+    # nothing while every app behind it waited. A request is a share under
+    # contention, not a cap: no limit, so it still bursts freely.
+    resources:
+      requests:
+        cpu: 100m
+        memory: 64Mi
     image:
       repository: {{ traefik_image_repository }}
       tag: "{{ traefik_image_tag }}"

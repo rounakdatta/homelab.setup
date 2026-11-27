@@ -93,16 +93,22 @@ spec:
           name: http
         # exec, not httpGet: the NetworkPolicy admits only Traefik and agentfest, and a probe from inside the
         # container needs no exception.
+        # The probe runs inside this container's CPU share (a 10m request) on the busiest node, so it is kept
+        # light: Python with only `socket` (-S skips site) costs ~40 ms of CPU, where importing urllib.request
+        # cost ~200 ms. At twelve a minute those outgrew the share whenever the node was starved, timed out,
+        # and took telly out of its Service and restarted it (400 restarts in 8 days, nothing wrong in telly).
         readinessProbe:
           exec:
-            command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/livez', timeout=3)"]
-          periodSeconds: 15
-          timeoutSeconds: 5
+            command: ["python", "-S", "-c", 'import socket; s = socket.create_connection(("127.0.0.1", 8080), 8); s.sendall(b"GET /livez HTTP/1.0\r\n\r\n"); assert s.recv(64).split(b" ")[1] == b"200"']
+          periodSeconds: 30
+          timeoutSeconds: 10
+        # A hang must last five minutes before a restart.
         livenessProbe:
           exec:
-            command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/livez', timeout=3)"]
-          periodSeconds: 30
-          timeoutSeconds: 5
+            command: ["python", "-S", "-c", 'import socket; s = socket.create_connection(("127.0.0.1", 8080), 8); s.sendall(b"GET /livez HTTP/1.0\r\n\r\n"); assert s.recv(64).split(b" ")[1] == b"200"']
+          periodSeconds: 60
+          timeoutSeconds: 10
+          failureThreshold: 5
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
@@ -143,14 +149,16 @@ spec:
           name: admin
         readinessProbe:
           exec:
-            command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/livez', timeout=3)"]
-          periodSeconds: 15
-          timeoutSeconds: 5
+            command: ["python", "-S", "-c", 'import socket; s = socket.create_connection(("127.0.0.1", 8081), 8); s.sendall(b"GET /livez HTTP/1.0\r\n\r\n"); assert s.recv(64).split(b" ")[1] == b"200"']
+          periodSeconds: 30
+          timeoutSeconds: 10
+        # A hang must last five minutes before a restart.
         livenessProbe:
           exec:
-            command: ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/livez', timeout=3)"]
-          periodSeconds: 30
-          timeoutSeconds: 5
+            command: ["python", "-S", "-c", 'import socket; s = socket.create_connection(("127.0.0.1", 8081), 8); s.sendall(b"GET /livez HTTP/1.0\r\n\r\n"); assert s.recv(64).split(b" ")[1] == b"200"']
+          periodSeconds: 60
+          timeoutSeconds: 10
+          failureThreshold: 5
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true

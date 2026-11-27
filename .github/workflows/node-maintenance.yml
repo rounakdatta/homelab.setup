@@ -42,6 +42,11 @@ on:
         description: 'Remove the one-time --server join flag from the k3s unit (it names the old control plane, now a worker), then restart k3s once. A no-op when absent; rolls back if the API does not return.'
         type: boolean
         default: false
+      kubelet_memory_safety:
+        description: 'Kubelet memory safety on the control plane: an OOM kills one process, not a whole container; memory kept for the host and k3s; LimitedSwap; 60 s graceful shutdown. check = read-only; apply = restart k3s ONCE (refuses while a deploy runs, puts the old state back if the kubelet does not return); revert'
+        type: choice
+        options: ['no', 'check', 'apply', 'revert']
+        default: 'no'
       velero_status:
         description: 'Read-only Velero report: server + node-agent, repository password strength (never printed), BSLs, backup repositories, last backups'
         type: boolean
@@ -53,6 +58,10 @@ on:
 jobs:
   maintain:
     runs-on: ubuntu-latest
+    # actions: read lets the kubelet step see whether a deploy is running.
+    permissions:
+      contents: read
+      actions: read
     env:
       CONTROL: ${{ secrets.CONTROL_MACHINE_NAME }}
     steps:
@@ -267,6 +276,141 @@ jobs:
             # Counts only: these logs are public.
             echo "nodes by status: $(k3s kubectl get nodes --no-headers | awk '{print $2}' | sort | uniq -c | xargs)"
             rm -f /root/k3s.service.before-drop-server
+          EOS
+
+      # The kubelet's memory safety (planned since 2026-09-29; A4 of the 2026-11-25 kanmani report).
+      # - singleProcessOOMKill: an OOM inside a container kills only the process that overflowed. The kubelet's
+      #   default on cgroup v2 (memory.oom.group=1) kills every process in it: agentfest lost every session,
+      #   Paseo and gpg-agent to one runaway process three times (25 Nov twice, 26 Nov).
+      # - systemReserved + kubeReserved: pods together stop short of the node's last 2.5 GiB, kept for the host
+      #   (sshd, tailscaled, HestiaCP) and k3s (API server, etcd, containerd). On 24 Nov pods took all of it.
+      # - LimitedSwap: burstable pods may page cold memory out to the node's zram, in proportion to their
+      #   memory request (node-tuning set the zram up; pods could not use it).
+      # - shutdownGracePeriod: a planned reboot gives pods a minute to stop cleanly.
+      # No memory eviction threshold, on purpose: the kubelet would evict the pod furthest over its request,
+      # agentfest, whole. New containers get all of it. For agentfest's running containers memory.oom.group
+      # is set to 0 live (what singleProcessOOMKill leaves it at), so nothing restarts.
+      # check: read-only. apply: write the drop-in, restart k3s ONCE (never while a deploy runs), and put the
+      # old state back if the kubelet is not back with the new settings in 5 min. revert: remove it, restart.
+      - name: Kubelet memory safety (${{ inputs.kubelet_memory_safety }})
+        if: ${{ inputs.kubelet_memory_safety != 'no' }}
+        env:
+          MODE: ${{ inputs.kubelet_memory_safety }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A k3s restart takes the API away for a minute or two: never while a deploy is applying.
+          if [ "$MODE" != check ]; then
+            busy=$(gh run list -R "$GITHUB_REPOSITORY" --limit 30 --json status,workflowName -q '[.[] | select(.status != "completed" and (.workflowName | test("^Deploy"))) | .workflowName] | join(", ")')
+            [ -z "$busy" ] || { echo "::error::a deploy is running ($busy): not restarting k3s"; exit 1; }
+          fi
+          tailscale ssh "root@${CONTROL}" "MODE=${MODE} bash -s" <<'EOS'
+            set -u
+            K="k3s kubectl"
+            D=/var/lib/rancher/k3s/agent/etc/kubelet.conf.d
+            F="$D/50-homelab-memory.conf"
+            B=/root/kubelet-50-homelab-memory.before
+            node=$($K get nodes -l node-role.kubernetes.io/control-plane=true -o jsonpath='{.items[0].metadata.name}')
+            [ -n "$node" ] || { echo "no control-plane node found"; exit 1; }
+            want() {
+              cat <<'CONF'
+          # Managed by homelab.setup (.github/workflows/node-maintenance.yml, kubelet_memory_safety).
+          # Delete this file and restart k3s to revert.
+          apiVersion: kubelet.config.k8s.io/v1beta1
+          kind: KubeletConfiguration
+          # An OOM in a container kills the process that overflowed, not every process in it.
+          singleProcessOOMKill: true
+          # Kept back from pods: for the host (sshd, tailscaled, HestiaCP) and for k3s (API server, etcd, containerd).
+          systemReserved:
+            cpu: 500m
+            memory: 1536Mi
+          kubeReserved:
+            cpu: 500m
+            memory: 1Gi
+          # Burstable pods may page cold memory out to the zram, in proportion to their memory request.
+          memorySwap:
+            swapBehavior: LimitedSwap
+          # A planned shutdown gives pods a minute to stop.
+          shutdownGracePeriod: 60s
+          shutdownGracePeriodCriticalPods: 10s
+          CONF
+            }
+            cfg() { $K get --raw "/api/v1/nodes/$node/proxy/configz" 2>/dev/null; }
+            field() { cfg | grep -o "\"$1\":[^,}]*" | head -1 | cut -d: -f2- | tr -d '"'; }
+            # memory.oom.group of each running agentfest container's cgroup, one path per line
+            agentfest_cgroups() {
+              for pod in $($K -n apps get pods -o name 2>/dev/null | sed -n 's|^pod/\(agentfest-.*\)|\1|p'); do
+                for sb in $(k3s crictl pods -q --no-trunc --namespace apps --name "^${pod}\$" --state ready 2>/dev/null); do
+                  for id in $(k3s crictl ps -q --no-trunc --pod "$sb" 2>/dev/null); do
+                    find /sys/fs/cgroup/kubepods.slice -maxdepth 4 -type d -name "cri-containerd-${id}.scope" 2>/dev/null | head -1
+                  done
+                done
+              done
+            }
+            report() {
+              echo "kubelet now: singleProcessOOMKill=$(field singleProcessOOMKill) swapBehavior=$(field swapBehavior) shutdownGracePeriod=$(field shutdownGracePeriod)"
+              echo "allocatable memory/cpu: $($K get node "$node" -o jsonpath='{.status.allocatable.memory} {.status.allocatable.cpu}')"
+              echo "kubepods memory.max: $(cat /sys/fs/cgroup/kubepods.slice/memory.max)"
+              echo "agentfest containers' memory.oom.group: $(agentfest_cgroups | while read -r d; do printf '%s ' "$(cat "$d/memory.oom.group")"; done)"
+              echo "pods on this node not Running/Succeeded: $($K get pods -A --field-selector spec.nodeName=$node --no-headers 2>/dev/null | awk '$4 != "Running" && $4 != "Completed"' | wc -l)"
+            }
+            restart_k3s() { # restarts once, then waits for the API (up to 5 min); 0 when it answers
+              systemctl restart k3s || echo "systemctl restart returned nonzero; waiting anyway"
+              for i in $(seq 1 60); do $K get nodes >/dev/null 2>&1 && { echo "API back after ~$((i*5))s"; return 0; }; sleep 5; done
+              return 1
+            }
+
+            # ---- preflight (every mode)
+            systemctl is-active --quiet k3s || { echo "k3s is not active: not touching it"; exit 1; }
+            [ -d "$D" ] || { echo "this k3s has no kubelet drop-in directory: not touching it"; exit 1; }
+            minor=$($K get node "$node" -o jsonpath='{.status.nodeInfo.kubeletVersion}' | sed -E 's/^v1\.([0-9]+)\..*/\1/')
+            [ "${minor:-0}" -ge 32 ] 2>/dev/null && echo "kubelet knows singleProcessOOMKill: yes" || { echo "kubelet too old for singleProcessOOMKill: not touching it"; exit 1; }
+            swapgate=$($K get --raw "/api/v1/nodes/$node/proxy/metrics" 2>/dev/null | grep -E '^kubernetes_feature_enabled\{name="NodeSwap"' | awk '{print $NF}' | head -1)
+            echo "NodeSwap feature on: ${swapgate:-unknown}"
+            [ "$MODE" = revert ] || [ "${swapgate:-0}" = 1 ] || { echo "NodeSwap is off here: LimitedSwap would keep the kubelet from starting; not touching it"; exit 1; }
+            echo "swap devices: $(swapon --noheadings | wc -l)"
+            ino=$(sysctl -n fs.inotify.max_user_instances)
+            echo "inotify instance limit: $ino"
+            [ "$MODE" = check ] || [ "$ino" -ge 1024 ] || { echo "inotify limit still $ino: run deploy-infra tags=node-tuning first (a k3s restart can fail on 128)"; exit 1; }
+            echo "drop-ins: $(ls "$D" | tr '\n' ' ')"
+            echo "agentfest containers found: $(agentfest_cgroups | wc -l)"
+            report
+
+            case "$MODE" in
+              check)
+                echo "== would write $F =="; want ;;
+              apply)
+                if [ -f "$F" ] && [ "$(cat "$F")" = "$(want)" ]; then
+                  echo "drop-in already in place: no restart"
+                else
+                  rm -f "$B"; [ -f "$F" ] && cp -a "$F" "$B"
+                  want > "$F.tmp" && mv "$F.tmp" "$F"
+                  before=$(systemctl show k3s -p NRestarts --value)
+                  echo "drop-in written; restarting k3s once"
+                  ok=0
+                  if restart_k3s; then
+                    for i in $(seq 1 36); do [ "$(field singleProcessOOMKill)" = true ] && { ok=1; break; }; sleep 5; done
+                  fi
+                  if [ "$ok" != 1 ]; then
+                    echo "the kubelet did not come back with the new settings: putting the old state back"
+                    if [ -f "$B" ]; then cp -a "$B" "$F"; else rm -f "$F"; fi
+                    restart_k3s || echo "API still not answering after the rollback: look at the node now"
+                    report; exit 1
+                  fi
+                  for i in $(seq 1 36); do [ "$($K get node "$node" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')" = True ] && break; sleep 5; done
+                  echo "node Ready: $($K get node "$node" -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}')"
+                  echo "restart counter: $before -> $(systemctl show k3s -p NRestarts --value) (a manual restart does not count)"
+                  rm -f "$B"
+                fi
+                # Running containers keep the group kill until they restart: set agentfest's as the kubelet now would.
+                agentfest_cgroups | while read -r d; do echo 0 > "$d/memory.oom.group"; done
+                report ;;
+              revert)
+                [ -f "$F" ] || { echo "no drop-in: nothing to revert"; exit 0; }
+                rm -f "$F"
+                echo "drop-in removed; restarting k3s once"
+                restart_k3s || { echo "API not answering after 5 min: look at the node now"; exit 1; }
+                report ;;
+            esac
           EOS
 
       - name: Rollout restart

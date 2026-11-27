@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.12@sha256:14325f012282cba5d1e5b136e5f11831134e5ddee788d393769255dabcc5a638"
+          tag: "0.5.15@sha256:768ec7dc28155e63a8f6796e07b677559acac25b1776e37aeeba52d48847f149"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -95,6 +95,26 @@ controllers:
           # voiced; towerd stays the only writer of /data. Not on the ingress; the
           # NetworkPolicy admits the runners (and agentfest, for checks) only.
           VOICE_PORT: "8788"
+          # Voice everything on the tower ahead of listeners, as it arrives (0.5.13): the
+          # runners' spare cores voice the whole front page (~15 h of speech; ~2 h to catch
+          # up, then only new comments), so a listener finds a table voiced instead of
+          # waiting on it. The standby beside the data takes only listeners and first words.
+          # /status reports cover. Roll back: remove it (voicing as before: first words
+          # everywhere, whole turns of the best tables while anyone has the page open).
+          VOICE_AHEAD: "all"
+          # How the room plays (the play flags, carried to every client in head.json): stream,
+          # a comment plays from its first decoded clip; cue, whoever speaks next is called over
+          # while the turn before is said, and nobody is waited on for long; quick, the first
+          # voice comes 0.6 s after you sit, not 1.6 s. A/B on the live site, 26 Nov, same tables
+          # (the app's tools/scale): first voice p95 2.64 -> 1.99 s desktop, 2.32 -> 1.54 s phone;
+          # silences over 1.5 s too long 8 -> 0. Roll back: remove it, or drop one flag.
+          # crowd (CROWD_V2, 0.5.15): a room that fits any crowd: tables keep a few people at
+          # their front, everyone else stands in the audience (galleries above the room when a
+          # floor needs them) and steps forward to speak; the camera never sits in the crowd.
+          # timeline (needs crowd): at a table, a line along the bottom to scrub through the
+          # conversation, watch people join it, and listen from any point (?t= links a moment).
+          # Roll back either: drop it from the list (a page can also try ?play=stream,cue,quick).
+          CLIENT_FLAGS: "stream,cue,quick,crowd,timeline"
         ports:
           - name: http
             containerPort: 8787
@@ -130,9 +150,13 @@ controllers:
           capabilities:
             drop:
               - ALL
-        # No CPU request: this node's CPU requests are full (its usage isn't).
+        # A CPU request of its own (0.5.13): without one its cgroup weight was 1 against
+        # agentfest's ~39, so agent bursts starved the site (probes timed out at high steal).
+        # 300m gives it weight ~12; the node's requests go from 3.03 to 3.33 of 6 CPUs.
+        # No CPU limit: it may use more when there's room.
         resources:
           requests:
+            cpu: 300m
             memory: 192Mi
           limits:
             memory: 768Mi
@@ -185,7 +209,10 @@ controllers:
   runner:
     forceRename: towerofhan-runner
     type: deployment
-    replicas: 2
+    # One runner, in Paris (26 Nov): voice-ahead keeps it busy for hours at a stretch, and
+    # the Rishra home box (i5-7400) can't cool that. At four busy cores it reset abruptly;
+    # at two it climbed to 87-89 °C. Paris is a VPS that idles 91-97% of the day.
+    replicas: 1
     pod:
       affinity:
         nodeAffinity:
@@ -194,6 +221,9 @@ controllers:
               - matchExpressions:
                   - key: node-role.kubernetes.io/control-plane
                     operator: DoesNotExist
+                  - key: homelab.setup/city
+                    operator: NotIn
+                    values: [rishra]
         # one per node: two on one node would only fight over its cores
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -221,7 +251,9 @@ controllers:
         env:
           VOICE_URL: http://towerofhan.apps.svc.cluster.local:8788
           THREADS: "2"
-          MAX_LANES: "4"
+          # Two lanes of two threads: all four of Paris's cores (~3x real time, against ~0.9-3 h
+          # of new speech an hour). The runner no longer runs on the Rishra box (see above).
+          MAX_LANES: "2"
           NODE_NAME:
             valueFrom:
               fieldRef:
