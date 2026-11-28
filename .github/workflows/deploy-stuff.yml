@@ -76,6 +76,24 @@ jobs:
             --docker-password="$GHCR_READ_TOKEN" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+      # The Cloudflare Tunnel's credentials for cloudflared (kubernetes/apps/cloudflared): the JSON that
+      # `cloudflared tunnel create` would write (AccountTag, TunnelSecret, TunnelID). From this repository's
+      # encrypted secrets until it lives in Bitwarden (a notes item, like velero's): the secrets play above would
+      # then write the same Secret and this step becomes a no-op rewrite. Never printed.
+      - name: cloudflared tunnel credentials -> Secret (repository secret, interim)
+        if: ${{ env.CLOUDFLARED_TOWEROFHN_CREDENTIALS != '' }}
+        env:
+          CLOUDFLARED_TOWEROFHN_CREDENTIALS: ${{ secrets.CLOUDFLARED_TOWEROFHN_CREDENTIALS }}
+        run: |
+          umask 077
+          f="$(mktemp)"
+          printf '%s' "$CLOUDFLARED_TOWEROFHN_CREDENTIALS" > "$f"
+          kubectl create secret generic cloudflared-credentials \
+            --namespace=apps \
+            --from-file=credentials.json="$f" \
+            --dry-run=client -o yaml | kubectl apply -f -
+          rm -f "$f"
+
       - name: Google Maps key -> Secret (repository secret, interim)
         if: ${{ env.GOOGLE_MAPS_API_KEY != '' }}
         env:

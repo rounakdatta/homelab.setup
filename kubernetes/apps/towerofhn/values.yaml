@@ -57,7 +57,7 @@ controllers:
       web:
         image:
           repository: ghcr.io/rounakdatta/towerofhan-web
-          tag: "0.5.15@sha256:768ec7dc28155e63a8f6796e07b677559acac25b1776e37aeeba52d48847f149"
+          tag: "0.5.19@sha256:a9b3d6b98aa53efbfc8c24996a14d14dc6b21dababccb89fe5cc915be8db5b94"
           pullPolicy: IfNotPresent
         env:
           VAR: /data
@@ -69,13 +69,15 @@ controllers:
           # while the disk has under 15% free (tower-dry only logs what it would do; it
           # ran first, 25 Nov). Roll back: age (RETENTION_DAYS alone).
           AUDIO_POLICY: "tower"
-          # Sponsoring (the app's apps/towerd/src/support.ts). Empty: nothing of it is in the
-          # page, byte for byte. Set to the GitHub Sponsors page once GitHub has approved
-          # the profile, https://github.com/sponsors/rounakdatta, and deploy: a quiet line
-          # on the door, a credit at a table on wide screens, and /support. Only a
-          # github.com/sponsors/<name> URL is accepted (anything else stays off, logged).
-          # SPONSOR_UPI (a UPI ID, name@bank) would add a UPI line to /support.
-          SPONSOR_URL: ""
+          # Sponsoring (the app's apps/towerd/src/support.ts; on since 0.5.18, Rounak's ask on 27 Nov):
+          # two small icons after the name in the corner (GitHub Sponsors' heart, a coffee cup), a
+          # quiet line at the foot of the door, the icons in a table's letterbox on wide screens,
+          # and /support. Only a github.com/sponsors/<name> URL turns it on (anything else stays
+          # off, logged); SPONSOR_COFFEE (a buymeacoffee.com/<name> page) adds the cup beside it.
+          # Empty SPONSOR_URL: nothing of it is in the page, byte for byte. SPONSOR_UPI (a UPI ID,
+          # name@bank) would add a UPI line to /support.
+          SPONSOR_URL: "https://github.com/sponsors/rounakdatta"
+          SPONSOR_COFFEE: "https://buymeacoffee.com/rounakdatta"
           # Commenter cards (a one-line summary of someone's public comments, cached three
           # days per person) and the tags every comment is performed with (emotion,
           # stance, intensity, cues; one call per table batch): Claude Haiku through
@@ -95,6 +97,10 @@ controllers:
           # voiced; towerd stays the only writer of /data. Not on the ingress; the
           # NetworkPolicy admits the runners (and agentfest, for checks) only.
           VOICE_PORT: "8788"
+          # The edge's way in (0.5.16): the Cloudflare Tunnel's connector (apps/cloudflared) reaches towerd here,
+          # and only it (the NetworkPolicy). CF-Connecting-IP names each visitor on this port, so listener counts
+          # and per-visitor limits work behind the CDN; /status is not served on it. Roll back: remove it.
+          EDGE_PORT: "8790"
           # Voice everything on the tower ahead of listeners, as it arrives (0.5.13): the
           # runners' spare cores voice the whole front page (~15 h of speech; ~2 h to catch
           # up, then only new comments), so a listener finds a table voiced instead of
@@ -113,14 +119,27 @@ controllers:
           # floor needs them) and steps forward to speak; the camera never sits in the crowd.
           # timeline (needs crowd): at a table, a line along the bottom to scrub through the
           # conversation, watch people join it, and listen from any point (?t= links a moment).
+          # floor (FLOOR_TIMELINE, 0.5.16; needs crowd): the floor is one building with every table and
+          # everyone on it, and one line for the floor's own clock: drag it and the whole room goes
+          # to that moment (people arrive with their first comment, leave an hour after their last),
+          # let go and the floor plays from there in the order comments were written (?t= links it).
+          # fast (0.5.17): in a room, or seated, head.json every 1 s instead of 2 s. Behind Cloudflare
+          # (apps/cloudflared) the edge answers these polls and is ~1 s behind towerd (27 Nov: p50
+          # 1.04 s); this wins that second back for new comments, at no cost to towerd.
           # Roll back either: drop it from the list (a page can also try ?play=stream,cue,quick).
-          CLIENT_FLAGS: "stream,cue,quick,crowd,timeline"
+          # reply (0.5.18) is deliberately NOT listed: replying to HN from the tower (the Reply button,
+          # R, the reply sheet, the page knowing your HN name, notes of replies to you) is off until
+          # Rounak turns it on. Add `reply` to the list to bring all of it back.
+          CLIENT_FLAGS: "stream,cue,quick,crowd,timeline,floor,fast"
         ports:
           - name: http
             containerPort: 8787
             protocol: TCP
           - name: voice
             containerPort: 8788
+            protocol: TCP
+          - name: edge
+            containerPort: 8790
             protocol: TCP
         # Exec probes: the NetworkPolicy admits only Traefik and agentfest, as telly's.
         probes:
@@ -315,4 +334,8 @@ service:
       # runners only (the NetworkPolicy); the ingress routes to http alone
       voice:
         port: 8788
+        protocol: TCP
+      # the Cloudflare Tunnel's connector only (the NetworkPolicy)
+      edge:
+        port: 8790
         protocol: TCP
