@@ -405,6 +405,15 @@
         data:
           users_database.yml: authelia/users_database
 
+      # The Cloudflare Tunnel's credentials for cloudflared (kubernetes/apps/cloudflared): the JSON that
+      # `cloudflared tunnel create` would write (AccountTag, TunnelSecret, TunnelID). `notes` because it is a
+      # JSON document. (Until 28 Nov a repository secret, written by an interim step in deploy-stuff.yml.)
+      - name: cloudflared-credentials
+        namespace: apps
+        type: notes
+        data:
+          credentials.json: cloudflared/towerofhn_credentials
+
       # Velero credentials (INI file)
       - name: velero-credentials
         namespace: velero
